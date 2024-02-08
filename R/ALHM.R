@@ -1,5 +1,30 @@
 # Complete Model
 # Wrap it up
+
+#' Arid Model - Runs Spatially Distributed Hydrology Model
+#'
+#' @param date The date of rainfall event in form "YYYY-MM-DD"
+#' @param ModelFolder Folder path to saved modeled outputs
+#' @param time_step Time in minutes for algorithm step for model, will dynamically adjust
+#' @param simulation_length Duration of model in minutes: NA = default entire event
+#' @param WatershedElements Folder path where watershed specific elements are located.
+#'  DEM, Computational boundary, and rainfall storage
+#' @param mini T/F Optional for miniature version of water
+#' @param rainfall_created Optional if rainfall event has been created
+#' @param save Optional if True will save plots in Model Folder
+#' @param All_save Optional if TRUE will save important variables
+#' @param crop Optional: if TRUE watershed boundary shapefile will clip watershed elements
+#' @param discharge Optional: if TRUE script expects recorded discharge data in watershed elements for comparisons
+#'
+#' @return Creates stacked rasters of surface depth, velocity, and soil mositure
+#' @export
+#'
+#' @examples
+#' ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Demo_Test)"
+#' WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\DemoElements)"
+#' # Do Not RUN
+#' arid_model(date, ModelFolder, time_step = 5, simulation_length = NA, WatershedElements = WatershedElements)
+#'
 arid_model <- function(date, ModelFolder,
                        time_step = .5,
                        simulation_length = NA,
