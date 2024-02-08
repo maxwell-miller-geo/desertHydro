@@ -199,7 +199,7 @@ dailyDischarge <- function(discharge_file_path, discharge_date, save_location, s
 
   # sFilter data with recorded discharge value
   discharge_per_day <- as.data.frame(stream_data) |>
-    mutate(date = ymd_hms(stream_data$`time (MST)`, quiet = T), discharge = stream_data$`Discharge(cfs)-GCMRC-GCLT1`, height = stream_data$`Gage Height(ft)-GCMRC-GCLT1`) |>
+    mutate(date = lubridate::ymd_hms(stream_data$`time (MST)`, quiet = T), discharge = stream_data$`Discharge(cfs)-GCMRC-GCLT1`, height = stream_data$`Gage Height(ft)-GCMRC-GCLT1`) |>
 
     filter(date(date) == discharge_date) |> # filters out discharge for date "YYYY-MM-DD"
     mutate(discharge_diff = round(c(diff(discharge),0),3)) |> # Calculates difference in discharge per time step
