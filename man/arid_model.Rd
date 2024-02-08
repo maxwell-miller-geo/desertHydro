@@ -44,15 +44,16 @@ DEM, Computational boundary, and rainfall storage}
 \item{discharge}{Optional: if TRUE script expects recorded discharge data in watershed elements for comparisons}
 }
 \value{
-Creates stacked rasters of surface depth, velocity, and soil mositure
+Creates stacked rasters of surface depth, velocity, and soil moisture
 }
 \description{
 Arid Model - Runs Spatially Distributed Hydrology Model
 }
 \examples{
-ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Demo_Test)"
-WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\DemoElements)"
+ModelFolder <- r"(C:\R\Example\SampleModel\Demo_Test)"
+WatershedElements <- r"(C:\R\Example\DemoElements)"
 # Do Not RUN
-arid_model(date, ModelFolder, time_step = 5, simulation_length = NA, WatershedElements = WatershedElements)
+# arid_model(date, ModelFolder, time_step = 5,
+#         WatershedElements = WatershedElements)
 
 }

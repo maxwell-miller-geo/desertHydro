@@ -16,14 +16,15 @@
 #' @param crop Optional: if TRUE watershed boundary shapefile will clip watershed elements
 #' @param discharge Optional: if TRUE script expects recorded discharge data in watershed elements for comparisons
 #'
-#' @return Creates stacked rasters of surface depth, velocity, and soil mositure
+#' @return Creates stacked rasters of surface depth, velocity, and soil moisture
 #' @export
 #'
 #' @examples
-#' ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Demo_Test)"
-#' WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\DemoElements)"
+#' ModelFolder <- r"(C:\R\Example\SampleModel\Demo_Test)"
+#' WatershedElements <- r"(C:\R\Example\DemoElements)"
 #' # Do Not RUN
-#' arid_model(date, ModelFolder, time_step = 5, simulation_length = NA, WatershedElements = WatershedElements)
+#' # arid_model(date, ModelFolder, time_step = 5,
+#' #         WatershedElements = WatershedElements)
 #'
 arid_model <- function(date, ModelFolder,
                        time_step = .5,
