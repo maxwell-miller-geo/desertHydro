@@ -1,10 +1,16 @@
 Package: desertHydro
-Title: What the Package Does (One Line, Title Case)
+Title: Spatially Distributed Hydrology Model for Arid Watersheds 
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+    person("Maxwell", "Miller", , "mmm683@nau.edu", role = c("aut", "cre"),
+           comment = c(ORCID = "0009-0000-2965-695X"))
+Description: The desertHydro watershed model simulates the surface and shallow 
+subsurface flow from an input rainfall event. The primary flow routing 
+algorithm is modified from a Soil Moisture Routing (SMR) algorithm. The user
+inputs a digital elevation model (DEM), watershed boundary, (shapefile), soil characteristics, and precipitation data. 
+The model outputs stacked tif files with each timestep as a layer including
+velocity, soil moisture, and surface depth. Optionally, these stacked rasters can
+be converted into gifs for visual aids. Note - This is still in early stages of development.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
