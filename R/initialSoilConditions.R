@@ -24,13 +24,13 @@ storage_amount <- function(landCoverTable){
 }
 
 # Create the land cover stacked map with soil characteristics
-createSoilRasters <- function(ClassMap, soilTable, key = "MUKEY"){
+createSoilRasters <- function(ClassMap, soilTable, key = "NLCD_Key"){
   # Load in the class map
   ClassMap <- terra::rast(ClassMap)
   landtypes <- unique(terra::values(ClassMap, na.rm = TRUE))
   outStack <- c() # creates empty vector
   for(x in 1:length(soilTable)){
-    
+
     if(is.character(soilTable[[x]])){
       next # Breaks if the value in the table is a character (names)
     }
@@ -50,7 +50,7 @@ createSoilRasters <- function(ClassMap, soilTable, key = "MUKEY"){
 
 initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap, DEM, ModelOutputs, type = "LC", saturatedPercentage = 0.2){
   LCC <- readxl::read_xlsx(LandCoverCharacteristics) # reads excel file with soil characteristics
-  
+
   #day_to_min <- 1 * 24 * 60 # adjust day to minutes
   hour_to_min <- 1 * 60 # adjust
 
@@ -85,14 +85,14 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
 
   LCC$ET_Reduction <- LCC$fieldCapacityAmount * 0.8 / LCC$soilDepthCM
 
-  
+
   SoilStack <- createSoilRasters(ClassificationMap, LCC)
 
-  
+
   # Attach the slope map to the land cover stack
   dem <- terra::rast(DEM)
-  
-  SoilStack$slope <- terra::terrain(dem, v="slope", neighbors=8, unit="degrees", 
+
+  SoilStack$slope <- terra::terrain(dem, v="slope", neighbors=8, unit="degrees",
                                     filename = file.path(ModelOutputs, "slope.tif"),
                                     overwrite = T)
   names(SoilStack$slope) <- "slope"
@@ -112,7 +112,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
 # ClassificationMap <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements\waterholes_lc.tif)"
 # DEM <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements\clipped_dem.tif)"
 # ModelOutputs <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel)"
-# # 
+# #
 # initial_soil_conditions(LandCoverCharacteristics = LandCoverCharacteristics,
 #                         ClassificationMap = ClassificationMap,
 #                         DEM = DEM,

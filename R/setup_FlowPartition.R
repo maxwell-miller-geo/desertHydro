@@ -1,10 +1,10 @@
 # Flow functions necessary for flow partitioning
-# DEM -> FlowSum Map -> 
+# DEM -> FlowSum Map ->
 # Necessary Packages
 #install.packages("terra")
 #library(terra)
 
-directions <- list("NW" = list(1, .7071), 
+directions <- list("NW" = list(1, .7071),
                          "N" = list(2, 1),
                          "NE" = list(3, .7071),
                          "W" = list(4, 1),
@@ -20,7 +20,7 @@ directions <- list("NW" = list(1, .7071),
 
 ## Define a custom function to calculate the difference from the center - essentially flow accumulation within a neighborhood
 flowOutSum <- function(x) { # Vector of values
-  
+
   center <- x[5]
   if(center < 0  | is.na(center)){ # ignore values that are 0 or NA
     return(0)
@@ -30,19 +30,19 @@ flowOutSum <- function(x) { # Vector of values
   #print(cardinal)
   # Represent the NW, NE, SW, and SE values
   diagonal <- x[c(1,3,7,9)]
-  
+
   # Take the difference between cardinal values and center cell - vector of elevation differences
   card_difference <- center - cardinal[cardinal > 0]
-  
+
   # Take the difference between diagonal values and center cell
   adjustment <- 1/sqrt(2)
   diag_difference <- (center - diagonal[diagonal > 0]) * adjustment
-  
+
   # Add the values together if they are above 0 (e.i., they flow into the current cell).
   # If the center is higher than a direction, it is not gaining flow from that particular direction
   flow_total <- sum(card_difference[card_difference > 0], na.rm = TRUE) +
-    sum(diag_difference[diag_difference > 0], na.rm = TRUE) 
-  
+    sum(diag_difference[diag_difference > 0], na.rm = TRUE)
+
   return(flow_total)
 }
 # # Test flow out sum
@@ -51,7 +51,7 @@ flowOutSum <- function(x) { # Vector of values
 # outFlow <- flowOutSum(testV)
 ## Define a custom function to calculate the difference from the center - essentially flow accumulation within a neighborhood
 # flowOutPercent <- function(x) { # Vector of values
-#   
+#
 #   center <- x[5]
 #   if(center < 0  | is.na(center)){ # ignore values that are 0 or NA
 #     return(0)
@@ -61,9 +61,9 @@ flowOutSum <- function(x) { # Vector of values
 #   #print(cardinal)
 #   # Represent the NW, NE, SW, and SE values
 #   diagonal <- x[c(1,3,7,9)]
-#   
+#
 #   # Direction key
-#   direction <- list("NW" = 1, 
+#   direction <- list("NW" = 1,
 #                   "N" = 2,
 #                   "NE" = 3,
 #                   "W" = 4,
@@ -71,29 +71,29 @@ flowOutSum <- function(x) { # Vector of values
 #                   "SW" = 7,
 #                   "S" = 8,
 #                   "SE" = 9)
-#   
-#   
+#
+#
 #   # Take the difference between cardinal values and center cell - vector of elevation differences
 #   card_difference <- center - cardinal[cardinal > 0]
-#   
+#
 #   # Take the difference between diagonal values and center cell
 #   adjustment <- 1/sqrt(2)
 #   diag_difference <- (center - diagonal[diagonal > 0]) * adjustment
-#   
+#
 #   # Keep the values above a certain threshold
 #   # Add the values together if they are above 0 (e.i., they flow into the current cell).
 #   # If the center is higher than a direction, it is not gaining flow from that particular direction
 #   flow_out_total <- sum(card_difference[card_difference > 0], na.rm = TRUE) +
-#     sum(diag_difference[diag_difference > 0], na.rm = TRUE) 
-#   
+#     sum(diag_difference[diag_difference > 0], na.rm = TRUE)
+#
 #   # Normalize the flow out percentage
-#   flow_percentage <- 
+#   flow_percentage <-
 #   return(flow_total)
 # }
 # flowOutPercent(testV)
-## Flow Partitioning function- Percent flow 
+## Flow Partitioning function- Percent flow
 outputFlow <- function(values, dir){
-  
+
   # Take input direction and perform the percent calculation -- needs direction list
   flowPosition <- directions[[dir]][[1]] # find the vector value within the direction dictionary (NW = 1)
   scalar <- directions[[dir]][[2]] # find the scaling factor (1 for orthogonal, .707 for diagonal)
@@ -105,8 +105,8 @@ outputFlow <- function(values, dir){
   #print(paste(values, flowPosition, flowElevation, centerElevation))
   if(is.na(centerElevation) || (values[flowPosition] <= 0 || values[5] <= 0 || flowElevation <= 0 || centerElevation <= 0)){
     return(0)
-  } 
-  
+  }
+
   else{
     # Calculate the flow percent based on the difference is the elevation values and flow accumulation
     flowPercent <- (flowElevation - centerElevation)/ (values[flowPosition])*scalar
@@ -123,11 +123,11 @@ flow_Partition <- function(clipped_adj_dem, file_name_and_path = ""){
   dem <- terra::rast(clipped_adj_dem)
   kernel <- array(1, dim = c(3,3,1)) # Create '3D' matrix 3x3x1 with only 1's
   dem_flow_units <- terra::focal3D(dem, w = kernel, fun = flowOutSum, pad = TRUE) # calculate the 'flow accumulation'
-  
+
   # Create Flow Partition maps
   dem_flow_stack <- c(dem_flow_units, dem, dem_flow_units*NA) # stack the two rasters + empty raster
   kernel3D <- array(1, dim = c(3,3,3))  # Create a new kernel for 3x3x3 matrix.
-  
+
   # Calculate the flow from each direction
   north_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "N", fillvalue = 0)
   names(north_flow) <- c("north_flow")
@@ -145,19 +145,19 @@ flow_Partition <- function(clipped_adj_dem, file_name_and_path = ""){
   names(southeast_flow) <- c("southeast_flow")
   southwest_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "SW", fillvalue = 0)
   names(southwest_flow) <- c("southwest_flow")
-  
+
   flowStacked <- c(northwest_flow, north_flow, northeast_flow,
                    west_flow, east_flow, southwest_flow, southeast_flow, south_flow)
 
   names(flowStacked) <- names(flowStacked)
-  
+
   # A more concise version, needs a few adjustments
   # flow_direction <- c("N", "E", "W", "S", "NW", "NE", "SE", "SW")
-  # 
+  #
   # for(x in flow_direction){
   #   terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = x, fillvalue = 0)
   # }
-  
+
   terra::writeRaster(flowStacked, file_name_and_path, overwrite = FALSE)
   return(flowStacked)
 }
@@ -180,10 +180,10 @@ Direction <- function(values, dir){
 
 ## --------------------------
 # Function to initialize and save rasters - returns name of file
-initializeRaster <- function(firstLayer, name, outFolder, zero = F){
+initializeRaster <- function(firstLayer, name, ModelFolder, zero = F){
   temp <- firstLayer
   names(temp) <- c(name)
-  outFile <- file.path(outFolder, paste0(name, ".tif"))
+  outFile <- file.path(ModelFolder, paste0(name, ".tif"))
   terra::writeRaster(temp, outFile, overwrite = T) # writes the initial raster
   return(outFile)
 }
@@ -220,8 +220,8 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
   if(is.character(flowToRoute)){
     flowToRoute <- terra::rast(flowToRoute)
   }
-  
-  
+
+
   # Get dimensions of flow map
   xDim <- res(flowToRoute)[1]
   yDim <- res(flowToRoute)[2]
@@ -233,7 +233,7 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
   # Create mini function to multiple layers
 
   # Shift dictionary/list - shift the map in the opposite direction of intended
-  
+
   shiftValues <- list( # c(xshift, yshift)
                       "N" = c(0, -1),
                       "E" = c(-1, 0),
@@ -254,7 +254,7 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
                   "SE" = "southeast_flow",
                   "SW" = "southwest_flow"
                   )
-  
+
   cardinal_directions <- c("N", "E", "S", "W", "NW", "NE", "SE", "SW")
   # Loop through cardinal directions and create shifted storage maps
   for(x in cardinal_directions){
@@ -266,20 +266,20 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
     # Apply the shift to the dimensions of the raster
     xshift <- shiftDir[[1]][1]*xDim
     yshift <- shiftDir[[1]][2]*yDim
-    
+
     # Shift the raster
     shiftStep <- terra::shift(flowToRoute, dx = xshift, dy = yshift)
     # Crop the raster
     flowShifted <- terra::crop(shiftStep, flowToRoute, snap = "near", extend = TRUE)
     # Select the appropriate layer
     flowDirection <- terra::subset(flowDirectionMap, subset = c(directionofFlow)) # issues with subsetting should be fixed
- 
+
     # Then multiply rasters with lapp
     #flowPercentage <- terra::lapp(stack_Rasters, fun = function(x,y){return(x*y)}) # Not faster..
     #flowPercentage1 <- stack_Rasters[[1]] * stack_Rasters[[2]]
     # Determine the amount of water added
     flowPercentage <- flowDirection * flowShifted
-    
+
     ## Calculate the flow amount in a cardinal direction
     # Multiply the percent of flow from a direction by the amount of lateral flow storage in given direction
     flowAccumDirection <- terra::ifel(is.na(flowPercentage), 0, flowPercentage)
@@ -325,19 +325,19 @@ disperseWater <- function(surfaceStorage, runoffDepth, flowStack_file = file.pat
 }
 ###---------------------------
 # Function that calculates movement aspects of runoff
-waterMovement <- function(surfaceStorage, 
+waterMovement <- function(surfaceStorage,
                           percentLengthMoved,
                           outFolder,
                           method = "percent",
-                          distanceStoragePath = file.path(outFolder, "distanceStorage.tif"), 
-                          flowMapPath = file.path(outFolder, "flowMap.tif"), 
+                          distanceStoragePath = file.path(outFolder, "distanceStorage.tif"),
+                          flowMapPath = file.path(outFolder, "flowMap.tif"),
                           runoffDepthPath = file.path(outFolder, "runoffDepth.tif"),
                           drainMapPath = file.path(outFolder, "drainMap.tif")
                           ){
   # Let's change the function to read in instead hopefully saving on memory
   tempFlowMap <- terra::rast(flowMapPath)
   tempDrainMap <- terra::rast(drainMapPath)
-  
+
   #print(paste0("Maximum distance moved ", round(minmax(percentLengthMoved)[2],3)))
   tempDistanceStorage <- terra::rast(distanceStoragePath) + percentLengthMoved # once distance gets above 100% if moves
   #return(tempDistanceStorage)
@@ -346,12 +346,12 @@ waterMovement <- function(surfaceStorage,
   terra::writeRaster(tempFlowMap, flowMapPath, overwrite = T)
   # Overflow section - water will move based upon overflow or it has previously flowed and is draining
   flowPercents <- terra::ifel(tempDistanceStorage > 1, tempDistanceStorage - 1, 0)  # Depths of water that will move
-  
+
   # Drainage section
   #drainPercents <- terra::ifel(tempFlowMap > 0, percentLengthMoved, flowPercents)
   tempDrainMap <- terra::ifel(tempDistanceStorage == 1, 1, tempDrainMap)
   terra::writeRaster(tempDrainMap, drainMapPath, overwrite = T)
-  
+
   drainPercents <- tempDrainMap * percentLengthMoved
   flowPercents <- flowPercents + drainPercents
   # If flow map > 1, calculate the amount of movement
@@ -363,7 +363,7 @@ waterMovement <- function(surfaceStorage,
     # Overwrite values to disk
     terra::writeRaster(runoffDepth, runoffDepthPath, overwrite = T)
     terra::writeRaster(tempDistanceStorage, distanceStoragePath, overwrite = T)
-    
+
   }else if(method == "velocity"){ # not used currently -- must update
     # move water if the flow Map overflows
     runoffDepth <- terra::ifel(flowMap > 1, surfaceStorage * percentLengthMoved, 0)
@@ -393,7 +393,7 @@ velocity <- function(n, depth, slope, length = 10){
 
 # Time of concentration - overland flow
 # Kerby-Kirpich method
-# Overland flow 
+# Overland flow
 # Tov = Kov * (N (retardance coefficient)*Lov(overland flow length)^.467 * Slope (m/m))
 
 
@@ -405,7 +405,7 @@ ManningsWideChannelVelocity <- function(n, depth, slope, length){
   Area <- depth_adj * length # calculate cross sectional area
   HydraulicRadius <-  Area / (2* depth_adj + length) # calculate the hydraulic radius
   #latex Rh: R_{h} = \frac{(d_{water}*l_{grid})}{2*d_{water} + l_{grid}}
-  slope_gradient <- tanpi(slope/180) # convert slope into a gradient (m/m) 
+  slope_gradient <- tanpi(slope/180) # convert slope into a gradient (m/m)
   # LaTEX V(\frac{m}{s}) = \frac{1}{n}*R_{h}^{\frac{2}{3}} * S^{\frac{1}{2}}_{grad}
   velocity <- ((HydraulicRadius^ (2/3)) * (slope_gradient^.5)) / n # R^2/3 * S^1/2 / n * Area = V * A
   #discharge <- (HydraulicRadius^(2/3)) * (slope_gradient^.5) / n * Area # R^2/3 * S^1/2 / n * Area = V * A
@@ -413,10 +413,10 @@ ManningsWideChannelVelocity <- function(n, depth, slope, length){
 }
 # Test
 #ManningsWideChannelVelocity(n = 0.03, depth = 1, slope = 80, length = 10)
-# ManningsWideChannelVelocity(n = 0.06, depth = 10, slope = 49, length = 10) 
-# ManningsWideChannelVelocity(n = 0.05, depth = .004, slope = 45, length = 10) 
+# ManningsWideChannelVelocity(n = 0.06, depth = 10, slope = 49, length = 10)
+# ManningsWideChannelVelocity(n = 0.05, depth = .004, slope = 45, length = 10)
 
- 
+
 dischargeCalc <- function(velocity, depth, length){
   return(velocity*depth*length)
 }

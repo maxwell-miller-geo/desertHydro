@@ -13,11 +13,11 @@
 ##-------------------- Discharge Creation
 # Function that checks and/or creates discharge for given date
 dischargeCreate <- function(date, ModelFolder, WatershedElements, discharge = T, store = T){
-  if(discharge){
+  rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
+   if(discharge & !is.null(date)){
     print("Processing discharge data...")
     # Load in the filtered rainfall file
     rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
-    rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
     if(file.exists(rain_discharge_file) & file.exists(rainFiltered_file)){
       print("Found discharge data")
       return(rain_discharge <- readr::read_csv(rain_discharge_file, show_col_types = F))
@@ -47,6 +47,7 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, discharge = T,
     }
   }else{
     print("Discharge not selected...")
+    rain_file <- file.path(ModelFolder, "Model-Rainfall.csv")
     rain_discharge <- readr::read_csv(rain_file, show_col_types = F) |>
       dplyr::select(time, Total_in) |>
       dplyr::add_row(Total_in = 0,
