@@ -23,5 +23,6 @@ Depends:
 LazyData: true
 Imports: 
     dplyr,
+    readxl,
     terra,
     whitebox
