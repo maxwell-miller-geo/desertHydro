@@ -1,13 +1,13 @@
 # Main functions for creating maps or performing calculations on storage and flow
 # Calculations done in the main function
-# library(terra)
+library(terra)
 # Reclassify function
 # Takes vector of categorical and returns a matrix used for reclassification based upon the table value.
 # createReClassMatrix <- function(categories, characteristic){
 #   return()
 #   for(x in categories){
 #     temp <- subset(table, table$NLCD_Key == x)
-#
+#     
 #   }
 # }
 
@@ -35,10 +35,10 @@ hydraulicFieldConductivity <- function(KsatMatrix, SaturatedMC, FieldCapAmt, Soi
 # For values inbetween those use
 # (K_{macro} -  K_{FieldCond}) *  \frac{(\frac{W_{surf}-Field_{cap}} { d_{soil}})}{ (\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_FieldCond})
 effectiveConductivity <- function(surfaceWaterStorage, FieldCapacityAmount, KsatMatrix, SatMoistureContent, KsatMacropore, SoilDepth, KFieldConductivity){
-  effK <- ifel(surfaceWaterStorage < FieldCapacityAmount,
-               (KsatMatrix * exp((-13.0/SatMoistureContent) * (SatMoistureContent - surfaceWaterStorage/SoilDepth))),
-               ifel(surfaceWaterStorage >= (SatMoistureContent*SoilDepth),
-                    KsatMacropore,
+  effK <- ifel(surfaceWaterStorage < FieldCapacityAmount, 
+               (KsatMatrix * exp((-13.0/SatMoistureContent) * (SatMoistureContent - surfaceWaterStorage/SoilDepth))), 
+               ifel(surfaceWaterStorage >= (SatMoistureContent*SoilDepth), 
+                    KsatMacropore, 
                     (KsatMacropore-KFieldConductivity) * ((surfaceWaterStorage - FieldCapacityAmount) / SoilDepth) /  (SatMoistureContent - FieldCapacityAmount / SoilDepth) + KFieldConductivity))
   return(effK)
 }
@@ -63,10 +63,10 @@ storage_amount_raster <- function(rockPercent, saturatedMoistureContent, soilDep
 # Effective conductivty is calculated with Bresler's formula for unsaturated conductivity. Kfc is conductivity at field capacity, effective conductivity combines saturated and unsaturated
 # Units of effective conductivity
 effectiveConductivity <- function(surfaceWaterStorage, FieldCapacityAmount, KsatMatrix, SatMoistureContent, KsatMacropore, SoilDepth, KFieldConductivity){
-  effK <- ifel(surfaceWaterStorage < FieldCapacityAmount,
-               (KsatMatrix * exp((-13.0/SatMoistureContent) * (SatMoistureContent - surfaceWaterStorage / SoilDepth))),
-               ifel(surfaceWaterStorage >= (SatMoistureContent * SoilDepth),
-                    KsatMacropore,
+  effK <- ifel(surfaceWaterStorage < FieldCapacityAmount, 
+               (KsatMatrix * exp((-13.0/SatMoistureContent) * (SatMoistureContent - surfaceWaterStorage / SoilDepth))), 
+               ifel(surfaceWaterStorage >= (SatMoistureContent * SoilDepth), 
+                    KsatMacropore, 
                     (KsatMacropore - KFieldConductivity) * ((surfaceWaterStorage - FieldCapacityAmount) / SoilDepth) /  (SatMoistureContent - FieldCapacityAmount / SoilDepth) + KFieldConductivity))
   return(effK)
 }
@@ -80,6 +80,7 @@ lateral_flow <- function(effectiveK, slope, soilDepth, waterStorage){
   lateral_flow <- min(effectiveK*(slope/100) * soilDepth / (10*100), waterStorage) # check units
   return(lateral_flow)
 }
+
 
 # Test
 #storage_amount(LandCoverCharacteristics)

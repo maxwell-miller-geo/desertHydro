@@ -3,7 +3,7 @@
 # library(readxl)
 # library(methods)
 # library(terra)
-
+#
 # LandCoverCharacteristics <- read_excel("LandCoverCharacteristics.xlsx")
 #View(LandCoverCharacteristics)
 

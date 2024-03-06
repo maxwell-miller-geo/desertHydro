@@ -22,7 +22,20 @@ Depends:
     tidyverse
 LazyData: true
 Imports: 
+    data.table,
     dplyr,
+    gganimate,
+    ggplot2,
+    ggtext,
+    gridExtra,
+    hms,
+    lubridate,
+    readr,
     readxl,
+    reshape2,
+    stringr,
     terra,
-    whitebox
+    viridis,
+    viridisLite,
+    whitebox,
+    zoo

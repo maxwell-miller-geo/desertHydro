@@ -23,11 +23,16 @@ quadratic_lm <- function(X, Y, poly = T){
 
 # ---------------------------------
 # Function that finds maximum values in layer, creates dataframe
-dfMax <- function(raster){
+dfMax <- function(raster, rename = NA){
   idx <- terra::where.max(raster)[2] # gets max value cell number
-  pos <-  terra::xyFromCell(raster,idx) # gets xy
-  maxValue <- terra::minmax(raster)[2]
-  name <- names(raster)
+  pos <-  terra::xyFromCell(raster, idx) # gets xy
+  maxValue <- terra::minmax(raster)[2] # maximum value of cell
+  if(is.na(rename)){
+    name <- names(raster)
+  }else{
+    name <- rename
+  }
+  
   return(data.frame(time = name, x = pos[1], y = pos[2], max = maxValue))
 }
 # Test
@@ -36,8 +41,8 @@ dfMax <- function(raster){
 # ---------------------------------
 # Function that creates vector file from data.frame
 vectCreation <- function(df, saveLoc, name, coords){ # df must contain xy
-  shapefile <- terra::vect(df, geom = c("x", "y"), crs = crs(coords))
-  writeVector(shapefile, filename = file.path(ModelFolder, name), overwrite =T)
+  shapefile <- terra::vect(df, geom = c("x", "y"), crs = crs(coords), keepgeom = T)
+  terra::writeVector(shapefile, filename = file.path(saveLoc, name), overwrite = T)
   return(shapefile)
 }
 
@@ -45,6 +50,26 @@ vectCreation <- function(df, saveLoc, name, coords){ # df must contain xy
 # vectName <- "depth_max.shp"
 # vector_shapefile <- terra::vect(data_out, geom = c("x", "y"), crs = crs(SoilStack)) 
 # writeVector(vector_shapefile, filename = file.path(ModelFolder, vectName))
+
+#----------------------------------
+# Function that reads vectors and turns them into DF see vectCreation
+# Returns format: time | x | y | value
+vectRead <- function(vect){
+  
+}
+##-------------------------------
+# Attach a layer and write to disk
+writeLayer <- function(rasterStackPath, layer, layername){
+  stack <- terra::rast(rasterStackPath)
+  names(layer) <- layername
+  terra::writeRaster(layer, rasterStackPath, gdal = "APPEND_SUBDATASET=YES")
+}
+
+# Test
+# rasterStackPath <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\2012-07-15-full-t\Surface_Storage.tif)"
+# layer <- terra::rast(rasterStackPath)[[2]]
+# writeDisk(rasterStackPath, layer)
+
 
 
 

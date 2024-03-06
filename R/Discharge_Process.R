@@ -1,5 +1,5 @@
 # Functions to process the discharge data
-#library(dplyr)
+# library(dplyr)
 # library(lubridate)
 # library(gridExtra)
 # library(readr)
@@ -10,6 +10,61 @@
 # #install.packages("zoo")
 # library(zoo)
 
+##-------------------- Discharge Creation
+# Function that checks and/or creates discharge for given date
+dischargeCreate <- function(date, ModelFolder, WatershedElements, discharge = T, store = T){
+  if(discharge){
+    print("Processing discharge data...")
+    # Load in the filtered rainfall file
+    rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
+    rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
+    if(file.exists(rain_discharge_file) & file.exists(rainFiltered_file)){
+      print("Found discharge data")
+      return(rain_discharge <- readr::read_csv(rain_discharge_file, show_col_types = F))
+    }else {
+      print("Creating discharge data")
+      # Check if discharge present on day - returns the date or optional date
+      date <- lubridate::date(discharge_present(WatershedElements, date))[1] # returns discharge date or next day (first     entry)
+      print(date)
+      # Load in stream data from Waterholes - GCMRC
+      dischargeDataPath <- file.path(WatershedElements, "Waterholes_Stream_gcmrc20231127132459.tsv") #- sloppy
+      print("discharge path complete")
+      # Calculate the daily discharge for given date
+      dischargeDF <- dailyDischarge(discharge_file_path = dischargeDataPath,
+                                    discharge_date = date,
+                                    save_location = ModelFolder,
+                                    saveGraphs = store)
+      print('rain filtered')
+      # Create
+      rainFiltered <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = F)
+      print('combining discharge')
+      # Combine the rainfall and discharge into a single .csv file
+      rain_discharge <- rainfall_discharge_combine(rainfallDF = rainFiltered,
+                                                   dischargeDF,
+                                                   outpath = ModelFolder,
+                                                   store = T)
+      return(rain_discharge)
+    }
+  }else{
+    print("Discharge not selected...")
+    rain_discharge <- readr::read_csv(rain_file, show_col_types = F) |>
+      dplyr::select(time, Total_in) |>
+      dplyr::add_row(Total_in = 0,
+                     time = 0,
+                     .before = 1) |>
+      dplyr::arrange(time)
+    # write rain-discharge into model folder
+    readr::write_csv(x = rain_discharge, file = rain_discharge_file)
+    return(rain_discharge)
+  }
+}
+
+# Test - not currently
+#z <- dischargeCreate(date, ModelFolder, WatershedElements, discharge = T)
+
+
+
+##----------------------discharge totals
 # Function that takes rainfall data from a watersheds gauges and gathers total rainfall
 dischargeTotal <- function(discharge_file, write = F){
     stream_data <- readr::read_tsv(discharge_file, show_col_types = FALSE)
@@ -93,12 +148,13 @@ discharge_present <- function(data_folder, date){
     discharge_dates <- append(discharge_dates, date_after)
   }
   if(is.null(discharge_dates)){
-    return(paste0("No recorded discharge found on ", date, " or ", date_after))
+    stop(paste0("No recorded discharge found on ", date, " or ", date_after))
   }
   return(discharge_dates)
 }
 
 # Example - folder location
+
 # data_folder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleData)"
 # rain_data <- file.path(data_folder, "USGS-GCMRC rain-gauge data WY 2000_2021.xlsx")
 # stream_data <- file.path(data_folder, "Waterholes_Stream_gcmrc20231127132459.tsv")
@@ -108,17 +164,35 @@ discharge_present <- function(data_folder, date){
 
 # Function that creates combined discharge and rainfall output
 
-rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, save = T){
-  # Load in the rainfall dataframe - add a bunch of zeros to match up the two datasets
-  # Create time sequence based upon rainfallDF
-  # time_seq <- seq(rainfallDF$Time_minute[1], tail(rainfallDF$Time_minute, 1), by = "1 min")
-  #
-  # # Merge the datasets
-  # rainMerge <- rainfallDF |>
-  #   tidyr::complete(Time_stamp = seq.POSIXt(min(Time_minute), max(Time_minute), by = "min"), `WATER-1`,`WATER-2`,`WATER-G`)
+rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store = T, trim = F){
+  # # Create zeros within the data create a sequence of time from the rainfall DF
+  # time_seq <- data.frame(Time_minute = seq(rainfallDF$Time_minute[1], tail(rainfallDF$Time_minute,1), by = "min"))
+  # # Change gauge names
+  colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "-", "_")
+  #colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "\\.", "_")
+  # # This step combines the rainfall and the discharge data into 1 dataframe - dirty
+  # rain_seq <- time_seq |>
+  #   dplyr::left_join(rainfallDF, by = "Time_minute") |>
+  #   tidyr::replace_na(list( time = 0))
+  # # This step combines the rainfall and the discharge data into 1 dataframe - dirty
 
-  # This step combines the rainfall and the discharge data into 1 dataframe - dirty
+  # Get the first time recorded for the discharge and rainfall
+  discharge_start <- dischargeDF$`time (MST)`[1]
+  rain_start <- rainfallDF$Time_minute[1]
+
+  if(rain_start < discharge_start){
+    time_diff <- as.numeric(difftime(discharge_start, rain_start, units = "mins"))
+    # Append discharge time at the end of rainfall
+    rainfallDF <- rainfallDF |>
+      dplyr::add_row(Time_minute = discharge_start,
+                     time = time_diff,
+                     WATER_1 = 0, WATER_2 = 0, WATER_G = 0, Total_in = 0,
+                     .before = 1) |>
+      dplyr::arrange(Time_minute)
+  }
+
   rain_discharge <- dplyr::full_join(rainfallDF, dischargeDF, by = join_by("Time_minute" == "time (MST)"))
+  # interpolate between values
   # Selectable columns
   cols <- c("Time_minute", "Total_in", "discharge", "height")
 
@@ -129,6 +203,11 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, save = 
     mutate(time = (as.numeric(rain_discharge$`Time_minute` - base::min(rain_discharge$`Time_minute`)
                              ) / 60) + 1)
 
+  #return(rain_discharge)
+  # Perform linear approximation on discharge and height values
+  rain_discharge$discharge <- round(na.approx(rain_discharge$discharge, na.rm = F), 4)
+  rain_discharge$height <- round(na.approx(rain_discharge$height, na.rm = F), 2)
+  #return(rain_discharge)
   # Replace NA values with 0s
   rain_discharge[is.na(rain_discharge)] <- as.integer(0)
 
@@ -145,15 +224,19 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, save = 
   # Cut off values if rainfall occurs after discharge recedes
   #which(rain_discharge$difftime > 60)[1])){
   index <- which(rain_discharge$difftime > 60)[1] # grab first time hour jump
-  if(rain_discharge[index, ]$discharge < 1){ # remove last entries if little discharge
+  if(rain_discharge[index, ]$discharge < 1 & trim){ # remove last entries if little discharge
       rain_discharge <- rain_discharge[1:(index-1),] # remove end points
    }
 
-
+  # Interpolate between discharge amounts
+  # discharge <- approx(rain_discharge$discharge, method = "linear")
+  # xapprox <- approx(x$discharge, method = "linear")
   # Writes the values into csv
-  if(save){
+  if(store){
     filename <- file.path(outpath, "rain-discharge.csv")
     readr::write_csv(x = rain_discharge, file = filename)
+    # Read csv
+    x <- readr::read_csv(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Demo_Test\2022-07-15\rain-discharge.csv)")
   }
   return(rain_discharge)
 }
@@ -161,7 +244,7 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, save = 
 # Rain
 
 # Plot rainfall - discharge
-plot_rainfall_discharge <- function(rain_discharge_DF, date, save = T, outpath = ""){
+plot_rainfall_discharge <- function(rain_discharge_DF, date, store = T, outpath = ""){
   # Change the x-axis from time to Time_minute
   rain_plot <- ggplot(rain_discharge_DF) +
     geom_col(mapping = aes(x = Time_minute, y = Total_in)) +
@@ -172,14 +255,14 @@ plot_rainfall_discharge <- function(rain_discharge_DF, date, save = T, outpath =
 
   discharge_plot <- ggplot(rain_discharge_DF) +
     geom_line(mapping = aes(x = Time_minute, y = discharge))  +
-    labs(title = paste("Discharge at Waterholes Watershed, AZ:", date), x = "", y = "Measured Discharge (ft\U00B3/s)") +
+    labs(title = paste("Discharge at Waterholes Watershed, AZ:", date), x = "", y = bquote("Measured Discharge" (ft^3/s))) +
     theme_bw() +
     theme(plot.title = element_text(hjust = 0.5))
 
     # Combine the two graphs
     combined_plot <- grid.arrange(discharge_plot, rain_plot)
-    # Save the graph for the date
-    if(save){
+    # store the graph for the date
+    if(store){
       outputPlot <- paste0("discharge_rain_", date ,".png")
       ggsave(file.path(outpath, outputPlot), plot = combined_plot, width = 6)
     }
@@ -187,21 +270,21 @@ plot_rainfall_discharge <- function(rain_discharge_DF, date, save = T, outpath =
 
 # Test function
 # rain_discharge <- "rain-discharge.csv"
-# rain_discharge_DF <- read_csv(file = file.path(ModelFolder, rain_discharge))
-# date <- "2007-07-23"
-# plot_rainfall_discharge(rain_discharge_DF, date = date, save = F)
+# rain_discharge_DF <- readr::read_csv(file = file.path(ModelFolder, rain_discharge))
+# # date <- "2007-07-23"
+# plot_rainfall_discharge(rain_discharge_DF, date = date, store = F)
 
 
 # Filters discharge data set for a particular date, optional - create graphic
 dailyDischarge <- function(discharge_file_path, discharge_date, save_location, saveGraphs = T){
   # Read data into R
-  stream_data <- read_tsv(discharge_file_path)
+  stream_data <- readr::read_tsv(discharge_file_path, show_col_types = F)
 
   # sFilter data with recorded discharge value
   discharge_per_day <- as.data.frame(stream_data) |>
     mutate(date = lubridate::ymd_hms(stream_data$`time (MST)`, quiet = T), discharge = stream_data$`Discharge(cfs)-GCMRC-GCLT1`, height = stream_data$`Gage Height(ft)-GCMRC-GCLT1`) |>
 
-    filter(date(date) == discharge_date) |> # filters out discharge for date "YYYY-MM-DD"
+    filter(lubridate::date(date) == discharge_date) |> # filters out discharge for date "YYYY-MM-DD"
     mutate(discharge_diff = round(c(diff(discharge),0),3)) |> # Calculates difference in discharge per time step
     filter(discharge > 0 | discharge_diff > 0) # selects locations with measured discharge and point before discharge occur
 
@@ -213,19 +296,19 @@ dailyDischarge <- function(discharge_file_path, discharge_date, save_location, s
   time_diff <- round(as.double(difftime(last(discharge_per_day$time), discharge_per_day$time[1], units = "mins")), 3) # number of minutes for particular discharge
 
   # Discharge graph
-  discharge_plot <- ggplot(discharge_per_day) + geom_line(aes(x = hms::as_hms(date), y = discharge)) + labs(title = paste("Discharge at Waterholes Watershed, AZ:", discharge_date), x = "Time", y = "Measured Discharge (ft\U00B3/s)") + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+  discharge_plot <- ggplot(discharge_per_day) + geom_line(aes(x = hms::as_hms(date), y = discharge)) + labs(title = paste("Discharge at Waterholes Watershed, AZ:", discharge_date), x = "Time", y = bquote("Measured Discharge ft"^3/s)) + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
 
   # Height graph
   height_plot <- ggplot(discharge_per_day) + geom_line(aes(x = hms::as_hms(date), y = height)) + labs(title = paste("Stage Height at Waterholes Watershed, AZ:", discharge_date), x = "Time", y = "Measured Height (ft)") + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
 
   # Combine the two graphs
   combined_plot <- grid.arrange(discharge_plot, height_plot)
-  # Save the graph for the date
+  # store the graph for the date
   if(saveGraphs){
     outputPlot <- paste0("discharge_height_plot_",discharge_date,".png")
     ggsave(file.path(save_location, outputPlot), plot = combined_plot, width = 6)
   }
-  # Save the data as an output
+  # store the data as an output
   outputData <- paste0("discharge-data-", discharge_date, ".csv")
   readr::write_csv(discharge_per_day, file = file.path(save_location, outputData))
 

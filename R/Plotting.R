@@ -1,12 +1,27 @@
 # Functions that automate plotting
-
+##----------------------------------
+# Function for creating the discharge plot
+# dischargeEstimate <- function(surfaceRaster, surfaceVelocity, shapefile, gridsize = 10, height = .01){
+#   #x_sections_path <- file.path(ModelElements, "Cross_Section_lines.shp")
+#   cross_section <- terra::vect(shapefile) # bring vector into R
+#   # # Extract the height from the surface stack
+#   surface_Height <- terra::extract(surfaceStorage, cross_section) # surface height in cm
+#   surface_velocity <- terra::extract(surfaceVelocity, cross_section) # velocity at given time (m/s)
+#   cm_to_m2 <- .01 * 10 # conversion factor - Conversion to m time grid size
+#   surface_discharge <- (as.numeric(surface_Height[,3:ncol(surface_Height)]* cm_to_m2) * surface_velocity[,3:ncol(surface_velocity)])
+#   xvalues <- as.numeric(colnames(surface_Height[,3:ncol(surface_Height)])) 
+#   estimated <- data.frame(time = xvalues, predDis = as.numeric(as.vector(surface_discharge[1,]))) 
+#   return
+# }
 
 ## Function that takes a raster stack, resamples, and produces a melted dataframe
-
-meltStack <- function(rasterStack, resample = 5, timevalues = xvalues){ # assumes terra raster stack in latitude/longitude
+meltStack <- function(rasterStack, resample = 1, timevalues = xvalues){ # assumes terra raster stack in latitude/longitude
   # Check if it is a filepath or a loaded in raster
   if(is.character(rasterStack)){ # if passed a file string instead of SpatRaster object
     rasterStack <- terra::rast(rasterStack)
+  }
+  if((dim(rasterStack)[1] * dim(rasterStack)[2]) > 160000){
+    resample <- 5
   }
   # Down sample the raster images
   downsampledstack <- terra::aggregate(rasterStack, fact = resample, fun = "mean", na.rm = F) |> 
