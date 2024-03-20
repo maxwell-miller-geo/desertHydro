@@ -1,8 +1,8 @@
 # Complete Model
 # Wrap it up
-arid_model <- function(ModelFolder, 
-                       date = NULL, 
-                       time_step = 1, 
+arid_model <- function(ModelFolder,
+                       date = NULL,
+                       time_step = 1,
                        simulation_length = NA,
                        WatershedElements = r"(C:\Thesis\Arid-Land-Hydrology\R\Example\MiniWatershedElements)",
                        mini = F,
@@ -10,7 +10,7 @@ arid_model <- function(ModelFolder,
                        store = T,
                        gif = T,
                        crop = T,
-                       discharge = T, 
+                       discharge = T,
                        impervious = F,
                        overwrite = F,
                        write = T,
@@ -19,23 +19,23 @@ arid_model <- function(ModelFolder,
                        key = "NLCD_Key",
                        ...){
 
-# ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\Test_1)"  
+# ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\Test_1)"
 ## Section 1
 ## 1. Load in necessary input data
 # Libraries that are necessary
 # libs <- c(
 #   "tidyverse", "tidyterra", "data.table",
-#   "ggmap", "classInt", "gifski", 
-#   "gganimate", "reshape2", "tidyverse", 
-#   "dplyr", "readxl", "gridExtra", 
+#   "ggmap", "classInt", "gifski",
+#   "gganimate", "reshape2", "tidyverse",
+#   "dplyr", "readxl", "gridExtra",
 #   "ggplot2", "zoo", "purrr",
 #   "ggtext", "whitebox", "bookdown",
 #   "terra", "viridis", "viridisLite",
 #   "stringr")
-# 
+#
 # # Check if packages are install or not
 # installed_libraries <- libs %in% rownames(installed.packages())
-# 
+#
 # if(any(installed_libraries == F)){
 #   install.packages(libs[!installed_libraries])
 # }
@@ -68,7 +68,7 @@ if(file.exists(model_complete) & !overwrite){ # check if model complete
 ##------------------------------------
 
 # Input files
-source("WatershedSetUp.R")
+# source("WatershedSetUp.R")
 # Files below are not needed for Example Script
 # dem_path <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\QGIS\waterholes_extent.tif)" # path of dem extent
 # land_cover_path <-  r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # land cover - unclipped file.
@@ -77,16 +77,17 @@ source("WatershedSetUp.R")
 dem_path <- file.path(WatershedElements, "waterholes_extent.tif") # path of dem extent
 if(!crop){ # if it isn't cropped, it will adjust to look for the demo file.
   watershed_shape_path <-  NA
-  #dem_path <- file.path(WatershedElements, "demo_dem.tif")
-  dem_path <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\DemoElements\demo_dem.tif)"
+  dem_path <- file.path(WatershedElements, "demo_dem.tif")
+  #dem_path <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\DemoElements\demo_dem.tif)"
 }else if(mini){
   watershed_shape_path <- file.path(WatershedElements,"mini_ws.shp")
   file.exists(watershed_shape_path)# watershed boundary ### IF NOT MINI
 }else{
   watershed_shape_path <- file.path(WatershedElements,"waterholes_shape.shp") # watershed boundary ### IF NOT MINI
 }
-
-if(file.exists(watershed_shape_path)){
+if(is.na(watershed_shape_path)){
+  print("No computational boundary layer")
+}else if(file.exists(watershed_shape_path) | watershed){
   print("Located computational boundary layer")
 }else{
   error(paste0("Could not locate computaitonal boundary:", watershed_shape_path))
@@ -98,9 +99,9 @@ landcovername <- watershedElements(Outpath = WatershedElements, DEM = dem_path, 
 ##--------------------------------
 
 # store initial conditions for a particular model.
-source("initialConditions.R")
+#source("initialConditions.R")
 # Assign the models - DEM
-# Smoothed DEM - can use the unaltered DEM or a filled/ breached model. 
+# Smoothed DEM - can use the unaltered DEM or a filled/ breached model.
 # It is not recommended to use the original DEM
 model_dem <- file.path(WatershedElements, "model_dem.tif") # can adjust the input dem
 #"C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements\"
@@ -111,14 +112,14 @@ initial_conditions(ModelOutputs = ModelFolder, model_dem = model_dem) # saves in
 ## Initial Soil conditions
 ##-----------------------------------
 
-source("initialSoilConditions.R")
+#source("initialSoilConditions.R")
 
 if(key == "NLCD_Key"){
   LandCoverCharacteristics <- "LandCoverCharacteristics.xlsx" # default excel file within current project folder
 }else if(key == "MUKEY"){
   LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
 }else if(key == "KEY"){
-  
+
 }
 
 ClassificationMap <- file.path(WatershedElements, landcovername) # adjusted/cropped classification map - must be named correctly
@@ -140,7 +141,7 @@ initial_soil_conditions(LandCoverCharacteristics = LandCoverCharacteristics,
 
 ## 2b. Weather - Rain data
 #eventDate <- "2012-07-15"
-source("Rainfall_Process.R")
+# source("Rainfall_Process.R")
 # Read in the rainfall data from a saved file, normalize it, and create a
 rain_file <- rainfallCreation(ModelFolder, WatershedElements, date = date, method = rainfall_method, overwrite = overwrite)
 # Slight issue: will use saved rainfall data if present - does not check to see what type of data the rainfall is
@@ -148,7 +149,7 @@ rain_file <- rainfallCreation(ModelFolder, WatershedElements, date = date, metho
 ## Discharge presence - obtain information for graphing
 ##---------------------
 
-source("Discharge_Process.R")
+# source("Discharge_Process.R")
 rain_discharge <- dischargeCreate(date = date, ModelFolder, WatershedElements, rain_file = rain_file, discharge = discharge)
 
 # For both cases of discharge
@@ -166,7 +167,7 @@ total_rain <- sum(rain_discharge$Total_in)
 if(store & discharge){
   plot_rainfall_discharge(rain_discharge, date = date, store = store, outpath = ModelFolder)
 }
-# 
+#
 ## Pre-model checks
 ## ------------------------------------
 ## 3. Checks
@@ -199,7 +200,7 @@ files_recommended <- c(time_step, simulation_length)
 ##--------------------------- Flow Model
 ## Flow Model
 # ## 4. Model Script
-source("flowModel.R")
+# source("flowModel.R")
 
 # Necessary elements for the model
 # SoilStack_file <- file.path(ModelFolder, "model_soil_stack.tif")
@@ -212,7 +213,7 @@ source("flowModel.R")
 # Soil Moisture Routing Model - writes
 print("Beginning Model Run...")
 gc()
-source("utils.R")
+# source("utils.R")
 flowModel(SoilStack_file = SoilStack_file,
           flowStack_file = flowStack_file,
           landCover_file = landCover_file,
@@ -222,7 +223,7 @@ flowModel(SoilStack_file = SoilStack_file,
           time_step = time_step,
           simulation_length = simulation_length,
           write = write,
-          rainfall_method = rainfall_method, 
+          rainfall_method = rainfall_method,
           impervious = impervious,
           gif = gif,
           restartModel = restartModel
@@ -230,8 +231,8 @@ flowModel(SoilStack_file = SoilStack_file,
 ## Display - Ought to be modular
 ## ----------------------------------------------------------------------------
 
-source("utils.R")
-source("postAnalysis.R")
+# source("utils.R")
+# source("postAnalysis.R")
 
 print(paste0("Creating graphics in ", ModelFolder))
 # Path to stacked rasters
@@ -244,7 +245,7 @@ if(store){
 #x_sections_path <- "gauge_waterholes.shp" # shapefile with points to measure discharge
 
 
-  
+
   # cm_to_ft <- 1/(2.54*12) # conversion factor - Conversion 1/(2.54*12 = .0328)
   # surface_Height <- surface_Height[,3:ncol(surface_Height)] * cm_to_ft
   # height values
@@ -253,22 +254,22 @@ if(store){
   # # Calculate discharge values
   # surface_discharge <- B[1] + B[2] * surface_Height + B[3] * surface_Height ^2
   # xvalues <- as.numeric(colnames(surface_Height))
-  
+
   #surface_discharge <- as.numeric(surface_Height[,3:ncol(surface_Height)] * surface_velocity[,3:ncol(surface_velocity)])
-  #estimated <- data.frame(time = xvalues, predDis = as.numeric(as.vector(surface_discharge[1,]))) 
-  
+  #estimated <- data.frame(time = xvalues, predDis = as.numeric(as.vector(surface_discharge[1,])))
+
 
 
 # Surface GIF
 ##--------------------------------
 
 # Functions for visualizations
-source("Plotting.R")
+#source("Plotting.R")
 # Libraries
-library(ggplot2)
-library(viridisLite)
-library(gganimate)
-library(viridis)
+# library(ggplot2)
+# library(viridisLite)
+# library(gganimate)
+# library(viridis)
 
 print("Retrieving rainfall data for simulation")
 if(gif){

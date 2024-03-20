@@ -29,10 +29,10 @@ library(desertHydro) # loads installed version not vignette version
 ```{r}
 # Important steps
 # Location or file path to save the 
-# ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
+ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
 # # ModelFolder <- r"(~TestFolderPackage)"
-# WatershedElements <- file.path("inst/extdata/")
+WatershedElements <- file.path("inst/extdata/DemoElements")
 
-#desertHydro:::arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements)
+desertHydro:::arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements,crop = F)
 ```
 

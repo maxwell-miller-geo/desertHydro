@@ -12,7 +12,7 @@
 
 ##-------------------- Discharge Creation
 # Function that checks and/or creates discharge for given date
-dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, discharge = T, store = T){
+dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, discharge = F, store = T){
   # Load in the filtered rainfall file
   rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
   rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")

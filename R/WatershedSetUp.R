@@ -18,7 +18,7 @@ watershedElements <- function(Outpath, DEM, WatershedShape, land_cover_file = "l
   if(!file.exists(model_dem)){
     print('Creating adjusted digital elevation model.')
     #library(whitebox)
-    source("demProcessing.R", local = TRUE) # Custom function with whitebox scripts
+    #source("demProcessing.R", local = TRUE) # Custom function with whitebox scripts
     flow_accumlation_wb(dem_file_path = DEM, Outpath = Outpath, watershed_shape_path = WatershedShape, ModelFolder = ModelFolder) # Does not overwrite - creates many rasters
     print('Finished creating adjusted DEM.')
   } else{
@@ -44,10 +44,11 @@ watershedElements <- function(Outpath, DEM, WatershedShape, land_cover_file = "l
   # Check if the landcover raster is already there
   landcovername <- landcovername
   land_cover_clip_file <- file.path(Outpath, landcovername)
+  print(land_cover_clip_file)
   print('Locating adjusted land cover map.')
   if(!file.exists(land_cover_clip_file)){
     # Landcover #
-    source("createWatershedModel.R", local = TRUE) # Land Cover script
+    #source("createWatershedModel.R", local = TRUE) # Land Cover script
     print("Land cover file not found. Searching additional location.")
     #land_cover_file <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # school desktop
     extension <- sub(".*\\.", "", land_cover_file) # use regular expression to get file extension
@@ -56,7 +57,7 @@ watershedElements <- function(Outpath, DEM, WatershedShape, land_cover_file = "l
     }else{
       land_cover <- terra::rast(land_cover_file)
     }
-    
+
     dem_local <- terra::rast(model_dem)
     land_cover_raster <- resizeShape(spatialObject = land_cover, extent_raster = dem_local, watershedboundary = WatershedShape, save = F)
     terra::writeRaster(land_cover_raster, file.path(land_cover_clip_file), overwrite = TRUE)
@@ -66,7 +67,7 @@ watershedElements <- function(Outpath, DEM, WatershedShape, land_cover_file = "l
     print("Found Land Cover raster.")
     land_cover_raster <- terra::rast(land_cover_clip_file)
   }
-  
+
   # Flow Calculations
   flow_filename <- "stack_flow.tif" # must be created with names of layers
   flow_file <- file.path(Outpath, flow_filename)
@@ -74,7 +75,7 @@ watershedElements <- function(Outpath, DEM, WatershedShape, land_cover_file = "l
   if(!file.exists(flow_file)){ # Can take a few minutes if not already created
     print("No flow partition map found.")
     print("Creating flow partition map.")
-    source("setup_FlowPartition.R", local = TRUE) # functions necessary
+    #source("setup_FlowPartition.R", local = TRUE) # functions necessary
     #flowStack <- flow_Partition(clipped_adj_dem = model_dem, file_name_and_path = flow_file)
     flowStack <- flowMap(dem = model_dem, outFolder = WatershedElements)
     print("Flow partition map created.")
@@ -82,7 +83,7 @@ watershedElements <- function(Outpath, DEM, WatershedShape, land_cover_file = "l
     print('Found flow partition map.')
     flowStack <- terra::rast(flow_file) + 0
   }
-  
+
   print("Checking created flow calculations extent.")
   # Crop the flow calculations raster to the extent of the land cover. If needed, overwrite previous data
   if(!(dim(flowStack)[1] == dim(land_cover_raster)[1] & dim(flowStack)[2] == dim(land_cover_raster)[2])){
@@ -94,12 +95,12 @@ watershedElements <- function(Outpath, DEM, WatershedShape, land_cover_file = "l
   return(landcovername)
 }
 
-# Test 
+# Test
 # fileOutpath <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements)"
 # dem_path <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\QGIS\waterholes_extent.tif)"
 # land_cover_path <-  r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # school desktop
 # watershed_shape_path <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\QGIS\waterholes_shape.shp)"
-# 
+#
 # watershedElements(Outpath = fileOutpath, DEM = dem_path, LandCover = land_cover_path, WatershedShape = watershed_shape_path)
 
 ## Create voronoi polygons
@@ -110,10 +111,10 @@ createVoronoi <- function(coords, shapefile, write = F){
   lines <- terra::voronoi(points, bnd = shapefile, as.lines = T)
   df <- geom(lines)[c(1:2,5:6),] # convert points to dataframe
   line_1 <- as.lines(df)
-  
+
   matrix_points <- as.matrix(data.frame(df$x, df$y))
   line_split <- terra::vect(df, type = "lines", crs = crs(shapefile)) # creates points
-  
+
   watershed_split <- terra::split(shape, line_split)
   terra::writeVector(watershed_split, "voronoi-test.shp", filetype = "ESRI Shapefile", overwrite = T)
 }
@@ -123,7 +124,7 @@ createVoronoi <- function(coords, shapefile, write = F){
 # shape <- terra::vect(r"(C:\\Thesis\\Arid-Land-Hydrology\\R\\Example\\WatershedElements/waterholes_shape.shp)")
 # extent <- terra::ext(-111.539814814976, -111.49617, 36.8323, 36.8616666671242) # extent of mini raster
 # smallerExt <- terra::ext(-111.539814814976, -111.51057, 36.84238, 36.8616666671242)
-# 
+#
 # mini <- terra::crop(shape, smallerExt)
 # WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\MiniWatershedElements)"
 # writeVector(mini, filename = file.path(WatershedElements, "mini_ws.shp"))
