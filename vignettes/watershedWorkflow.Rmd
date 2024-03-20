@@ -1,0 +1,38 @@
+---
+title: "Watershed Workflow in desertHydro"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{watershedWorkflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  progress = FALSE
+  
+)
+```
+
+$$(K_{macro} -  K_{FieldCond}) {\frac{W_{surf}-Field_{cap}}{d_{soil}}} ({\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}})^{-1}$$
+$${\frac{W_{surf}-Field_{cap}}{d_{soil}}}$$
+$$ {\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}$$
+```{r setup}
+library(desertHydro) # loads installed version not vignette version
+# Only use other packages that are already required
+
+```
+
+```{r}
+# Important steps
+# Location or file path to save the 
+# ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
+# # ModelFolder <- r"(~TestFolderPackage)"
+# WatershedElements <- file.path("inst/extdata/")
+
+#desertHydro:::arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements)
+```
+

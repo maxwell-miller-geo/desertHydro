@@ -39,3 +39,7 @@ Imports:
     viridisLite,
     whitebox,
     zoo
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

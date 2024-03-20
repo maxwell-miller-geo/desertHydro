@@ -26,17 +26,21 @@ storage_amount <- function(landCoverTable){
 # Create the land cover stacked map with soil characteristics
 createSoilRasters <- function(ClassMap, soilTable, key = "NLCD_Key"){
   # Load in the class map
+  if(is.character(soilTable)){
+    soilTable <- readxl::read_xlsx(soilTable)
+  }
   ClassMap <- terra::rast(ClassMap)
   landtypes <- unique(terra::values(ClassMap, na.rm = TRUE))
   outStack <- c() # creates empty vector
+  #ClassMapNumeric <- terra::subst(ClassMap, ClassMap, landtypes)
   for(x in 1:length(soilTable)){
 
     if(is.character(soilTable[[x]])){
       next # Breaks if the value in the table is a character (names)
     }
-    c_matrix <- matrix(cbind(soilTable[[key]], soilTable[[x]]), ncol = 2) # Create classification matrix
-    #temp <- terra::classify(ClassMap, c_matrix, right = T) # classify ClassMap based on matrix
-    temp <- terra::subst(ClassMap, soilTable[[key]], soilTable[[x]]) # classify ClassMap based on matrix
+    c_matrix <- matrix(cbind(soilTable[[key]], soilTable[[x]]), ncol = 2)# Create classification matrix
+    temp <- terra::classify(ClassMap, c_matrix, right = T) # classify ClassMap based on matrix
+    #temp <- terra::subst(ClassMap, soilTable[[key]], soilTable[[x]]) # classify ClassMap based on matrix
     names(temp) <- names(soilTable[x]) # Assign a name to the Raster Layer
     outStack <- append(outStack, temp) # Append raster layer to raster 'brick'
   }

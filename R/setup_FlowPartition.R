@@ -4,14 +4,7 @@
 #install.packages("terra")
 #library(terra)
 
-directions <- list("NW" = list(1, .7071),
-                         "N" = list(2, 1),
-                         "NE" = list(3, .7071),
-                         "W" = list(4, 1),
-                         "E" = list(6, 1),
-                         "SW" = list(7, .7071),
-                         "S" = list(8, 1),
-                         "SE" = list(9, .7071))
+
 
 # Direction = vector value, direction scalar
 ## Function -------------------------------------
@@ -92,24 +85,32 @@ flowOutSum <- function(x) { # Vector of values
 # }
 # flowOutPercent(testV)
 ## Flow Partitioning function- Percent flow
-outputFlow <- function(values, dir){
-
+outputFlow <- function(kernelList, dir){
+  directions <- list("NW" = list(1, .7071),
+                     "N" = list(2, 1),
+                     "NE" = list(3, .7071),
+                     "W" = list(4, 1),
+                     "E" = list(6, 1),
+                     "SW" = list(7, .7071),
+                     "S" = list(8, 1),
+                     "SE" = list(9, .7071))
+  print(list(kernelList))
+  #return(values)
   # Take input direction and perform the percent calculation -- needs direction list
   flowPosition <- directions[[dir]][[1]] # find the vector value within the direction dictionary (NW = 1)
   scalar <- directions[[dir]][[2]] # find the scaling factor (1 for orthogonal, .707 for diagonal)
-  centerElevation <- values[14] # center value of the top layer
-  flowElevation <- values[flowPosition + 9]
+  centerElevation <- kernelList[14] # center value of the top layer
+  flowElevation <- kernelList[flowPosition + 9]
   # cat(flowElevation, centerElevation, flowElevation)
   # print('Done')
   # Checks if center cell and cell in question have any flow accumulation at all
   #print(paste(values, flowPosition, flowElevation, centerElevation))
-  if(is.na(centerElevation) || (values[flowPosition] <= 0 || values[5] <= 0 || flowElevation <= 0 || centerElevation <= 0)){
+  if(is.na(centerElevation) || kernelList[flowPosition] <= 0 || kernelList[5] <= 0 || flowElevation <= 0 || centerElevation <= 0){
     return(0)
   }
-
   else{
     # Calculate the flow percent based on the difference is the elevation values and flow accumulation
-    flowPercent <- (flowElevation - centerElevation)/ (values[flowPosition])*scalar
+    flowPercent <- (flowElevation - centerElevation)/ (kernelList[flowPosition])*scalar
     return(max(flowPercent, 0)) # return only positive values
   }
 }
@@ -118,12 +119,12 @@ outputFlow <- function(values, dir){
 
 ## Function that takes the DEM input and brings it all together
 # DEM -> Flow Sum Map (x1) -> Flow Partitioned Map(s) (x8) -> Stacked-Output
-flow_Partition <- function(clipped_adj_dem, file_name_and_path = ""){
+flow_Partition <- function(clipped_adj_dem, file_name_and_path = NA){
   # Create Flow sum map
   dem <- terra::rast(clipped_adj_dem)
   kernel <- array(1, dim = c(3,3,1)) # Create '3D' matrix 3x3x1 with only 1's
   dem_flow_units <- terra::focal3D(dem, w = kernel, fun = flowOutSum, pad = TRUE) # calculate the 'flow accumulation'
-
+  plot(dem)
   # Create Flow Partition maps
   dem_flow_stack <- c(dem_flow_units, dem, dem_flow_units*NA) # stack the two rasters + empty raster
   kernel3D <- array(1, dim = c(3,3,3))  # Create a new kernel for 3x3x3 matrix.
@@ -157,11 +158,14 @@ flow_Partition <- function(clipped_adj_dem, file_name_and_path = ""){
   # for(x in flow_direction){
   #   terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = x, fillvalue = 0)
   # }
-
-  terra::writeRaster(flowStacked, file_name_and_path, overwrite = FALSE)
+  if(!is.na(file_name_and_path)){
+    terra::writeRaster(flowStacked, file_name_and_path, overwrite = FALSE)
+  }
   return(flowStacked)
 }
-# Test for flow direction maps
+# # Test for flow direction maps
+exampleRast <- (matrix(c(5,2,1,5,3,2,6,4,3), ncol = 3))
+plot(flow_Partition(exampleRast))
 #flow_Partition(dem_raster, file_name_and_path = flow_file)
 
 ## Direction function takes in a vector of values and return a particular directions value

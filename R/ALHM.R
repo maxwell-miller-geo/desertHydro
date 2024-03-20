@@ -113,6 +113,8 @@ initial_conditions(ModelOutputs = ModelFolder, model_dem = model_dem) # saves in
 
 LandCoverCharacteristics <- file.path(WatershedElements, "LandCoverCharacteristics.xlsx") # default excel file within current project folder
 #LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
+landcovername <- "landcover.tif"
+
 ClassificationMap <- file.path(WatershedElements, landcovername) # adjusted/cropped classification map - must be named correctly
 #DEM <- file.path(WatershedElements, "cropped_dem.tif") # clipped dem, elevations unaltered - must be named correctly
 DEM <- file.path(WatershedElements, "model_dem.tif") # modified dem, elevations unaltered - must be named correctly

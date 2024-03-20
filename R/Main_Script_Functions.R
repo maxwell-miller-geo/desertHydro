@@ -7,7 +7,7 @@ library(terra)
 #   return()
 #   for(x in categories){
 #     temp <- subset(table, table$NLCD_Key == x)
-#     
+#
 #   }
 # }
 
@@ -29,16 +29,16 @@ hydraulicFieldConductivity <- function(KsatMatrix, SaturatedMC, FieldCapAmt, Soi
 
 # Calculates the effective hydrualic conductivity for subsurface flow
 # LaTEX version
-# K _{mat} ^{\frac{-13}{ Sat_{mc}} * Sat_{mc} -  \frac{W_{surf}}{d_{soil}}}} for surface water below field capacity
+# K_{mat} ^{\frac{-13}{ Sat_{mc}} * Sat_{mc} -  \frac{W_{surf}}{d_{soil}}} for surface water below field capacity
 # If surface water contains more water than the maximum soil moisture content * Soil Depth
 # K_{macro}
 # For values inbetween those use
 # (K_{macro} -  K_{FieldCond}) *  \frac{(\frac{W_{surf}-Field_{cap}} { d_{soil}})}{ (\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_FieldCond})
 effectiveConductivity <- function(surfaceWaterStorage, FieldCapacityAmount, KsatMatrix, SatMoistureContent, KsatMacropore, SoilDepth, KFieldConductivity){
-  effK <- ifel(surfaceWaterStorage < FieldCapacityAmount, 
-               (KsatMatrix * exp((-13.0/SatMoistureContent) * (SatMoistureContent - surfaceWaterStorage/SoilDepth))), 
-               ifel(surfaceWaterStorage >= (SatMoistureContent*SoilDepth), 
-                    KsatMacropore, 
+  effK <- ifel(surfaceWaterStorage < FieldCapacityAmount,
+               (KsatMatrix * exp((-13.0/SatMoistureContent) * (SatMoistureContent - surfaceWaterStorage/SoilDepth))),
+               ifel(surfaceWaterStorage >= (SatMoistureContent*SoilDepth),
+                    KsatMacropore,
                     (KsatMacropore-KFieldConductivity) * ((surfaceWaterStorage - FieldCapacityAmount) / SoilDepth) /  (SatMoistureContent - FieldCapacityAmount / SoilDepth) + KFieldConductivity))
   return(effK)
 }
@@ -63,10 +63,10 @@ storage_amount_raster <- function(rockPercent, saturatedMoistureContent, soilDep
 # Effective conductivty is calculated with Bresler's formula for unsaturated conductivity. Kfc is conductivity at field capacity, effective conductivity combines saturated and unsaturated
 # Units of effective conductivity
 effectiveConductivity <- function(surfaceWaterStorage, FieldCapacityAmount, KsatMatrix, SatMoistureContent, KsatMacropore, SoilDepth, KFieldConductivity){
-  effK <- ifel(surfaceWaterStorage < FieldCapacityAmount, 
-               (KsatMatrix * exp((-13.0/SatMoistureContent) * (SatMoistureContent - surfaceWaterStorage / SoilDepth))), 
-               ifel(surfaceWaterStorage >= (SatMoistureContent * SoilDepth), 
-                    KsatMacropore, 
+  effK <- ifel(surfaceWaterStorage < FieldCapacityAmount,
+               (KsatMatrix * exp((-13.0/SatMoistureContent) * (SatMoistureContent - surfaceWaterStorage / SoilDepth))),
+               ifel(surfaceWaterStorage >= (SatMoistureContent * SoilDepth),
+                    KsatMacropore,
                     (KsatMacropore - KFieldConductivity) * ((surfaceWaterStorage - FieldCapacityAmount) / SoilDepth) /  (SatMoistureContent - FieldCapacityAmount / SoilDepth) + KFieldConductivity))
   return(effK)
 }
