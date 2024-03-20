@@ -1,6 +1,6 @@
 # Main functions for creating maps or performing calculations on storage and flow
 # Calculations done in the main function
-library(terra)
+#library(terra)
 # Reclassify function
 # Takes vector of categorical and returns a matrix used for reclassification based upon the table value.
 # createReClassMatrix <- function(categories, characteristic){

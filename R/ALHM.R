@@ -23,25 +23,25 @@ arid_model <- function(ModelFolder,
 ## Section 1
 ## 1. Load in necessary input data
 # Libraries that are necessary
-libs <- c(
-  "tidyverse", "tidyterra", "data.table",
-  "ggmap", "classInt", "gifski", 
-  "gganimate", "reshape2", "tidyverse", 
-  "dplyr", "readxl", "gridExtra", 
-  "ggplot2", "zoo", "purrr",
-  "ggtext", "whitebox", "bookdown",
-  "terra", "viridis", "viridisLite",
-  "stringr")
-
-# Check if packages are install or not
-installed_libraries <- libs %in% rownames(installed.packages())
-
-if(any(installed_libraries == F)){
-  install.packages(libs[!installed_libraries])
-}
-invisible(lapply(
-  libs, library, character.only = T
-))
+# libs <- c(
+#   "tidyverse", "tidyterra", "data.table",
+#   "ggmap", "classInt", "gifski", 
+#   "gganimate", "reshape2", "tidyverse", 
+#   "dplyr", "readxl", "gridExtra", 
+#   "ggplot2", "zoo", "purrr",
+#   "ggtext", "whitebox", "bookdown",
+#   "terra", "viridis", "viridisLite",
+#   "stringr")
+# 
+# # Check if packages are install or not
+# installed_libraries <- libs %in% rownames(installed.packages())
+# 
+# if(any(installed_libraries == F)){
+#   install.packages(libs[!installed_libraries])
+# }
+# invisible(lapply(
+#   libs, library, character.only = T
+# ))
 
 ##-------------------------
 # Section 2

@@ -2,31 +2,31 @@
 # The script takes in the necessary input parameters and performs flow routing
 # The script writes the outputs of the script to the model folder
 # Necessary Libraries
-libs <- c(
-  "tidyverse", "tidyterra", "tidyverse", "dplyr", "readxl", "whitebox", "terra", "data.table")
-
-# Check if packages are install or not
-installed_libraries <- libs %in% rownames(installed.packages())
-
-if(any(installed_libraries == F)){
-  install.packages(libs[!installed_libraries])
-}
-invisible(lapply(
-  libs, library, character.only = T
-))
+# libs <- c(
+#   "tidyverse", "tidyterra", "tidyverse", "dplyr", "readxl", "whitebox", "terra", "data.table")
+# 
+# # Check if packages are install or not
+# installed_libraries <- libs %in% rownames(installed.packages())
+# 
+# if(any(installed_libraries == F)){
+#   install.packages(libs[!installed_libraries])
+# }
+# invisible(lapply(
+#   libs, library, character.only = T
+# ))
 
 # Custom Functions necessary
 #source("setup_LandCover.R") # Land Cover script
-# If flow direction has already been calculated, then it can be loaded in there.
-source("setup_FlowPartition.R")
-# Weather functions
-source("Rainfall_Process.R")
-# Model functions
-source("Main_Script_Functions.R")
-# Digital Elevation Functions
-source("demProcessing.R")
-# Utility functions
-source("utils.R")
+# # If flow direction has already been calculated, then it can be loaded in there.
+# source("setup_FlowPartition.R")
+# # Weather functions
+# source("Rainfall_Process.R")
+# # Model functions
+# source("Main_Script_Functions.R")
+# # Digital Elevation Functions
+# source("demProcessing.R")
+# # Utility functions
+# source("utils.R")
 
 ##  Model Script
 #LandCoverCharacteristics <- storage_amount(LandCoverCharacteristics) # adjusts the storage amount must reassign values for table

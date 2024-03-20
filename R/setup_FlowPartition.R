@@ -82,6 +82,64 @@ flowOutSum <- function(x) { # Vector of values
 #   return(flow_total)
 # }
 # flowOutPercent(testV)
+
+## ----------------------------- Flow Map
+# New better way to make flow function map!
+flowMap <- function(dem, outFolder = NA, name = "stack_flow.tif"){
+  # Load in DEM
+  if(is.character(dem)){
+    dem <- terra::rast(dem)
+  }
+  # Create flow map based on elevation differences
+  # Create Flow sum map
+  kernel <- array(1, dim = c(3,3,1)) # Create '3D' matrix 3x3x1 with only 1's
+  dem_flow <- terra::focal3D(dem, w = kernel, fun = flowOutSum, pad = TRUE) # calculate the 'flow accumulation'
+  
+  # Shift and create dem maps
+  flowMaps <- createFlowMaps(dem, dem_flow)
+  if(is.character(outFolder)){
+    terra::writeRaster(flowMaps, file.path(outFolder, name = "stack_flow.tif"), overwrite = T)
+  }
+  return(flowMaps)
+}
+# Test
+#flowMapTest <- flowMap(dem)
+## ---------------------------
+# Create flow maps 2.0
+createFlowMaps <- function(dem, dem_flow){
+  xDim <- terra::res(dem)[1]
+  yDim <- terra::res(dem)[2]
+  # The names of the different flow layers
+  flowKey <- list("N" = list("north_flow",c(0, -1), 1), 
+                  "E" = list("east_flow",c(-1, 0), 1),
+                  "S" = list("south_flow",c(0, 1), 1),
+                  "W" = list("west_flow",c(1, 0), 1),
+                  "NW" = list("northwest_flow",c(1, -1), .7071),
+                  "NE" = list("northeast_flow",c(-1, -1), .7071),
+                  "SE" = list("southeast_flow",c(-1, 1), .7071),
+                  "SW" = list("southwest_flow", c(1, 1), .7071)
+                  )
+  mapCalculations <- function(x, dem, dem_flow, xDim, yDim, flowKey){
+    # Apply the shift to the dimensions of the raster
+    xshift <- flowKey[[x]][[2]][[1]]*xDim
+    yshift <- flowKey[[x]][[2]][[2]]*yDim
+    # Stack dem and flow direction map
+    stack <- c(dem, dem_flow)
+    # Shift the raster
+    shiftMap <- terra::shift(stack, dx = xshift, dy = yshift)
+    # Crop the raster
+    mapShift <- terra::crop(shiftMap, dem, snap = "near", extend = TRUE)
+    # Adjust maps
+    directionNorth <- (mapShift[[1]] - dem) / mapShift[[2]] * flowKey[[x]][[3]]
+    # Adjust
+    filtered <- terra::ifel(directionNorth > 0, directionNorth, 0)
+    names(filtered) <- flowKey[[x]][[1]] # direction of flow
+    return(filtered)
+  }
+  flowList <- lapply(names(flowKey), FUN = mapCalculations, dem, dem_flow, xDim, yDim, flowKey)
+  flowMaps <- terra::rast(flowList)
+  return(flowMaps)
+}
 ## Flow Partitioning function- Percent flow 
 outputFlow <- function(values, dir){
   
@@ -164,10 +222,10 @@ flow_Partition <- function(clipped_adj_dem, file_name_and_path = ""){
 #flow_Partition(dem_raster, file_name_and_path = flow_file)
 
 ## Direction function takes in a vector of values and return a particular directions value
-Direction <- function(values, dir){
-  Position <- directions[[dir]][[1]]
-  return(values[Position])
-}
+# Direction <- function(values, dir){
+#   Position <- directions[[dir]][[1]]
+#   return(values[Position])
+# }
 # Test case
 # kernel <- array(1, dim = c(3,3,1)) # Create '3D' matrix 3x3x1 with only 1's
 # kernel <- array(1, dim = c(3,3))
@@ -189,38 +247,17 @@ initializeRaster <- function(firstLayer, name, outFolder, zero = F){
 }
 # Test
 
-##---------------
-# # Adding the water to the storage - very slow method
-# subsurfaceFlow <- function(lateralFlow){
-#   lat_flow <- lateralFlow$lateralFlow # grabbing flow layer from raster stack
-#   kernel <- array(1, dim = c(3,3,1)) # Create '3D' matrix 3x3x1 with only 1's
-#   cardinal_directions <- c("N", "E", "W", "S", "NW", "NE", "SE", "SW")
-#   outStack <- c() # create outputstack
-#   for(x in cardinal_directions){
-#     flow_direction <- terra::focal3D(lat_flow, w = kernel, fun = Direction, dir = x, fillvalue = 0)
-#     names(flow_direction) <- c(paste0(x,"_lat_flow"))
-#     outStack <- c(outStack, flow_direction)
-#   }
-#   return(outStack)
-# }
-# # Test of subsurface flow
-# s_t <- Sys.time()
-# lateral_flow_test <- subsurfaceFlow(SoilStack)
-# tot_time <- Sys.time() - s_t
-# tot_time
-
 # Function to route water through the subsurface from lateral flow values and flow direction stack
 
 flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
   # Start time variable
-  start <- Sys.time()
+  #start <- Sys.time()
   # Load in flow direction raster
   flowDirectionMap <- terra::rast(flowDirectionMap)
   # Load in flow to route - not done
   if(is.character(flowToRoute)){
     flowToRoute <- terra::rast(flowToRoute)
   }
-  
   
   # Get dimensions of flow map
   xDim <- res(flowToRoute)[1]
@@ -234,46 +271,59 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
 
   # Shift dictionary/list - shift the map in the opposite direction of intended
   
-  shiftValues <- list( # c(xshift, yshift)
-                      "N" = c(0, -1),
-                      "E" = c(-1, 0),
-                      "S" = c(0, 1),
-                      "W" = c(1, 0),
-                      "NW" = c(1, -1),
-                      "NE" = c(-1, -1),
-                      "SE" = c(-1, 1),
-                      "SW" = c(1, 1)
-  )
+  # shiftValues <- list( # c(xshift, yshift)
+  #                     "N" = c(0, -1),
+  #                     "E" = c(-1, 0),
+  #                     "S" = c(0, 1),
+  #                     "W" = c(1, 0),
+  #                     "NW" = c(1, -1),
+  #                     "NE" = c(-1, -1),
+  #                     "SE" = c(-1, 1),
+  #                     "SW" = c(1, 1)
+  # )
+  # # The names of the different flow layers
+  # flowKey <- list("N" = "north_flow",
+  #                 "E" = "east_flow",
+  #                 "S" = "south_flow",
+  #                 "W" = "west_flow",
+  #                 "NW" = "northwest_flow",
+  #                 "NE" = "northeast_flow",
+  #                 "SE" = "southeast_flow",
+  #                 "SW" = "southwest_flow"
+  #                 )
+  # 
+  # cardinal_directions <- c("N", "E", "S", "W", "NW", "NE", "SE", "SW")
   # The names of the different flow layers
-  flowKey <- list("N" = "north_flow",
-                  "E" = "east_flow",
-                  "S" = "south_flow",
-                  "W" = "west_flow",
-                  "NW" = "northwest_flow",
-                  "NE" = "northeast_flow",
-                  "SE" = "southeast_flow",
-                  "SW" = "southwest_flow"
-                  )
+  flowKey <- list("N" = list("north_flow",c(0, -1), 1), 
+                  "E" = list("east_flow",c(-1, 0), 1),
+                  "S" = list("south_flow",c(0, 1), 1),
+                  "W" = list("west_flow",c(1, 0), 1),
+                  "NW" = list("northwest_flow",c(1, -1), .7071),
+                  "NE" = list("northeast_flow",c(-1, -1), .7071),
+                  "SE" = list("southeast_flow",c(-1, 1), .7071),
+                  "SW" = list("southwest_flow", c(1, 1), .7071)
+  )
   
-  cardinal_directions <- c("N", "E", "S", "W", "NW", "NE", "SE", "SW")
   # Loop through cardinal directions and create shifted storage maps
-  for(x in cardinal_directions){
+  #for(x in cardinal_directions){
     #print(paste0("Flow ", x, ": time delta: ", round(as.numeric(Sys.time() - start),2)))
+  routeFlow <- function(x, flowToRoute, flowDirectionMap, xDim, yDim, flowKey){
     # Find the appropriate shift direction
-    shiftDir <- shiftValues[x]
+    #shiftDir <- shiftValues[x]
     # Match the direction to the directional name within the flowStack
-    directionofFlow <- flowKey[[x]]
+    directionofFlow <- flowKey[[x]][[1]]
     # Apply the shift to the dimensions of the raster
-    xshift <- shiftDir[[1]][1]*xDim
-    yshift <- shiftDir[[1]][2]*yDim
-    
+    # xshift <- shiftDir[[1]][1]*xDim
+    # yshift <- shiftDir[[1]][2]*yDim
+    xshift <- flowKey[[x]][[2]][[1]]*xDim
+    yshift <- flowKey[[x]][[2]][[2]]*yDim
     # Shift the raster
     shiftStep <- terra::shift(flowToRoute, dx = xshift, dy = yshift)
     # Crop the raster
     flowShifted <- terra::crop(shiftStep, flowToRoute, snap = "near", extend = TRUE)
     # Select the appropriate layer
     flowDirection <- terra::subset(flowDirectionMap, subset = c(directionofFlow)) # issues with subsetting should be fixed
- 
+    
     # Then multiply rasters with lapp
     #flowPercentage <- terra::lapp(stack_Rasters, fun = function(x,y){return(x*y)}) # Not faster..
     #flowPercentage1 <- stack_Rasters[[1]] * stack_Rasters[[2]]
@@ -285,21 +335,26 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
     flowAccumDirection <- terra::ifel(is.na(flowPercentage), 0, flowPercentage)
     #print(paste0("Adding flow to temp variable ", x, ": time delta: ", round(as.numeric(Sys.time() - start),2)))
     #storage_adjusted <- storage_adjusted + flowAccumDirection
-    storage_adjusted <- c(storage_adjusted, flowAccumDirection)
+    #storage_adjusted <- c(storage_adjusted, flowAccumDirection)
+    return(flowAccumDirection)
   }
+  storage <- lapply(names(flowKey), FUN = routeFlow, flowToRoute, flowDirectionMap, xDim, yDim, flowKey)
+  storageRaster <- terra::rast(storage)
+  #}
   # Sum adjusted storage layers
-  storage_adjusted <- sum(storage_adjusted)
+  storage_adjusted <- sum(storageRaster)
   if(time){
-    print(paste("Time to shift water", as.numeric(Sys.time() - start)))
+    #print(paste("Time to shift water", as.numeric(Sys.time() - start)))
   }
   #print(paste0("Total time elapsed ", x, ": time delta: ", round(as.numeric(Sys.time() - start),2)))
   return(storage_adjusted)
 }
 ## Test flow routing function
-# # Make a map of 1s
-# flowToRoute <- file.path(ModelFolder, "slope.tif")
+# # # Make a map of 1s
+# flowToRoute <- terra::ifel(terra::rast(file.path(WatershedElements, "stack_flow.tif"))[[1]] >= 0, 1, 0)
+# 
 # flowMapPath <- file.path(WatershedElements, "stack_flow.tif")
-# flowRouting(flowToRoute, flowMapPath)
+#z <- flowRouting(flowToRoute, flowMapPath)
 # testStorage <- rast(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements\breached_clipped_dem.tif)")
 # values(testStorage) <- 1.000001 #flowStack <- terra::wrap(flowStack) # the flow stack must be wrapped? before it is read in
 # flowStack <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements\stack_flow.tif)"
