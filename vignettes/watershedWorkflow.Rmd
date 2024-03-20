@@ -36,3 +36,5 @@ print("Check for vignette!")
 # desertHydro:::arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements,crop = F)
 ```
 
+# Use vignettes -
+build_rmd("vignette/vignettename")
