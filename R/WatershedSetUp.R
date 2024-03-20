@@ -7,7 +7,7 @@
 # Some of the scripts are created in external functions
 
 watershedElements <- function(Outpath, DEM, WatershedShape, land_cover_file = "land_cover_soils.shp", landcovername = "landcover_soil.tif", ModelFolder = NA){ # DEM should be unaltered
-  library(terra)
+  requireNamespace("terra")
   # DEM adjustments
   # Adjust the input DEM with the watershed shapefile.
   # Creates the following maps using the Whitebox package <- https://github.com/cran/whitebox

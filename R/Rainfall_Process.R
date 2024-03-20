@@ -1,12 +1,12 @@
-# Functions to process Rainfall Data
-# Rainfall can come in 2 non-spatial varieties: constant and time-dependent
-library(readxl)
-library(tidyverse)
-library(purrr)
-library(lubridate)
+# # Functions to process Rainfall Data
+# # Rainfall can come in 2 non-spatial varieties: constant and time-dependent
+# library(readxl)
+# library(tidyverse)
+# library(purrr)
+# library(lubridate)
 
 ## Rainfall Data to bring over
-# Items | Model Folder | Options | 
+# Items | Model Folder | Options |
 # Synthetic - Dummy Data present within function
 # Rainfall Data from Gauges
 # Weighted Data from Gauges
@@ -36,7 +36,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
     if(file.exists(rain_file) & (method == "synthetic")){
       print("Found a synthetic rainfall...")
       return(rain_file)
-    } 
+    }
   }
   if(TRUE){
     # Synthetic rainfall method
@@ -48,7 +48,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
       #total_rain <- mean(c(.51, .12, .37))
       total_rain <- .5
       rain_step <- 0.05 # time interval of rainfall (minutes) - should be less than default model time step
-      
+
       rain_duration <- seq(0, total_rain_duration, rain_step) # rainfall in minutes
       rainfall_amount_per_step <- (total_rain/total_rain_duration)*rain_step # amount of rainfall (rainfall/min) * (min)
       rainfall_rate <- c(0, rep(rainfall_amount_per_step, total_rain_duration/rain_step))
@@ -62,7 +62,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
     # Rainfall filtering
     rainFiltered <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = T)
     #test <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = F)
-    
+
     # Normalize the rainfall data
     if(method == "gauges"){
       # Weight the input rainfall
@@ -73,15 +73,15 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
         rainFiltered$`WATER-1` <- rainFiltered$`WATER-1` * weights[1]
         rainFiltered$`WATER-2` <- rainFiltered$`WATER-2` * weights[2]
         rainFiltered$`WATER-G` <- rainFiltered$`WATER-G` * weights[3]
-        
+
         # Readjust the total column
         rainFiltered$Total_in <- rowSums(rainFiltered[, c("WATER-1", "WATER-2", "WATER-G")])
       }
       #Save rainfall to model folder
-      rainNormal <- rainFiltered |> 
-        dplyr::select(time, Total_in) |> 
+      rainNormal <- rainFiltered |>
+        dplyr::select(time, Total_in) |>
         round(4) # round columns to 4 decimals
-      
+
       readr::write_csv(rainNormal, rain_file)
       print("Rainfall created...")
       return(rain_file)
@@ -89,16 +89,16 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
     # Spatial distributed rainfall - a little janky just returns rainfall- not rain-discharge
     if(method == "spatial"){ # create table with time | Water-1 | Water-2 | Water-G
       cols <- c("WATER-1", "WATER-2", "WATER-G")
-      spatial_rain <- rainFiltered |> 
+      spatial_rain <- rainFiltered |>
         dplyr::select(Time_minute, time, all_of(cols)) |> # Select relevant columns
-        dplyr::add_row(Time_minute = c(rainFiltered[1,1] - lubridate::minutes(1)), 
+        dplyr::add_row(Time_minute = c(rainFiltered[1,1] - lubridate::minutes(1)),
                        `WATER-1` = 0,
                        `WATER-2` = 0,
                        `WATER-G` = 0,
-                       time = 0, .before = 1) |> 
-        dplyr::select(time, cols) |> 
+                       time = 0, .before = 1) |>
+        dplyr::select(time, cols) |>
         round(5)
-      
+
       # Save the output
       readr::write_csv(spatial_rain, rain_spatial_file)
       print("Spatial Rainfall created...")
@@ -126,7 +126,7 @@ rainfallAccum <- function(rain, beginning_time, end_time, rainfall_method = "gau
     # Get rainfall from shape
     rainForGauges <- cumulativeRain(rain, left = beginning_time, right = end_time, spatial = T)
     # Could adjust voronoi
-    rainfall_for_timestep <- rasterizeRainfall(voronoi_shape = "Example/WatershedElements/waterholes_voronoi.shp", 
+    rainfall_for_timestep <- rasterizeRainfall(voronoi_shape = "Example/WatershedElements/waterholes_voronoi.shp",
                                                rainAtGauges = rainForGauges,
                                                rainfallRaster = terra::rast(file.path(WatershedElements, "model_dem.tif")))
     return(rainfall_for_timestep)
@@ -153,7 +153,7 @@ rainfallProcess <- function(rainfall, filepath = T, inches = T){
   # Assumes data structure: Time (min) | Cumulative Rain (in)
   if(filepath){
     rain <- as.data.frame(read_csv(rainfall_file, show_col_types = FALSE))
-  } 
+  }
   else{
     rain <- rainfall
   }
@@ -164,11 +164,11 @@ rainfallProcess <- function(rainfall, filepath = T, inches = T){
   rain[,2] <- rain[,2] / max_rain_depth
   # Calculate rainfall rates between measured steps
   rainfall_rates <-  diff(rain[,2])/ time_diff # rainfall amount/Time (in/min)
-  
+
   # Output
   time_min <- seq(0, max(rain[,1]), by = 1) # create sequence in 1 minute intervals until the end of the rain
   rainfall_rate <- c(0, rep(rainfall_rates, time_diff))
-  
+
   # return combined data frame of time with minute intervals and normalized rainfall
   return(cbind.data.frame(time_min, rainfall_rate))
 }
@@ -196,7 +196,7 @@ rainfallTotal <- function(rainfall, filepath = T, inches = T){
 
 # Function that takes rainfall data from a watersheds gauges and gathers total rainfall
 rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("WATER-1", "WATER-2", "WATER-G"),  write = T){
-  
+
   if(substr(date, 1, 4) == "2022"){ # Year 2022
     rainfall_file <- file.path(rainfall_folder, "USGS_Rain_2022.xlsx")
   }else{
@@ -205,16 +205,16 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("
   # if(new){
   #   rainfall_file <- file.path(rainfall_file, "USGS_Rain_2023.xlsx")
   # } # year 2023
-    
+
   # Load in the rainfall file - excel sheet
   rain <- rainfall_file |>
-    excel_sheets() |> 
+    excel_sheets() |>
     set_names() |>
-    map(read_excel, path = rainfall_file) 
-  
+    map(read_excel, path = rainfall_file)
+
   # Select the rainfall gauges in the list
   rainSelected <- rain[gauges]
-  
+
   # Dirty way to adjust the cumulative amounts into differences
   for(x in 1:length(rainSelected)){
     # print(x)
@@ -229,16 +229,16 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("
     differences[differences > 100] <- 0
     #rainSelected[[x]]$`TOTAL Cumulative Rain (in)`
     rainSelected[[x]][[y]] <- round(differences,2)  # Assign the rainfall to the increment recorded
-    rainSelected[[x]] <- rainSelected[[x]] |> 
-      dplyr::mutate(date_time = `Date and time`, rain_in = `TOTAL Cumulative Rain (in)`) |> 
+    rainSelected[[x]] <- rainSelected[[x]] |>
+      dplyr::mutate(date_time = `Date and time`, rain_in = `TOTAL Cumulative Rain (in)`) |>
       dplyr::select(date_time, rain_in) |> # reorganize the list for a particular gauge
-      stats::aggregate(rain_in ~ floor_date(date_time, unit = level), FUN = sum) |> 
+      stats::aggregate(rain_in ~ floor_date(date_time, unit = level), FUN = sum) |>
       dplyr::rename(date = "floor_date(date_time, unit = level)")
 
       #mutate(month = lubridate::month(date_time, label = T)) # Create monthly column
   }
   # Join all of the rainfall amounts together
-  joinedDF <- dplyr::full_join(rainSelected[[1]],rainSelected[[2]],  by = "date") |> 
+  joinedDF <- dplyr::full_join(rainSelected[[1]],rainSelected[[2]],  by = "date") |>
     dplyr::full_join(rainSelected[[3]], by = "date")
   # #return(rainSelected)
   # return(joinedDF)
@@ -248,8 +248,8 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("
   names(joinedDF) <- c(paste0("Time_",level), gauges)
   joinedDF[is.na(joinedDF)] <- 0 # Fill NA values with zero
   #rainDay[(rainDay >= 100)] <- 0 # take take of extraneous values
-  
-  ## !Filter the date out if desired 
+
+  ## !Filter the date out if desired
   # if(!is.null(date)){
   #   date <- ymd(date)
   #   rainDay <- rainfallForEvent(rainDF = rainDay, eventDate = date)
@@ -279,9 +279,9 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("
 
 rainfallForEvent <- function(rainDF, eventDate, remove = T){
   filteredDF <- rainDF |> # filters recorded rainfall by given date "YYYY-MM-DD"
-    filter(lubridate::date(rainDF[,1]) == eventDate) |> 
+    filter(lubridate::date(rainDF[,1]) == eventDate) |>
     filter(row_number() <= n()-1)
-  
+
   if(nrow(filteredDF) == 0){
     return(NULL) # No dates found - exits script
   }
@@ -300,8 +300,8 @@ rainfallFilter <- function(date, ModelFolder, WatershedElements, overwrite = F){
   rainDF <- rainfallTotalRain(WatershedElements, date, level = "minute", write = F)
   #rainDF <- utils::read.csv("rain-data-minute.csv") # assumes rain is in R directory
   # Filter the rainfall for a given day
-  rainFiltered <- rainfallForEvent(rainDF, date) 
-  
+  rainFiltered <- rainfallForEvent(rainDF, date)
+
   # Rainfall Check
   if(is.null(rainFiltered)){ # if no rows in rain data
     errorMessage <- paste("No rainfall data found for", date, ": Exiting script.")
@@ -311,12 +311,12 @@ rainfallFilter <- function(date, ModelFolder, WatershedElements, overwrite = F){
     #stop(paste("ERROR: No rainfall data found for date:", date))
   }
   # Remove some pesky early data
-  rainTemp <- rainFiltered |> 
+  rainTemp <- rainFiltered |>
     arrange(rainFiltered$Time_minute)
-  
+
   # Calculate time difference of first rainfall value
   timeDiff <- diff(rainTemp$Time_minute)[[1]]
-  
+
   if(timeDiff > 30){ # remove first rainfall value if greater than 30 minutes before next rainfall
     print("Removing minor incident rainfall")
     rainTemp <- rainTemp[2:length(rainTemp$Time_minute),]
@@ -324,7 +324,7 @@ rainfallFilter <- function(date, ModelFolder, WatershedElements, overwrite = F){
   # Further filter the rainfall files
   rainFiltered <-  rainTemp |>
     dplyr::mutate(time = (as.numeric(Time_minute - base::min(Time_minute)) / 60) + 1)
-  
+
   readr::write_csv(rainFiltered, file = rainFiltered_file)
   return(rainFiltered)
 }
@@ -350,8 +350,8 @@ checkRainfall <- function(date_list){
       #return(write.table(errorMessage, file = file.path(ModelFolder, "errors.txt"), row.names = F, col.names = F))
       #stop(paste("ERROR: No rainfall data found for date:", date))
     } else{
-      rainfallPositive <- c(rainfallPositive, as.character(date)) 
-    } 
+      rainfallPositive <- c(rainfallPositive, as.character(date))
+    }
   }
   rainDF <- data.frame(time = rainfallPositive)
   rainDF$time <- as.character(lubridate::ymd(rainDF$time))
@@ -368,7 +368,7 @@ checkRainfall <- function(date_list){
 rainfallIntensity <- function(rainfallEvent){
   total_rain <- colSums(rainfallEvent[,-1]) # calculate the sums of each rainfall column
   duration <- as.numeric(difftime(rainfallEvent[nrow(rainfallEvent),1], rainfallEvent[1,1], units = "min")) # select last and first times to find durations in minutes
-  
+
   intensity <- total_rain/duration * 60 # gives duration of event in inches/hour per gauge
 }
 
@@ -378,13 +378,13 @@ rainfallIntensity <- function(rainfallEvent){
 # Function that takes input rain data and selects a particular day of rain, if present
 rainSelection <- function(rain_dataset, date, sheets = c("WATER-1", "WATER-2", "WATER-G")){ # assumes excel sheets
   #rain_file_path <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Temporal_Data\USGS-GCMRC rain-gauge data WY 2000_2021.xlsx)"
-  rain_tibbles <- lapply(sheets, function(x) readxl::read_excel(rain_dataset, sheet = x)) # creates tibble of x number of 
+  rain_tibbles <- lapply(sheets, function(x) readxl::read_excel(rain_dataset, sheet = x)) # creates tibble of x number of
   rain_list <- lapply(rain_tibbles, as.data.frame) # convert into dataframe
-  
+
   # search through rainfall list for matching dates
-  date_matches <- lapply(rain_list, FUN = rainfallForEvent, eventDate = date) 
-  date_before <- lapply(rain_list, FUN = rainfallForEvent, eventDate = ymd(date) - days(1)) 
-  
+  date_matches <- lapply(rain_list, FUN = rainfallForEvent, eventDate = date)
+  date_before <- lapply(rain_list, FUN = rainfallForEvent, eventDate = ymd(date) - days(1))
+
   return(date_matches)
 }
 
@@ -397,14 +397,14 @@ rainSelection <- function(rain_dataset, date, sheets = c("WATER-1", "WATER-2", "
 
 # Function that takes rainfall for a particular day and obtains duration and intensity (in/hr)
 rainfallDayDistribution <- function(rainfallEvent, units = "minute", write = T){
-  # Remove the first entry if it isn't contributing significantly 
+  # Remove the first entry if it isn't contributing significantly
   rainfallEvent <- rainfallEvent[-1,]
   # Remove the last entry - often entries at the end of day
   #rainfallEvent <- rainfallEvent |> filter(row_number() <= n()-1)
-  
+
   time <- ceiling_date(rainfallEvent[,1], unit = units)
-  sumRain <- rainfallEvent |> 
-    mutate(Time_date = time) |> 
+  sumRain <- rainfallEvent |>
+    mutate(Time_date = time) |>
     aggregate(Total_in ~ Time_date, FUN = sum) |> # sum rainfall per time (minute)
     mutate(Time_sec = Time_date - base::min(Time_date)) |> # scale time to 0
     mutate(rain_duration = as.numeric(Time_sec) / 60 + 1) |> # adjust to minutes (add 1 to make start 0)
@@ -443,7 +443,7 @@ rainfallCheck <- function(data, search_dates){
   # Create dataframe to be filled
   df <- data.frame(matrix(nrow = nrow(search_dates), ncol = length(col_names)))
   colnames(df) <- col_names
-  
+
   for(x in 1:nrow(search_dates)){
     date <- search_dates[x,2]
     df[x,1] <- as.character(date)
@@ -451,7 +451,7 @@ rainfallCheck <- function(data, search_dates){
     date <- lubridate::parse_date_time(date, "ymd")
     #date_after <- date + lubridate::days(1) # day after
     date_before <- date + lubridate::days(-1)
-    
+
     # Check search date, before, and after
     if(date %in% data$day){
       print(paste0("Rain recorded on ", date))
@@ -477,8 +477,8 @@ rainfallCheck <- function(data, search_dates){
 # Function that sums the rainfall between to times
 cumulativeRain <- function(rainDF, left, right, spatial = F){
   # Function assumes two column rain data frame: time(minutes) | total rainfall
-  SelectRain <- rainDF |> 
-    dplyr::filter(between(time, left-.001, right)) # because between is inclusive - this should make it not inclusive 
+  SelectRain <- rainDF |>
+    dplyr::filter(between(time, left-.001, right)) # because between is inclusive - this should make it not inclusive
   # assumes first column is rain_duration normalized to minutes
   if(spatial){
     rainSum <- colSums(SelectRain[,2:ncol(SelectRain)])
@@ -496,15 +496,15 @@ rasterizeRainfall <- function(voronoi_shape, rainfallRaster, rainAtGauges){
     shape <- terra::vect(voronoi_shape)
     # Pull out the values and convert to a dataframe
     df <- as.data.frame(values(shape))
-    # replace rain values in dataframe with recorded values 
+    # replace rain values in dataframe with recorded values
     # Note: Make sure the position is corresponding correctly
     replacement_values <- c(round(rainAtGauges, 3))
     conditions <- c(NaN, NaN, NaN) # Should not have any values saved here
-    
+
     df$rain <- replace(df$rain, df$rain %in% conditions, replacement_values)
     # Assign rainfall to a section the the table
     values(shape) <- df
-    
+
     # Use an input raster map onto
     newRainfall <- terra::rasterize(shape, rainfallRaster, "rain")
     return(newRainfall)
@@ -532,7 +532,7 @@ goesRain <- function(date, rainFolder, WatershedElements, method = "near"){
   # Loop through files
   rainStack <- terra::rast(file.path(WatershedElements, "cropped_dem.tif")) * 0
   names(rainStack) <- "Start"
-  
+
   for(file in files){
     # Example file name for GOES satellites- should be standardized
     # "OR_ABI-L2-RRQPEF-M6_G17_s20222392300319_e20222392309386_c20222392309487.nc"
@@ -541,14 +541,14 @@ goesRain <- function(date, rainFolder, WatershedElements, method = "near"){
     # Convert strings into time objects
     startT <- parseTimeGOES(startTime)
     endT <- parseTimeGOES(endTime)
-    
+
     # Load in the raster
     rainRaster <- terra::rast(file.path(rainFolder, file))[[1]]
     # Resample the data
     shape <- terra::vect(file.path(WatershedElements, "waterholes_shape.shp"))
     # Scaled raster
     scale <- terra::rast(file.path(WatershedElements, "cropped_dem.tif"))
-    
+
     rainProj <- resizeImagery(rainRaster, shape, scale, method = method)
     names(rainProj) <- startT
     rainStack <- c(rainStack, rainProj)
@@ -573,7 +573,7 @@ parseTimeGOES <- function(time_string){
   hour <- substr(time_string, 8, 9)
   minute <- substr(time_string, 10, 11)
   time_comb <- paste0(hour, ":", minute)
-  
+
   time_posix <- as.POSIXct(paste(date, time_comb), format = "%Y-%m-%d %H:%M", tz = "UTC")
   time_posix <- lubridate::with_tz(time_posix, tzone = "MST")
   # Truncate string - don't need seconds
@@ -584,7 +584,7 @@ parseTimeGOES <- function(time_string){
 # goesTime <- parseTimeGOES("20222392300319")
 # Plot rain data by day
 rainPlots <- function(rainDF){
-  # Create months 
+  # Create months
   rainDF$Second <- minute(rainDF$second)
   rainPlot <- ggplot(rainDF, aes(x = rainDF[,1], y = Total_in, color = Second)) + geom_point() + labs(title = "Total Rainfall Per Second Waterholes: 2001 - 2021", x = "Time", y = "Total Rainfall (in)") + theme(plot.title = element_text(hjust = 0.5))
   rainPlot

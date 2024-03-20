@@ -18,16 +18,13 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1
 Depends: 
-    R (>= 2.10),
-    tidyverse
+    R (>= 2.10)
 LazyData: true
 Imports: 
     data.table,
     dplyr,
     gganimate,
     ggplot2,
-    ggtext,
-    gridExtra,
     hms,
     lubridate,
     readr,
@@ -35,10 +32,7 @@ Imports:
     reshape2,
     stringr,
     terra,
-    viridis,
-    viridisLite,
-    whitebox,
-    zoo
+    whitebox
 Suggests: 
     knitr,
     rmarkdown
