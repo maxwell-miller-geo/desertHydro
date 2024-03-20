@@ -1,21 +1,21 @@
 ## -----------------------------------------------------------------------
 #install.packages('readxl')
-# library(readxl)
-# library(methods)
-# library(terra)
-#
-# LandCoverCharacteristics <- read_excel("LandCoverCharacteristics.xlsx")
+library(readxl)
+library(methods)
+library(terra)
+
+LandCoverCharacteristics <- read_excel("LandCoverCharacteristics.xlsx")
 #View(LandCoverCharacteristics)
 
 read_LandCover <- function(localFilePath, type = "Excel"){
   if(type == "Excel"){
     LandCover <- read_excel(localFilePath)
   }
-
+  
   # Create a dictionary based upon the excel spreadsheet
   landcover_dictionary <- apply(LandCover, 1, function(row) {
   as.list(row)})
-
+  
   landcoverTypes <- lapply(landcover_dictionary, function(dict) {
   #name <- ifelse(is.null(dict$Name), NA, as.character(dict$Name))
   new('LandCover',
@@ -38,15 +38,15 @@ read_LandCover <- function(localFilePath, type = "Excel"){
   return(landcoverTypes)
 }
 
-# # Test case
-# LocalFilePath <- "LandCoverCharacteristics.xlsx"
-# landCover_example <- read_LandCover(LocalFilePath)
+# Test case
+LocalFilePath <- "LandCoverCharacteristics.xlsx"
+landCover_example <- read_LandCover(LocalFilePath)
 
 hydraulicFieldConductivity <- function(Ksat, SaturatedMoistureContent, FieldCapacity, SoilDepth){
   Kfc <- Ksat*exp((-13.0/SaturatedMoistureContent)*(SaturatedMoistureContent-FieldCapacity/SoilDepth))
   return(ifelse(is.na(Kfc), 0, Kfc))
 }
-# setClass('LandCover',
+# setClass('LandCover', 
 #          representation(
 #            Name = 'character',
 #            residualMoistureContent = 'numeric',

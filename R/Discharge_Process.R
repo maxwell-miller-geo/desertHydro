@@ -12,12 +12,12 @@
 
 ##-------------------- Discharge Creation
 # Function that checks and/or creates discharge for given date
-dischargeCreate <- function(date, ModelFolder, WatershedElements, discharge = T, store = T){
+dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, discharge = T, store = T){
+  # Load in the filtered rainfall file
+  rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
   rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
-   if(discharge & !is.null(date)){
+  if(discharge){
     print("Processing discharge data...")
-    # Load in the filtered rainfall file
-    rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
     if(file.exists(rain_discharge_file) & file.exists(rainFiltered_file)){
       print("Found discharge data")
       return(rain_discharge <- readr::read_csv(rain_discharge_file, show_col_types = F))
@@ -46,8 +46,6 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, discharge = T,
       return(rain_discharge)
     }
   }else{
-    print("Discharge not selected...")
-    rain_file <- file.path(ModelFolder, "Model-Rainfall.csv")
     rain_discharge <- readr::read_csv(rain_file, show_col_types = F) |>
       dplyr::select(time, Total_in) |>
       dplyr::add_row(Total_in = 0,
@@ -170,7 +168,7 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
   # time_seq <- data.frame(Time_minute = seq(rainfallDF$Time_minute[1], tail(rainfallDF$Time_minute,1), by = "min"))
   # # Change gauge names
   colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "-", "_")
-  #colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "\\.", "_")
+  colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "\\.", "_")
   # # This step combines the rainfall and the discharge data into 1 dataframe - dirty
   # rain_seq <- time_seq |>
   #   dplyr::left_join(rainfallDF, by = "Time_minute") |>
@@ -237,7 +235,7 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
     filename <- file.path(outpath, "rain-discharge.csv")
     readr::write_csv(x = rain_discharge, file = filename)
     # Read csv
-    x <- readr::read_csv(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Demo_Test\2022-07-15\rain-discharge.csv)")
+    #x <- readr::read_csv(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Demo_Test\2022-07-15\rain-discharge.csv)")
   }
   return(rain_discharge)
 }

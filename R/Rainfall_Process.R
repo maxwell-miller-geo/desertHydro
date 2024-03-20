@@ -16,10 +16,11 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
   print("Rainfall...")
   rain_file <- file.path(ModelFolder, "Model-Rainfall.csv")
   rain_spatial_file <- file.path(ModelFolder, "Model-Spatial-Rainfall.csv")
+  rain_goes_file <- file.path(ModelFolder, "goes-rainfall.tif")
   rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
   rainFilterFile <- file.exists(rainFiltered_file)
   # Check for files that have been written
-  if(!overwrite & rainFilterFile){
+  if(!overwrite){
     if(file.exists(rain_file) & (method == "gauges") & rainFilterFile){
       print("Found a model rainfall...")
       return(rain_file)
@@ -27,6 +28,10 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
     if(file.exists(rain_spatial_file) & (method == "spatial") & rainFilterFile){
       print("Found a spatial rainfall file...")
       return(rain_spatial_file)
+    }
+    if(file.exists(rain_goes_file) & (method == "goes") & rainFilterFile){
+      print("Found GOES processed file")
+      return(rain_goes_file)
     }
     if(file.exists(rain_file) & (method == "synthetic")){
       print("Found a synthetic rainfall...")
@@ -41,8 +46,8 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
       #date <- "Synthetic"
       total_rain_duration <- 15
       #total_rain <- mean(c(.51, .12, .37))
-      total_rain <- .25
-      rain_step <- 0.1 # time interval of rainfall (minutes) - should be less than default model time step
+      total_rain <- .5
+      rain_step <- 0.05 # time interval of rainfall (minutes) - should be less than default model time step
       
       rain_duration <- seq(0, total_rain_duration, rain_step) # rainfall in minutes
       rainfall_amount_per_step <- (total_rain/total_rain_duration)*rain_step # amount of rainfall (rainfall/min) * (min)
@@ -63,8 +68,8 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
       # Weight the input rainfall
       if(weighted){
         # Weights from voronoi calculations order is: WATER-1, WATER-2, WATER-G
-        #weights <- c(.49254, .40299, .10448)
-        weights <- c(.33333, .33333, .33333) # equally weighted
+        weights <- c(.49254, .40299, .10448)
+        #weights <- c(.33333, .33333, .33333) # equally weighted
         rainFiltered$`WATER-1` <- rainFiltered$`WATER-1` * weights[1]
         rainFiltered$`WATER-2` <- rainFiltered$`WATER-2` * weights[2]
         rainFiltered$`WATER-G` <- rainFiltered$`WATER-G` * weights[3]
@@ -98,7 +103,14 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
       readr::write_csv(spatial_rain, rain_spatial_file)
       print("Spatial Rainfall created...")
       return(rain_spatial_file)
-  }
+    }
+    # GOES Rainfall
+    if(method == "goes"){
+      temporalFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Temporal_Data)"
+      rainFolder <- file.path(temporalFolder, paste0(date,"-rain"))
+      goes_Rain <- goesRain(date, rainFolder, WatershedElements)
+      return(goes_Rain)
+    }
   }
 }
 # Test
@@ -108,104 +120,33 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
 # # Check if rainfall is already created
 # rain_file <- file.path(ModelFolder, paste0(date, "-Rainfall.csv"))
 # rain_spatial_file <- file.path(ModelFolder, paste0(date, "-Spatial-Rainfall.csv"))
-# source("Rainfall_Process.R")
-# if((file.exists(rain_file) | file.exists(rain_spatial_file)) & !overwrite){
-#   print("Found a rainfall file!")
-#   if(rain_spatial){
-#     print("Using thessian rainfall....")
-#   }else{
-#     print("Using rain gauges...")
-#   }
-# 
-# }else if(!rainfall_created){
-#   print("Rainfall not found - creating...")
-#   # Rainfall with a time distribution
-#   # Read csv file and create a dataframe - assumes within model folder
-#   if(is.null(date)){
-#     print("Using synthetic data")
-#     # Rainfall for a constant amount
-#     #date <- "Synthetic"
-#     total_rain_duration <- 15
-#     #total_rain <- mean(c(.51, .12, .37))
-#     total_rain <- .25
-#     rain_step <- 0.1 # time interval of rainfall (minutes) - should be less than default model time step
-# 
-#     rain_duration <- seq(0, total_rain_duration, rain_step) # rainfall in minutes
-#     rainfall_amount_per_step <- (total_rain/total_rain_duration)*rain_step # amount of rainfall (rainfall/min) * (min)
-#     rainfall_rate <- c(0, rep(rainfall_amount_per_step, total_rain_duration/rain_step))
-#     rain <- cbind.data.frame(rain_duration, rainfall_rate) # Time(minutes) | Rain (in)
-#     colnames(rain) <- c("time", "Total_in")
-#     # Create a csv rainfile
-#     rain_file <- file.path(ModelFolder, paste0(date, "-Rainfall.csv"))
-#     readr::write_csv(rain, rain_file)
-#   }else if(!is.null(date)){
-#     # Search the rainfall data and gather the rainfall recorded by the minute
-#     rainDF <- rainfallTotalRain(WatershedElements, level = "minute", write = F)
-#     #rainDF <- utils::read.csv("rain-data-minute.csv") # assumes rain is in R directory
-# 
-#     # Filter the rainfall for a given day
-#     rainFiltered <- rainfallForEvent(rainDF, date)
-#     if(is.null(rainFiltered)){ # if no rows in rain data
-#       errorMessage <- paste("No rainfall data found for", date, ": Exiting script.")
-#       print(errorMessage)
-#       print("--------------------------")
-#       return(write.table(errorMessage, file = file.path(ModelFolder, "errors.txt"), row.names = F, col.names = F))
-#       #stop(paste("ERROR: No rainfall data found for date:", date))
-#     }
-#     rainFiltered <-  rainFiltered |>
-#       dplyr::mutate(time = (as.numeric(Time_minute - base::min(Time_minute)) / 60) + 1)
-# 
-#     # Save the filtered rainfall
-#     rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-",date,".csv"))
-#     readr::write_csv(rainFiltered, file = rainFiltered_file)
-# # 
-#     # Spatial distributed rainfall - a little janky just returns rainfall- not rain-discharge
-#     if(rain_spatial){ # create table with time | Water-1 | Water-2 | Water-G
-#       cols <- c("WATER-1", "WATER-2", "WATER-G")
-#       spatial_rain <- rainFiltered |>
-#         dplyr::select(Time_minute, time, all_of(cols)) |> # Select relevant columns
-#         dplyr::add_row(Time_minute = c(rainFiltered[1,1] - lubridate::minutes(1)),
-#                        `WATER-1` = 0,
-#                        `WATER-2` = 0,
-#                        `WATER-G` = 0,
-#                        time = 0, .before = 1) |>
-#         dplyr::select(time, cols) |>
-#         round(5)
-# 
-#       # Save the output
-#       rain_spatial_file <- file.path(ModelFolder, paste0(date, "-Spatial-Rainfall.csv"))
-#       write_csv(spatial_rain, rain_spatial_file)
-#     }
-#     # Weight the input rainfall
-#     if(rainfall_weighted){
-#       # Weights from voronoi calculations order is: WATER-1, WATER-2, WATER-G
-#       #weights <- c(.49254, .40299, .10448)
-#       weights <- c(.33333, .33333, .33333) # equally weighted
-#       rainFiltered$`WATER-1` <- rainFiltered$`WATER-1` * weights[1]
-#       rainFiltered$`WATER-2` <- rainFiltered$`WATER-2` * weights[2]
-#       rainFiltered$`WATER-G` <- rainFiltered$`WATER-G` * weights[3]
-# 
-#       # Readjust the total column
-#       rainFiltered$Total_in <- rowSums(rainFiltered[, c("WATER-1", "WATER-2", "WATER-G")])
-#     }
-#     #Save rainfall to model folder
-#     rainNormal <- rainFiltered |>
-#       dplyr::select(time, Total_in) |>
-#       round(4) # round columns to 4 decimals
-# 
-#     rain_file <- file.path(ModelFolder, paste0(date, "-Rainfall.csv"))
-#     readr::write_csv(rainNormal, rain_file)
-#     print("Rainfall created")
-#   }
-# }
-# Constant rainfall
-# Total rain fall / Rainfall Duration = Rainfall per timestep
-# 1 in / 20 min = .05 in/min
-
-# Time dependent rainfall
-# The rainfall rate depends on the time.
-
-
+## ----------------- Rainfall per time step
+rainfallAccum <- function(rain, beginning_time, end_time, rainfall_method = "gauges"){
+  if(rainfall_method == "spatial"){
+    # Get rainfall from shape
+    rainForGauges <- cumulativeRain(rain, left = beginning_time, right = end_time, spatial = T)
+    # Could adjust voronoi
+    rainfall_for_timestep <- rasterizeRainfall(voronoi_shape = "Example/WatershedElements/waterholes_voronoi.shp", 
+                                               rainAtGauges = rainForGauges,
+                                               rainfallRaster = terra::rast(file.path(WatershedElements, "model_dem.tif")))
+    return(rainfall_for_timestep)
+  }else if(rainfall_method == "goes"){
+    if(beginning_time == 1){
+      rainfall_for_timestep <- 0
+      return(rainfall_for_timestep)
+    }else{
+      goesRain <- terra::rast(rain)
+      layerSelection <- ceiling(beginning_time/10)+1
+      mm_to_in <- 0.0393701
+      timeElapsed <- end_time - beginning_time
+      rainfall_for_timestep <- goesRain[[layerSelection]] / (10/timeElapsed) * mm_to_in # rain fallen in inches
+      return(rainfall_for_timestep)
+    }
+  }else{
+    rainfall_for_timestep <- cumulativeRain(rain, left = beginning_time, right = end_time)
+    return(rainfall_for_timestep)
+  }
+}
 # Formats rainfall csv file from time/cumulative amount into time/rainfall-rate
 rainfallProcess <- function(rainfall, filepath = T, inches = T){
   # Assuming first line is a zero
@@ -254,12 +195,12 @@ rainfallTotal <- function(rainfall, filepath = T, inches = T){
 # rainfallTotal(rainfall_file)
 
 # Function that takes rainfall data from a watersheds gauges and gathers total rainfall
-rainfallTotalRain <- function(rainfall_folder, level = "day", gauges = c("WATER-1", "WATER-2", "WATER-G"),  write = T, new = T){
+rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("WATER-1", "WATER-2", "WATER-G"),  write = T){
   
-  if(new){ # Year 2022
+  if(substr(date, 1, 4) == "2022"){ # Year 2022
     rainfall_file <- file.path(rainfall_folder, "USGS_Rain_2022.xlsx")
   }else{
-    rainfall_file <- file.path(rainfall_file, "USGS-GCMRC rain-gauge data WY 2000_2021.xlsx")
+    rainfall_file <- file.path(rainfall_folder, "USGS-GCMRC rain-gauge data WY 2000_2021.xlsx")
   }
   # if(new){
   #   rainfall_file <- file.path(rainfall_file, "USGS_Rain_2023.xlsx")
@@ -356,7 +297,7 @@ rainfallFilter <- function(date, ModelFolder, WatershedElements, overwrite = F){
     return(data.frame(readr::read_csv(rainFiltered_file, show_col_types = F)))
   }
   # Check the rainfall database located in the WatershedElements Folder
-  rainDF <- rainfallTotalRain(WatershedElements, level = "minute", write = F)
+  rainDF <- rainfallTotalRain(WatershedElements, date, level = "minute", write = F)
   #rainDF <- utils::read.csv("rain-data-minute.csv") # assumes rain is in R directory
   # Filter the rainfall for a given day
   rainFiltered <- rainfallForEvent(rainDF, date) 
@@ -478,6 +419,20 @@ rainfallDayDistribution <- function(rainfallEvent, units = "minute", write = T){
 
 # #Test
 # rainDayDF <- rainfallDayDistribution(rainfallEvent = rainfallEvent)
+loadRain <- function(rain_file, rainfall_method = "gauges"){
+  if(rainfall_method == "spatial"){
+    rain <- readr::read_csv(rain_file, show_col_types = F) # read in rain.csv file
+    total_rain_duration <- max(rain$time)
+    #rain_step <- mean(diff(rain$time)) # find the average time step
+  } else if(rainfall_method == "goes"){
+    rain <- rain_file
+    total_rain_duration <- (nlyr(terra::rast(rain_file)) - 1) * 10 # duration in minutes
+  }else{
+    rain <- readr::read_csv(rain_file, show_col_types = F) # read in rain.csv file
+    total_rain_duration <- max(rain$time)
+  }
+  return(list(rain, total_rain_duration))
+}
 ## --------------------------------- Rainfall selection
 # Function that checks if rainfall happened on particular dates or before particular dates
 rainfallCheck <- function(data, search_dates){
@@ -554,13 +509,79 @@ rasterizeRainfall <- function(voronoi_shape, rainfallRaster, rainAtGauges){
     newRainfall <- terra::rasterize(shape, rainfallRaster, "rain")
     return(newRainfall)
 }
-
 # Test
 # voronoi_shape <- watershed_voronoi <- r"(Z:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements\waterholes_voronoi.shp)"
 # rainAtGauges <- c(1,2,3)#rainSum#
 # rainfallRaster <- rast(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements\filled_dem.tif)")
 # test <- rasterizeRainfall(voronoi_shape = watershed_voronoi, rainfallRaster = rainfallRaster, rainAtGauges = rainAtGauges)
 
+goesRain <- function(date, rainFolder, WatershedElements, method = "near"){
+  # Get rainfall from website
+  # Download (optional)
+  # Process the rainfall based on when the rainfall starts? How do you know that beforehand
+  # Need to account for time conversions 7 hour UTC differences and overlaps
+  # Or manually download the times you need into a folder and then process them from here
+  # Subset the amount of rainfall you need by using the gauge date !!
+  # File location
+  goesRain <- file.path(rainFolder, paste0(date,"-rain-", method,".tif"))
+  if(file.exists(goesRain)){
+    return(goesRain)
+  }
+  #rainFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Temporal_Data\2022-08-27-rain)"
+  files <- list.files(rainFolder, pattern = "*.nc") # GOES files are NC files
+  # Loop through files
+  rainStack <- terra::rast(file.path(WatershedElements, "cropped_dem.tif")) * 0
+  names(rainStack) <- "Start"
+  
+  for(file in files){
+    # Example file name for GOES satellites- should be standardized
+    # "OR_ABI-L2-RRQPEF-M6_G17_s20222392300319_e20222392309386_c20222392309487.nc"
+    startTime <- stringr::str_extract_all(file, "(?<=s)([^_]+)") # find characters after s and before _
+    endTime <- stringr::str_extract_all(file, "(?<=e)([^_]+)") # find characterts with e and before _
+    # Convert strings into time objects
+    startT <- parseTimeGOES(startTime)
+    endT <- parseTimeGOES(endTime)
+    
+    # Load in the raster
+    rainRaster <- terra::rast(file.path(rainFolder, file))[[1]]
+    # Resample the data
+    shape <- terra::vect(file.path(WatershedElements, "waterholes_shape.shp"))
+    # Scaled raster
+    scale <- terra::rast(file.path(WatershedElements, "cropped_dem.tif"))
+    
+    rainProj <- resizeImagery(rainRaster, shape, scale, method = method)
+    names(rainProj) <- startT
+    rainStack <- c(rainStack, rainProj)
+    #terra::writeRaster(rainProj, file = file.path(ModelFolder, "raintest.tif"))
+  }
+  goesRain <- file.path(rainFolder, paste0(date,"-rain-", method,".tif"))
+  terra::writeRaster(rainStack, file = goesRain, overwrite = T)
+  return(goesRain)
+}
+# Test
+# rainFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Temporal_Data\2022-08-27-rain)"
+# rainTest <- goesRain(date = "2022-08-27", rainFolder = rainFolder, WatershedElements, method = "near")
+## ----------------- Parse GOES File name
+# Function to parse date strings on GOES objects
+parseTimeGOES <- function(time_string){
+  # Extract components\
+  #Year-Month-Day
+  year <- substr(time_string, 1, 4)
+  day_of_year <- as.numeric(substr(time_string, 5, 7))
+  date <- as.Date(paste(year, day_of_year, sep = "-"), format = "%Y-%j")
+  # Hour:Minute
+  hour <- substr(time_string, 8, 9)
+  minute <- substr(time_string, 10, 11)
+  time_comb <- paste0(hour, ":", minute)
+  
+  time_posix <- as.POSIXct(paste(date, time_comb), format = "%Y-%m-%d %H:%M", tz = "UTC")
+  time_posix <- lubridate::with_tz(time_posix, tzone = "MST")
+  # Truncate string - don't need seconds
+  return(time_posix)
+}
+# Test
+# time_string <- "2022 239 23 00 31 9"
+# goesTime <- parseTimeGOES("20222392300319")
 # Plot rain data by day
 rainPlots <- function(rainDF){
   # Create months 
@@ -580,7 +601,7 @@ resizeImagery <- function(imagery, outline, targetRaster, method = "near"){
   clipRaster <- terra::crop(reproject, outline, ext = F, mask = T)
   # Select the first layer - the RRQPE
   rainfall <- clipRaster[[1]]
-  
+  return(rainfall)
 }
 
 # Imagery file

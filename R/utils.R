@@ -32,7 +32,6 @@ dfMax <- function(raster, rename = NA){
   }else{
     name <- rename
   }
-  
   return(data.frame(time = name, x = pos[1], y = pos[2], max = maxValue))
 }
 # Test
@@ -71,5 +70,73 @@ writeLayer <- function(rasterStackPath, layer, layername){
 # writeDisk(rasterStackPath, layer)
 
 
-
-
+## # ------------------ Layer write 
+# Take a single layer - save with time variable in name
+# Chunks the writing process of outputs - recompiles with another function
+rasterWrite <- function(raster, ModelFolder, end_time, layername = "surface"){
+  
+  # raster layer
+  time <- gsub("[.]", "-", c(end_time))
+  name <- paste0(layername,"-time-",time,".tif")
+  names(raster) <- end_time
+  rasterPath <- file.path(ModelFolder, name)
+  terra::writeRaster(raster, filename = rasterPath, overwrite = T)
+  return(rasterPath)
+}
+# Test 
+# raster <- surface[[2]]
+# end_time <- 1
+# layername = "surface"
+# rasterPath <- rasterWrite(raster, ModelFolder, end_time, layername = "surface")
+# rasterPath2 <- rasterWrite(raster, ModelFolder, end_time+0.5, layername = "surface")
+# 
+# raster1 <- rast(rasterPath)
+# raster2 <- rast(rasterPath2)
+## -------------------------- Combine rasters
+# Function that takes a bunch of rasters and combined them by name
+rasterCompile <- function(ModelFolder, layername){ # layername must be present in folder
+  # Find files with names and combined them by time
+  tifFiles <- list.files(ModelFolder, pattern = "*.tif") 
+  layerFiles <- grep(paste0(layername,"-time-"), tifFiles, value = T)
+  # Converts strings into ordered dataframe
+  orderedDF <- convert_string(layerFiles)
+  # combine layers and save as combined stack
+  layerStack <- terra::rast(file.path(ModelFolder, names(orderedDF)[1]))
+  for(x in 2:length(orderedDF)){
+    terra::add(layerStack) <- terra::rast(file.path(ModelFolder, names(orderedDF)[x]))
+  }
+  outStack <- file.path(ModelFolder, paste0(layername, "Storage.tif"))
+  terra::writeRaster(layerStack, filename = outStack, overwrite = T)
+  print(paste0("Created ", layername, "Storage.tif"))
+  # Remove temporary files
+  fullPaths <- lapply(layerFiles, FUN = function(x)(file.path(ModelFolder, x)))
+  # Remove temp files
+  #remove <- lapply(fullPaths, file.remove)
+  return(layerStack)
+}
+# Test
+# testRaster <- rasterCompile(ModelFolder, "surface")
+# Define a function to convert the strings
+convert_string <- function(x) {
+  # Use regular expression to find pattern "-number-number."
+  pattern <- "([^e.]+)\\."
+  # Times
+  times <- stringr::str_extract(x, pattern)
+  # Define pattern for matching
+  pattern <- "-(\\d+)-?(\\d*)."
+  
+  # Replace matches using gsub
+  timeDecimal <- as.numeric(gsub(pattern, "\\1.\\2", times))
+  
+  # Create a named list or vector to store the mapping
+  converted_dict <- setNames(timeDecimal, x)
+  
+  # Convert the dictionary to a data frame
+  df <- data.frame(original_string = names(converted_dict),
+                   converted_value = unname(converted_dict))
+  # Sort the data frame based on the converted values
+  df <- df[order(df$converted_value), ]
+  # Convert the data frame back to a named vector
+  sorted_dict <- setNames(df$converted_value, df$original_string)
+  return(sorted_dict)
+}

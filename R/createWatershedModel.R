@@ -30,7 +30,7 @@ resizeShape <- function(spatialObject, extent_raster, watershedboundary, save = 
       land_cover_crop <- terra::crop(land_cover_proj, terra::vect(watershedboundary), ext = FALSE)
       
       # Find KEY within names
-      if(key %in% terra::names(land_cover_crop)){
+      if(key %in% names(land_cover_crop)){
         land_cover_adj <- terra::rasterize(land_cover_crop, extent_raster, field = key)
       }
       
