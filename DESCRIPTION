@@ -28,13 +28,15 @@ Imports:
     gridExtra,
     hms,
     lubridate,
+    purrr,
     readr,
     readxl,
     reshape2,
     stats,
     stringr,
     terra,
-    whitebox
+    whitebox,
+    zoo
 Suggests: 
     knitr,
     rmarkdown

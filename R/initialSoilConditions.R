@@ -20,7 +20,7 @@ hydraulicFieldConductivity <- function(Ksat, SaturatedMoistureContent, FieldCapa
 # Function to set the initial storage amount based upon table values
 storage_amount <- function(landCoverTable){
   # Function changes the table values and returns two column list with NLCD land type and corresponding storage
-  landCoverTable$maximumStorageAmount <- 
+  landCoverTable$maximumStorageAmount <-
     (1-landCoverTable$rockPercent) * landCoverTable$saturatedMoistureContent * landCoverTable$soilDepthCM
   # Create a map??
   #return(cbind(c(landCoverTable$NLCD_Key),c(landCoverTable$storageAmount)))
@@ -28,14 +28,20 @@ storage_amount <- function(landCoverTable){
 }
 
 # Create the land cover stacked map with soil characteristics
-createSoilRasters <- function(ClassMap, soilTable, key = "MUKEY"){
+createSoilRasters <- function(ClassMapFile, soilTable, key = "MUKEY"){
+  requireNamespace("terra")
   # Load in the class map
-  ClassMap <- terra::rast(ClassMap)
-  ClassMapNumeric <- terra::catalyze(ClassMap)
+  print(ClassMap)
+  print(key)
+  print(soilTable)
+  ClassMap <- terra::rast(ClassMapFile)
+
+  #terra::plot(ClassMap)
+  #ClassMapNumeric <- terra::catalyze(ClassMap)
+  #terra::plot(ClassMap)
   landtypes <- unique(terra::values(ClassMap, na.rm = TRUE))
   outStack <- c() # creates empty vector
   for(x in 1:length(soilTable)){
-    
     if(is.character(soilTable[[x]])){
       next # Breaks if the value in the table is a character (names)
     }
@@ -55,13 +61,13 @@ createSoilRasters <- function(ClassMap, soilTable, key = "MUKEY"){
 
 
 initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap, DEM, ModelOutputs, key = "NLCD_Key", depthAdj = T, saturatedPercentage = 0.2, overwrite = F){
-  
+
   soilstack_file <- file.path(ModelOutputs, "model_soil_stack.tif")
   if(file.exists(soilstack_file)){
     return("Found model soil file..")
   }
   LCC <- readxl::read_xlsx(LandCoverCharacteristics) # reads excel file with soil characteristics
-  
+
   #day_to_min <- 1 * 24 * 60 # adjust day to minutes
   hour_to_sec <- 1 * 60 * 60 # adjust conductivity rates to cm/second
 
@@ -69,14 +75,14 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   LCC$saturatedHydraulicMatrix <- LCC$saturatedHydraulicMatrix / hour_to_sec
   LCC$verticalHydraulicConductivity <- LCC$verticalHydraulicConductivity / hour_to_sec
   LCC$hydraulicConductivityRestrictiveLayer <- LCC$hydraulicConductivityRestrictiveLayer / hour_to_sec
-  
+
   LCC$fieldCapacityAmount <- LCC$soilDepthCM * (LCC$fieldCapacityMoistureContent - LCC$residualMoistureContent)
-  
+
   # Calculate starting canopy storage amount
   LCC$currentCanopyStorage <- 0.0
-  
+
   LCC$fieldCapacityAmount <- LCC$soilDepthCM * (LCC$fieldCapacityMoistureContent - LCC$residualMoistureContent)
-  
+
   # Create conductivity at field capacity (Kfc)
   # Field Capacity Conductivity = Ksat * exp((-13.0/Sat_mc)*(sat_mc_1 -fieldcapt_amt/soilDepth))
   LCC$conductivityAtFieldCapacity <- hydraulicFieldConductivity(
@@ -88,17 +94,17 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   LCC$maxSoilStorageAmount <- storage_amount(LCC)
   # Calculate starting soil storage amount
   LCC$currentSoilStorage <- saturatedPercentage * LCC$maxSoilStorageAmount
-  
+
   # Adjust the filed capacity amount if less than zero
   LCC$fieldCapacityAmount[LCC$fieldCapacityAmount < 0] <- 0
-  
+
   LCC$wiltingPointAmount <- LCC$wiltingPointMoistureContent * LCC$soilDepthCM
-  
+
   LCC$ET_Reduction <- LCC$fieldCapacityAmount * 0.8 / LCC$soilDepthCM
-  
+
   SoilStack <- createSoilRasters(ClassificationMap, LCC, key = key)
-  
-  
+
+
   # Attach the slope map to the land cover stack
   dem <- terra::rast(DEM)
   slopeInitial <- terra::terrain(dem, v="slope", neighbors=8, unit="degrees")
@@ -110,9 +116,9 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   SoilStack$slope <- slopeAdj
   names(SoilStack$slope) <- "slope"
   terra::writeRaster(SoilStack$slope, slopeName, overwrite = T)
-  
-  
-  
+
+
+
   SoilStack$surfaceWater <- SoilStack$slope * 0
   names(SoilStack$surfaceWater) <- "surfaceWater"
   # From - to classification
@@ -124,7 +130,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
                     45, 90, .01)
   reclassMatrix <- matrix(reclassTable, ncol = 3, byrow = T)
   depthModifier <- terra::classify(SoilStack$slope, reclassMatrix, include.lowest = T)
-  
+
   if(depthAdj){
     SoilStack$soilDepthCM <- SoilStack$soilDepthCM * depthModifier
     # Adjust certain characteristics base upon slope
@@ -140,12 +146,12 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
     SoilStack$maxSoilStorageAmount <- storage_amount(SoilStack)
     # Calculate starting soil storage amount
     SoilStack$currentSoilStorage <- saturatedPercentage * SoilStack$maxSoilStorageAmount
-    
+
     # Adjust the filed capacity amount if less than zero
     SoilStack$fieldCapacityAmount[LCC$fieldCapacityAmount < 0] <- 0
-    
+
     SoilStack$wiltingPointAmount <- SoilStack$wiltingPointMoistureContent * SoilStack$soilDepthCM
-    
+
     SoilStack$ET_Reduction <- SoilStack$fieldCapacityAmount * 0.8 / SoilStack$soilDepthCM
   }
   # Stream extraction - adjust Manning's n in stream channel by 0.01
@@ -159,13 +165,13 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
     extracted <- terra::ifel(is.nan(stream_extracted), 0, stream_extracted)
     SoilStack$mannings_n <- SoilStack$mannings_n - extracted*.01
   }
-  
-  
-  
+
+
+
   # Save the starting soil characteristic layers
   readr::write_csv(LCC, file.path(ModelOutputs, "Starting_Soil_Characteristics.csv"))
   # # startingSoil <- write.csv(LCC, file.path(DataStorage, "Starting_LandCover.csv"), overwrite = TRUE)
-  
+
   terra::writeRaster(SoilStack, soilstack_file, overwrite = T)
   print("Model soil stack created...")
 }

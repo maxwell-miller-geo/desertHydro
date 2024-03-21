@@ -37,11 +37,11 @@ WatershedElements <- "../inst/extdata/DemoElements" # Moves out a level to get t
 
 dem <- "dem.tif" # Necessary
 boundary <- NA # Optional
-landCoverFile <- "landcover.tif"
+landCoverFile <- "landcover1.tif"
 
 
 # # print("Check for vignette!")
-arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements)
+# a <- arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements, landCoverFile = landCoverFile)
 getwd()
 ```
 

@@ -3,7 +3,7 @@
 # to put
 
 ## ---------------------------------- Wrapper finder function
-stringMatch <- function(dataset, guessName = "Discharge"){
+stringMatch <- function(dataset, guessName = "Discharge", string = T){
   matchLocations <- grep(guessName, colnames(dataset)) # index of guesses
   if(length(matchLocations) == 1){
     stringName <- colnames(dataset)[matchLocations]
@@ -12,9 +12,12 @@ stringMatch <- function(dataset, guessName = "Discharge"){
     stringName <- colnames(dataset)[matchLocations][1]
   }else{
     print("Could not find matches for input string: Please check input string")
-    stringName <- NA
+    stringName <- matchLocations <- NA
   }
-  return(stringName) # index of matching column
+  if(string){
+    return(stringName) # index of matching column
+  }
+  return(matchLocations[[1]])
 }
 # Test
 # dataset <- streams

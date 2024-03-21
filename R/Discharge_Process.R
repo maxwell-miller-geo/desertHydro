@@ -64,15 +64,25 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, dis
 # # Function that takes rainfall data from a watersheds gauges and gathers total rainfall
 dischargeTotal <- function(discharge_file, write = F){
     print("Calculating total discharge values")
-    date_time <- height <- discharge <- temp_c <-  NULL
-    stream_data <- data.table::fread(discharge_file) # reads tsv and csv files
+    date_time <- height <- discharge <- temp_c <- stream <-  NULL
+    stream <- data.table::fread(discharge_file) # reads tsv and csv files
+
+
     #stream_data <- readr::read_tsv(discharge_file, show_col_types = FALSE)
-    # Filter data with recorded discharge values
-    observable_discharge <- as.data.frame(stream_data) |>
-      dplyr::mutate(date_time = stream_data$`time (MST)`, height = stream_data$`Gage Height(ft)-GCMRC-GCLT1`, discharge = stream_data$`Discharge(cfs)-GCMRC-GCLT1`, temp_c = stream_data$`Air Temperature(°C)-GCMRC-GCLT1`) |>
+    # Filter data with recorded discharge values- case sensitive
+    timeIndex <- stringMatch(stream, guessName = "time", string = F)
+    heightIndex <- stringMatch(stream, guessName = "Height", string = F)
+    dischIndex <- stringMatch(stream, guessName = "Discharge", string = F)
+    tempIndex <- stringMatch(stream, guessName = "Temp", string = F)
+    stream[,tempIndex] <- zoo::na.approx(stream[, tempIndex]) # filter out NA values
+
+    observable_discharge <- as.data.frame(stream) |>
+      dplyr::mutate(date_time = stream[,timeIndex],
+                    height = stream[,heightIndex],
+                    discharge = stream[,dischIndex],
+                    temp_c = stream[,dischIndex]) |>
       dplyr::select(date_time, height, discharge, temp_c) |>
-      dplyr::mutate(temp_c = ifelse(temp_c < -50, NA, temp_c)) |>   # deal with values less then possible (-999)
-      dplyr::mutate(temp_c = zoo::na.approx(temp_c)) |>
+      dplyr::mutate(temp_c = ifelse(temp_c < -50, NA, temp_c)) |> # deal with values less then possible (-999)
       dplyr::filter(discharge > 0) # filter out all the discharge greater than 0
 
   if(write){
@@ -88,7 +98,7 @@ dischargeTotal <- function(discharge_file, write = F){
 # # date_time, height, discharge, temp_c
 dischargeResample <- function(dischargeDF, units = "day", write = F){
   resampledDF <- dischargeDF |>
-    stats::aggregate(cbind(discharge, temp_c) ~ floor_date(date_time, unit = units), FUN = max) |>
+    stats::aggregate(cbind(discharge, temp_c) ~ lubridate::floor_date(date_time, unit = units), FUN = max) |>
     purrr::set_names(units, "maxDischarge", "temp_c") # want the peaks
   if(write){
     filename <- paste0("max-discharge-per-", units, ".csv")
@@ -113,6 +123,7 @@ dischargeResample <- function(dischargeDF, units = "day", write = F){
 #
 #
 #
+## ----------------------------------------------
 # # Create a function to look up if discharge is recorded on a particular date
 discharge_present <- function(data_folder, date, discharge_name = "example_discharge.csv", write = T){
   # Currently only works for 1 downloaded gauge - does select by stream gauge
@@ -133,8 +144,8 @@ discharge_present <- function(data_folder, date, discharge_name = "example_disch
   # Assuming the input date is in YYYY/MM/DD
   #date <- lubridate::ymd(date) # convert date
   date <- lubridate::parse_date_time(date, "ymd")
-  date_after <- date + days(1) # day after
-  date_before <- date + days(-1)
+  date_after <- date + lubridate::days(1) # day after
+  date_before <- date + lubridate::days(-1)
   discharge_dates <- c()
   # Check search date, before, and after
   if(date %in% dischargeDaily$day){
@@ -162,86 +173,86 @@ discharge_present <- function(data_folder, date, discharge_name = "example_disch
 #
 # # Function that creates combined discharge and rainfall output
 #
-# rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store = T, trim = F){
-#   # # Create zeros within the data create a sequence of time from the rainfall DF
-#   # time_seq <- data.frame(Time_minute = seq(rainfallDF$Time_minute[1], tail(rainfallDF$Time_minute,1), by = "min"))
-#   # # Change gauge names
-#   colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "-", "_")
-#   #colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "[.]", "_")
-#   # # This step combines the rainfall and the discharge data into 1 dataframe - dirty
-#   # rain_seq <- time_seq |>
-#   #   dplyr::left_join(rainfallDF, by = "Time_minute") |>
-#   #   tidyr::replace_na(list( time = 0))
-#   # # This step combines the rainfall and the discharge data into 1 dataframe - dirty
-#
-#   # Get the first time recorded for the discharge and rainfall
-#   discharge_start <- dischargeDF$`time (MST)`[1]
-#   rain_start <- rainfallDF$Time_minute[1]
-#
-#   if(rain_start < discharge_start){
-#     time_diff <- as.numeric(difftime(discharge_start, rain_start, units = "mins"))
-#     # Append discharge time at the end of rainfall
-#     rainfallDF <- rainfallDF |>
-#       dplyr::add_row(Time_minute = discharge_start,
-#                      time = time_diff,
-#                      WATER_1 = 0, WATER_2 = 0, WATER_G = 0, Total_in = 0,
-#                      .before = 1) |>
-#       dplyr::arrange(Time_minute)
-#   }
-#
-#   rain_discharge <- dplyr::full_join(rainfallDF, dischargeDF, by = join_by("Time_minute" == "time (MST)"))
-#   # interpolate between values
-#   # Selectable columns
-#   cols <- c("Time_minute", "Total_in", "discharge", "height")
-#
-#   # Filter columns
-#   rain_discharge <- rain_discharge |>
-#     select(cols) |>
-#     arrange(rain_discharge$`Time-minute`) |>
-#     mutate(time = (as.numeric(rain_discharge$`Time_minute` - base::min(rain_discharge$`Time_minute`)
-#                              ) / 60) + 1)
-#
-#   #return(rain_discharge)
-#   # Perform linear approximation on discharge and height values
-#   rain_discharge$discharge <- round(na.approx(rain_discharge$discharge, na.rm = F), 4)
-#   rain_discharge$height <- round(na.approx(rain_discharge$height, na.rm = F), 2)
-#   #return(rain_discharge)
-#   # Replace NA values with 0s
-#   rain_discharge[is.na(rain_discharge)] <- as.integer(0)
-#
-#   # Add a line of zeros at the beginning
-#   rain_discharge <-  rain_discharge |>
-#       dplyr::add_row(Time_minute = c(rain_discharge[1,1] - minutes(1)),
-#                         Total_in = 0,
-#                        discharge = 0,
-#                           height = 0,
-#                             time = 0, .before = 1) |>
-#                           arrange(time) |>
-#                       mutate(difftime = c(0, diff(time)))
-#
-#   # Cut off values if rainfall occurs after discharge recedes
-#   #which(rain_discharge$difftime > 60)[1])){
-#   index <- which(rain_discharge$difftime > 60)[1] # grab first time hour jump
-#   if(rain_discharge[index, ]$discharge < 1 & trim){ # remove last entries if little discharge
-#       rain_discharge <- rain_discharge[1:(index-1),] # remove end points
-#    }
-#
-#   # Interpolate between discharge amounts
-#   # discharge <- approx(rain_discharge$discharge, method = "linear")
-#   # xapprox <- approx(x$discharge, method = "linear")
-#   # Writes the values into csv
-#   if(store){
-#     filename <- file.path(outpath, "rain-discharge.csv")
-#     readr::write_csv(x = rain_discharge, file = filename)
-#     # Read csv
-#     #x <- readr::read_csv(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Demo_Test\2022-07-15\rain-discharge.csv)")
-#   }
-#   return(rain_discharge)
-# }
+rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store = T, trim = F){
+  # # Create zeros within the data create a sequence of time from the rainfall DF
+  # time_seq <- data.frame(Time_minute = seq(rainfallDF$Time_minute[1], tail(rainfallDF$Time_minute,1), by = "min"))
+  # # Change gauge names
+  colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "-", "_")
+  colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "[.]", "_")
+  # # This step combines the rainfall and the discharge data into 1 dataframe - dirty
+  # rain_seq <- time_seq |>
+  #   dplyr::left_join(rainfallDF, by = "Time_minute") |>
+  #   tidyr::replace_na(list( time = 0))
+  # # This step combines the rainfall and the discharge data into 1 dataframe - dirty
+
+  # Get the first time recorded for the discharge and rainfall
+  discharge_start <- dischargeDF$`time (MST)`[1]
+  rain_start <- rainfallDF$Time_minute[1]
+
+  if(rain_start < discharge_start){
+    time_diff <- as.numeric(difftime(discharge_start, rain_start, units = "mins"))
+    # Append discharge time at the end of rainfall
+    rainfallDF <- rainfallDF |>
+      dplyr::add_row(Time_minute = discharge_start,
+                     time = time_diff,
+                     WATER_1 = 0, WATER_2 = 0, WATER_G = 0, Total_in = 0,
+                     .before = 1) |>
+      dplyr::arrange(Time_minute)
+  }
+
+  rain_discharge <- dplyr::full_join(rainfallDF, dischargeDF, by = join_by("Time_minute" == "time (MST)"))
+  # interpolate between values
+  # Selectable columns
+  cols <- c("Time_minute", "Total_in", "discharge", "height")
+
+  # Filter columns
+  rain_discharge <- rain_discharge |>
+    select(cols) |>
+    arrange(rain_discharge$`Time-minute`) |>
+    mutate(time = (as.numeric(rain_discharge$`Time_minute` - base::min(rain_discharge$`Time_minute`)
+                             ) / 60) + 1)
+
+  return(rain_discharge)
+  # Perform linear approximation on discharge and height values
+  rain_discharge$discharge <- round(na.approx(rain_discharge$discharge, na.rm = F), 4)
+  rain_discharge$height <- round(na.approx(rain_discharge$height, na.rm = F), 2)
+  #return(rain_discharge)
+  # Replace NA values with 0s
+  rain_discharge[is.na(rain_discharge)] <- as.integer(0)
+
+  # Add a line of zeros at the beginning
+  rain_discharge <-  rain_discharge |>
+      dplyr::add_row(Time_minute = c(rain_discharge[1,1] - minutes(1)),
+                        Total_in = 0,
+                       discharge = 0,
+                          height = 0,
+                            time = 0, .before = 1) |>
+                          arrange(time) |>
+                      mutate(difftime = c(0, diff(time)))
+
+  # Cut off values if rainfall occurs after discharge recedes
+  #which(rain_discharge$difftime > 60)[1])){
+  index <- which(rain_discharge$difftime > 60)[1] # grab first time hour jump
+  if(rain_discharge[index, ]$discharge < 1 & trim){ # remove last entries if little discharge
+      rain_discharge <- rain_discharge[1:(index-1),] # remove end points
+   }
+
+  # Interpolate between discharge amounts
+  # discharge <- approx(rain_discharge$discharge, method = "linear")
+  # xapprox <- approx(x$discharge, method = "linear")
+  # Writes the values into csv
+  if(store){
+    filename <- file.path(outpath, "rain-discharge.csv")
+    readr::write_csv(x = rain_discharge, file = filename)
+    # Read csv
+    #x <- readr::read_csv(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Demo_Test\2022-07-15\rain-discharge.csv)")
+  }
+  return(rain_discharge)
+}
 # # Test - see rain-discharge set-up
 # # Rain
 #
-# # Plot rainfall - discharge
+# # # Plot rainfall - discharge
 plot_rainfall_discharge <- function(rain_discharge_DF, date, store = T, outpath = ""){
   # Change the x-axis from time to Time_minute
   rain_plot <- ggplot2::ggplot(rain_discharge_DF) +
@@ -320,8 +331,6 @@ dailyDischarge <- function(discharge_file_path, discharge_date, save_location, s
 
   return(discharge_per_day)
 }
-#
-# # x <- read_csv(outputData)
 #
 # # Test
 # # discharge_file_path <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Temporal_Data\Waterholes_Stream_gcmrc20231127132459.tsv)"

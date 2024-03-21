@@ -58,9 +58,9 @@ arid_model <- function(ModelFolder,
                        store = T,
                        gif = T,
                        boundary = NA,
-                       discharge = T,
+                       discharge = F,
                        impervious = F,
-                       overwrite = F,
+                       overwrite = T,
                        write = T,
                        restartModel = F,
                        landCoverFile = NA,
@@ -183,14 +183,14 @@ initial_conditions(ModelOutputs = ModelFolder, model_dem = model_dem) # saves in
 #source("initialSoilConditions.R")
 
 if(key == "NLCD_Key"){
-  LandCoverCharacteristics <- "LandCoverCharacteristics.xlsx" # default excel file within current project folder
+  LandCoverCharacteristics <- file.path(WatershedElements, "LandCoverCharacteristics.xlsx") # default excel file within current project folder
 }else if(key == "MUKEY"){
-  LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
+  LandCoverCharacteristics <- file.path(WatershedElements, "LandCoverCharacteristics_Soils.xlsx")
 }else if(key == "KEY"){
   # Land Cover characteristics
 }
+ClassificationMap <- landCoverFile # adjusted/cropped classification map - must be named correctly
 
-ClassificationMap <- file.path(WatershedElements, landcovername) # adjusted/cropped classification map - must be named correctly
 #DEM <- file.path(WatershedElements, "cropped_dem.tif") # clipped dem, elevations unaltered - must be named correctly
 #DEM <- file.path(WatershedElements, "model_dem.tif") # modified dem, elevations unaltered - must be named correctly
 # Initial soil conditions for model - a stacked map of soil characteristics including:
