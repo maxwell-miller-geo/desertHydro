@@ -87,23 +87,28 @@
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Important steps</span></span>
 <span><span class="co"># Location or file path to save the </span></span>
-<span><span class="va">ModelFolder</span> <span class="op">&lt;-</span> <span class="st">r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)"</span> </span>
+<span><span class="va">ModelFolder</span> <span class="op">&lt;-</span> <span class="st">r"(Z:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)"</span> </span>
 <span><span class="co"># # # ModelFolder &lt;- r"(~TestFolderPackage)"</span></span>
 <span><span class="co">#WatershedElements &lt;- "./inst/extdata/DemoElements"</span></span>
-<span><span class="va">WatershedElements</span> <span class="op">&lt;-</span> <span class="st">"inst/extdata/DemoElements"</span></span>
+<span><span class="va">WatershedElements</span> <span class="op">&lt;-</span> <span class="st">"../inst/extdata/DemoElements"</span> <span class="co"># Moves out a level to get to data folder</span></span>
 <span><span class="co"># File names</span></span>
 <span></span>
 <span><span class="va">dem</span> <span class="op">&lt;-</span> <span class="st">"dem.tif"</span> <span class="co"># Necessary</span></span>
 <span><span class="va">boundary</span> <span class="op">&lt;-</span> <span class="cn">NA</span> <span class="co"># Optional</span></span>
-<span><span class="va">landCoverFile</span> <span class="op">&lt;-</span> <span class="st">"landcover.tif"</span></span>
+<span><span class="va">landCoverFile</span> <span class="op">&lt;-</span> <span class="st">"landcover1.tif"</span></span>
 <span></span>
 <span></span>
 <span><span class="co"># # print("Check for vignette!")</span></span>
-<span><span class="co"># desertHydro::arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements, demFile = dem, boundary = landCoverFile)</span></span></code></pre></div>
+<span><span class="co"># a &lt;- arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements, landCoverFile = landCoverFile)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">getwd</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "/home/runner/work/desertHydro/desertHydro/vignettes"</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="use-vignettes--">Use vignettes -<a class="anchor" aria-label="anchor" href="#use-vignettes--"></a>
 </h2>
-<p>build_rmd(“vignettes/watershedWorkflow.Rmd”)</p>
+</div>
+<div class="section level2">
+<h2 id="build_rmdvignetteswatershedworkflow-rmd">build_rmd(“vignettes/watershedWorkflow.Rmd”)<a class="anchor" aria-label="anchor" href="#build_rmdvignetteswatershedworkflow-rmd"></a>
+</h2>
 </div>
   </div>
 
