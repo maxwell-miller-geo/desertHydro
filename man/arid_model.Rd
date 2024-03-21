@@ -85,7 +85,8 @@ Desert Hydrology Model Full Suite
 }
 \examples{
 \dontrun{
-ModelFolder <- r"(C:/Thesis/Arid-Land-Hydrology/R/Example/SampleModel)" # Change this to output folder
+# Change this to output folder
+ModelFolder <- r"(C:/Thesis/Arid-Land-Hydrology/R/Example/SampleModel)"
 WatershedElements <- file.path("inst/extdata/DemoElements") # demo elements
 arid_model(ModelFolder, WatershedElements)
 }
