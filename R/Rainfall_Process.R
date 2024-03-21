@@ -334,7 +334,7 @@ rainfallFilter <- function(date, ModelFolder, WatershedElements, overwrite = F){
 
 ##-----------------------
 # Function that checks if rainfall is on a current day
-checkRainfall <- function(date_list){
+checkRainfall <- function(date_list, WatershedElements, day_list){
   # Check all the days that have recorded discharge and recorded rainfall
   rainDF <- rainfallTotalRain(WatershedElements, level = "minute", write = F)
   # Rainfall list
@@ -477,8 +477,9 @@ rainfallCheck <- function(data, search_dates){
 # Function that sums the rainfall between to times
 cumulativeRain <- function(rainDF, left, right, spatial = F){
   # Function assumes two column rain data frame: time(minutes) | total rainfall
+  time <- NULL
   SelectRain <- rainDF |>
-    dplyr::filter(between(time, left-.001, right)) # because between is inclusive - this should make it not inclusive
+    dplyr::filter(dplyr::between(time, left-.001, right)) # because between is inclusive - this should make it not inclusive
   # assumes first column is rain_duration normalized to minutes
   if(spatial){
     rainSum <- colSums(SelectRain[,2:ncol(SelectRain)])

@@ -103,19 +103,19 @@ watershedElements <- function(Outpath, DEM, WatershedShape, land_cover_file = "l
 #
 # watershedElements(Outpath = fileOutpath, DEM = dem_path, LandCover = land_cover_path, WatershedShape = watershed_shape_path)
 
-## Create voronoi polygons
-createVoronoi <- function(coords, shapefile, write = F){
+## Create voronoi polygons - not run
+createVoronoi <- function(coords, combined, shapefile, write = F){ # Not run
   # Function is hard coded for example (waterholes)
   points <- terra::vect(matrix(combined, nrow = length(coords)/2, byrow = T)) # matrix with points
   shapefile <- terra::vect(shapefile)
   lines <- terra::voronoi(points, bnd = shapefile, as.lines = T)
-  df <- geom(lines)[c(1:2,5:6),] # convert points to dataframe
-  line_1 <- as.lines(df)
+  df <- terra::geom(lines)[c(1:2,5:6),] # convert points to dataframe
+  line_1 <- terra::as.lines(df)
 
   matrix_points <- as.matrix(data.frame(df$x, df$y))
-  line_split <- terra::vect(df, type = "lines", crs = crs(shapefile)) # creates points
+  line_split <- terra::vect(df, type = "lines", crs = terra::crs(shapefile)) # creates points
 
-  watershed_split <- terra::split(shape, line_split)
+  watershed_split <- terra::split(shapefile, line_split)
   terra::writeVector(watershed_split, "voronoi-test.shp", filetype = "ESRI Shapefile", overwrite = T)
 }
 

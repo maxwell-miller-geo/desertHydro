@@ -47,14 +47,14 @@ vectCreation <- function(df, saveLoc, name, coords){ # df must contain xy
 
 # Test
 # vectName <- "depth_max.shp"
-# vector_shapefile <- terra::vect(data_out, geom = c("x", "y"), crs = crs(SoilStack)) 
+# vector_shapefile <- terra::vect(data_out, geom = c("x", "y"), crs = crs(SoilStack))
 # writeVector(vector_shapefile, filename = file.path(ModelFolder, vectName))
 
 #----------------------------------
 # Function that reads vectors and turns them into DF see vectCreation
 # Returns format: time | x | y | value
 vectRead <- function(vect){
-  
+
 }
 ##-------------------------------
 # Attach a layer and write to disk
@@ -70,11 +70,11 @@ writeLayer <- function(rasterStackPath, layer, layername){
 # writeDisk(rasterStackPath, layer)
 
 
-## # ------------------ Layer write 
+## # ------------------ Layer write
 # Take a single layer - save with time variable in name
 # Chunks the writing process of outputs - recompiles with another function
 rasterWrite <- function(raster, ModelFolder, end_time, layername = "surface"){
-  
+
   # raster layer
   time <- gsub("[.]", "-", c(end_time))
   name <- paste0(layername,"-time-",time,".tif")
@@ -83,20 +83,20 @@ rasterWrite <- function(raster, ModelFolder, end_time, layername = "surface"){
   terra::writeRaster(raster, filename = rasterPath, overwrite = T)
   return(rasterPath)
 }
-# Test 
+# Test
 # raster <- surface[[2]]
 # end_time <- 1
 # layername = "surface"
 # rasterPath <- rasterWrite(raster, ModelFolder, end_time, layername = "surface")
 # rasterPath2 <- rasterWrite(raster, ModelFolder, end_time+0.5, layername = "surface")
-# 
+#
 # raster1 <- rast(rasterPath)
 # raster2 <- rast(rasterPath2)
 ## -------------------------- Combine rasters
 # Function that takes a bunch of rasters and combined them by name
 rasterCompile <- function(ModelFolder, layername){ # layername must be present in folder
   # Find files with names and combined them by time
-  tifFiles <- list.files(ModelFolder, pattern = "*.tif") 
+  tifFiles <- list.files(ModelFolder, pattern = "*.tif")
   layerFiles <- grep(paste0(layername,"-time-"), tifFiles, value = T)
   # Converts strings into ordered dataframe
   orderedDF <- convert_string(layerFiles)
@@ -124,19 +124,19 @@ convert_string <- function(x) {
   times <- stringr::str_extract(x, pattern)
   # Define pattern for matching
   pattern <- "-(\\d+)-?(\\d*)."
-  
+
   # Replace matches using gsub
   timeDecimal <- as.numeric(gsub(pattern, "\\1.\\2", times))
-  
+
   # Create a named list or vector to store the mapping
-  converted_dict <- setNames(timeDecimal, x)
-  
+  converted_dict <- stats::setNames(timeDecimal, x)
+
   # Convert the dictionary to a data frame
   df <- data.frame(original_string = names(converted_dict),
                    converted_value = unname(converted_dict))
   # Sort the data frame based on the converted values
   df <- df[order(df$converted_value), ]
   # Convert the data frame back to a named vector
-  sorted_dict <- setNames(df$converted_value, df$original_string)
+  sorted_dict <- stats::setNames(df$converted_value, df$original_string)
   return(sorted_dict)
 }

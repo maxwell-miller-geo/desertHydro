@@ -85,7 +85,21 @@ totalVolume <- function(time, discharge){
 
 ## ---------------------------- Discharge Figures
 # Function that creates discharge figures
-dischargeAnalysis <- function(ModelFolder, WatershedElements, discharge = T, store = T){
+#' Discharge Analysis after desertFlo simulation
+#'
+#' @param ModelFolder Model Folder with saved outputs
+#' @param WatershedElements Watershed Folder with Watershed components. Assumes that
+#' @param time_step
+#' @param simulation_length
+#' @param discharge
+#' @param store
+#'
+#' @return
+#' @export
+#'
+#' @examples
+dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length, discharge = T, store = T){
+  time <- Total_in <- NULL
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
   velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
   subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
@@ -119,16 +133,16 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, discharge = T, sto
 
       modelScore <- modelEfficiency(compareDis, method = "NSE")
       dischargePlot <- ggplot2::ggplot() +
-        geom_line(aes(x = compareDis$time, y = compareDis$recDis, color = "Recorded")) +
-        geom_line(aes(x = compareDis$time, y = compareDis$predDis, color = "Predicted")) +
-        labs(title = paste0("Predicted Discharge from Rainfall Event: ",  date),
+        ggplot2::geom_line(ggplot2::aes(x = compareDis$time, y = compareDis$recDis, color = "Recorded")) +
+        ggplot2::geom_line(ggplot2::aes(x = compareDis$time, y = compareDis$predDis, color = "Predicted")) +
+        ggplot2::labs(title = paste0("Predicted Discharge from Rainfall Event: ",  date),
              x = paste0("Time (minutes)"),
              y = paste0("Discharge (ft\u00b3/s)"),
              color = "Legend")
 
       dischargePlot
       if(store){
-        ggsave(filename = file.path(ModelFolder, paste0("compare-discharge-xsection-", x, "-", date,".png")),
+        ggplot2::ggsave(filename = file.path(ModelFolder, paste0("compare-discharge-xsection-", x, "-", date,".png")),
                plot = dischargePlot, width = 5.5, height = 4)
       }
       if(x == nrow(surface_Height)){ # save the
@@ -149,14 +163,14 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, discharge = T, sto
       xvalues <- seq(time_step, simulation_length, by = time_step)
       dischargePlot <- ggplot2::ggplot() +
         #geom_line(aes(x = compareDis$time, y = compareDis$recDis, color = "Recorded")) +
-        geom_line(aes(x = xvalues, y = estimated, color = "Predicted")) +
-        labs(title = paste0("Predicted Discharge from Rainfall Event: ",  date),
+        ggplot2::geom_line(ggplot2::aes(x = xvalues, y = estimated, color = "Predicted")) +
+        ggplot2::labs(title = paste0("Predicted Discharge from Rainfall Event: ",  date),
              x = paste0("Time (minutes)"),
              y = paste0("Discharge (ft\u00b3/s)"),
              color = "Legend")
       dischargePlot
       if(store){
-        ggsave(filename = file.path(ModelFolder, paste0("discharge-prediction","-xsection-", x, "-", date,".png")),
+        ggplot2::ggsave(filename = file.path(ModelFolder, paste0("discharge-prediction","-xsection-", x, "-", date,".png")),
                plot = dischargePlot, width = 5.5, height = 4)
       }
     }

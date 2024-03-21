@@ -25,11 +25,13 @@ Imports:
     dplyr,
     gganimate,
     ggplot2,
+    gridExtra,
     hms,
     lubridate,
     readr,
     readxl,
     reshape2,
+    stats,
     stringr,
     terra,
     whitebox

@@ -12,6 +12,7 @@ arid_model(
   simulation_length = NA,
   mini = F,
   rainfall_method = "gauges",
+  store = T,
   gif = T,
   crop = T,
   discharge = T,
@@ -48,6 +49,8 @@ Large computational areas + 1 million cells will take considerable time dependin
 \item{rainfall_method}{Optional rainfall method string. Default "gauges" creates weighted average of rainfall within a given watershed.
 The "gauges" data must be formatted correctly to apply rainfall. For additional options of rainfall see documenatatin for
 rainfallCreate.}
+
+\item{store}{Optional: T/F: If TRUE, will store graphs or plots in ModelFolder}
 
 \item{gif}{Optional: T/F: If TRUE, will create gif animations for each of the typical outputs - Surface water depth, surface water velocity, and soil moisture.}
 

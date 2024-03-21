@@ -9,8 +9,8 @@
 #   surface_velocity <- terra::extract(surfaceVelocity, cross_section) # velocity at given time (m/s)
 #   cm_to_m2 <- .01 * 10 # conversion factor - Conversion to m time grid size
 #   surface_discharge <- (as.numeric(surface_Height[,3:ncol(surface_Height)]* cm_to_m2) * surface_velocity[,3:ncol(surface_velocity)])
-#   xvalues <- as.numeric(colnames(surface_Height[,3:ncol(surface_Height)])) 
-#   estimated <- data.frame(time = xvalues, predDis = as.numeric(as.vector(surface_discharge[1,]))) 
+#   xvalues <- as.numeric(colnames(surface_Height[,3:ncol(surface_Height)]))
+#   estimated <- data.frame(time = xvalues, predDis = as.numeric(as.vector(surface_discharge[1,])))
 #   return
 # }
 
@@ -24,20 +24,20 @@ meltStack <- function(rasterStack, resample = 1, timevalues = xvalues){ # assume
     resample <- 5
   }
   # Down sample the raster images
-  downsampledstack <- terra::aggregate(rasterStack, fact = resample, fun = "mean", na.rm = F) |> 
+  downsampledstack <- terra::aggregate(rasterStack, fact = resample, fun = "mean", na.rm = F) |>
     subset(1:nlyr(rasterStack)) # removes first layer
-  
-  # Create names for layers - create names for vector within the model function 
+
+  # Create names for layers - create names for vector within the model function
   #names(downsampledstack) <- seq(1: nlyr(downsampledstack)) # number of layers
   print(length(names(downsampledstack)))
   print(length(timevalues))
   names(downsampledstack) <- as.numeric(timevalues)
   # Create dataframe
   stackdf <- terra::as.data.frame(downsampledstack, xy = T)
-  
+
   # Melt the stacked data frame
   meltedDF <- reshape2::melt(stackdf, variable.name = "Time", id = c("x", "y"))
-  
+
   # Convert "Time" to numeric and remove missing values
   meltedDF$Time <- as.numeric(as.character(meltedDF$Time))
   meltedDF <- na.omit(meltedDF)
@@ -51,15 +51,17 @@ meltStack <- function(rasterStack, resample = 1, timevalues = xvalues){ # assume
 
 # Create an animation stack
 animateStack <- function(meltedDF, title = "", units = "", caption = ""){
-  animated <- ggplot(meltedDF, aes(x = x, y = y, fill = value, frame = Time)) +
-              geom_raster() +
-              scale_fill_viridis_c(direction = -1, option = "viridis") +
-              ggtitle("{title} - Time {round(frame_time)} (minutes)") +
-              xlab("Longitude") + 
-              ylab("Latitude") + 
-              labs(fill = units, caption = caption) + 
-              theme(plot.title = element_text(hjust = 0.5)) +
-              theme_dark() + 
-              transition_time(Time)
+  requireNamespace("ggplot2")
+  x <- y <- value <- Time <- NULL # binding local variables
+  animated <- ggplot2::ggplot(meltedDF, ggplot2::aes(x = x, y = y, fill = value, frame = Time)) +
+              ggplot2::geom_raster() +
+              ggplot2::scale_fill_viridis_c(direction = -1, option = "viridis") +
+              ggplot2::ggtitle("{title} - Time {round(frame_time)} (minutes)") +
+              ggplot2::xlab("Longitude") +
+              ggplot2::ylab("Latitude") +
+              ggplot2::labs(fill = units, caption = caption) +
+              ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
+              ggplot2::theme_dark() +
+              gganimate::transition_time(Time)
   return(animated)
 }

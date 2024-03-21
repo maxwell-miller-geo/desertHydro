@@ -245,26 +245,26 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, dis
 # # Plot rainfall - discharge
 plot_rainfall_discharge <- function(rain_discharge_DF, date, store = T, outpath = ""){
   # Change the x-axis from time to Time_minute
-  rain_plot <- ggplot(rain_discharge_DF) +
-    geom_col(mapping = aes(x = Time_minute, y = Total_in)) +
-    labs(title = paste("Rainfall at Waterholes Watershed, AZ:", date), x = "", y = "Measured Rainfall (in)") +
-    theme_bw() +
-    theme(plot.title = element_text(hjust = 0.5))
+  rain_plot <- ggplot2::ggplot(rain_discharge_DF) +
+    ggplot2::geom_col(mapping = aes(x = Time_minute, y = Total_in)) +
+    ggplot2::labs(title = paste("Rainfall at Waterholes Watershed, AZ:", date), x = "", y = "Measured Rainfall (in)") +
+    ggplot2::theme_bw() +
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 
 
-  discharge_plot <- ggplot(rain_discharge_DF) +
-    geom_line(mapping = aes(x = Time_minute, y = discharge))  +
+  discharge_plot <- ggplot2::ggplot(rain_discharge_DF) +
+    ggplot2::geom_line(mapping = aes(x = Time_minute, y = discharge))  +
     #labs(title = paste("Discharge at Waterholes Watershed, AZ:", date), x = "", y = bquote("Measured Discharge" (ft^3/s))) +
-    labs(title = paste("Discharge at Waterholes Watershed, AZ:", date), x = "", y = paste0("Measured Discharge ft\u00b3/s)")) +
-    theme_bw() +
-    theme(plot.title = element_text(hjust = 0.5))
+    ggplot2::labs(title = paste("Discharge at Waterholes Watershed, AZ:", date), x = "", y = paste0("Measured Discharge ft\u00b3/s)")) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(plot.title = element_text(hjust = 0.5))
 
     # Combine the two graphs
-    combined_plot <- grid.arrange(discharge_plot, rain_plot)
+    combined_plot <- gridExtra::grid.arrange(discharge_plot, rain_plot)
     # store the graph for the date
     if(store){
       outputPlot <- paste0("discharge_rain_", date ,".png")
-      ggsave(file.path(outpath, outputPlot), plot = combined_plot, width = 6)
+      ggplot2::ggsave(file.path(outpath, outputPlot), plot = combined_plot, width = 6)
     }
 }
 #
@@ -277,36 +277,43 @@ plot_rainfall_discharge <- function(rain_discharge_DF, date, store = T, outpath 
 #
 # # Filters discharge data set for a particular date, optional - create graphic
 dailyDischarge <- function(discharge_file_path, discharge_date, save_location, saveGraphs = T){
+  discharge <- discharge_diff <- height <- NULL
   # Read data into R
   stream_data <- readr::read_tsv(discharge_file_path, show_col_types = F)
-
   # sFilter data with recorded discharge value
   discharge_per_day <- as.data.frame(stream_data) |>
-    mutate(date = lubridate::ymd_hms(stream_data$`time (MST)`, quiet = T), discharge = stream_data$`Discharge(cfs)-GCMRC-GCLT1`, height = stream_data$`Gage Height(ft)-GCMRC-GCLT1`) |>
+    dplyr::mutate(date = lubridate::ymd_hms(stream_data$`time (MST)`, quiet = T), discharge = stream_data$`Discharge(cfs)-GCMRC-GCLT1`, height = stream_data$`Gage Height(ft)-GCMRC-GCLT1`) |>
 
-    filter(lubridate::date(date) == discharge_date) |> # filters out discharge for date "YYYY-MM-DD"
-    mutate(discharge_diff = round(c(diff(discharge),0),3)) |> # Calculates difference in discharge per time step
-    filter(discharge > 0 | discharge_diff > 0) # selects locations with measured discharge and point before discharge occur
+    dplyr::filter(lubridate::date(date) == discharge_date) |> # filters out discharge for date "YYYY-MM-DD"
+    dplyr::mutate(discharge_diff = round(c(diff(discharge),0),3)) |> # Calculates difference in discharge per time step
+    dplyr::filter(discharge > 0 | discharge_diff > 0) # selects locations with measured discharge and point before discharge occur
 
 
   # Scale the height data for a particular storm to zero.
   discharge_per_day$height <- round(discharge_per_day$height - min(discharge_per_day$height), 3)
 
   # Determine the length of discharge
-  time_diff <- round(as.double(difftime(last(discharge_per_day$time), discharge_per_day$time[1], units = "mins")), 3) # number of minutes for particular discharge
+  time_diff <- round(as.double(difftime(data.table::last(discharge_per_day$time), discharge_per_day$time[1], units = "mins")), 3) # number of minutes for particular discharge
 
   # Discharge graph
-  discharge_plot <- ggplot(discharge_per_day) + geom_line(aes(x = hms::as_hms(date), y = discharge)) + labs(title = paste("Discharge at Waterholes Watershed, AZ:", discharge_date), x = "Time", y = paste0("Measured Discharge ft\u00b3/s)")) + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+  discharge_plot <- ggplot2::ggplot(discharge_per_day) +
+    ggplot2::geom_line(ggplot2::aes(x = hms::as_hms(date), y = discharge)) +
+    ggplot2::labs(title = paste("Discharge at Waterholes Watershed, AZ:", discharge_date), x = "Time", y = paste0("Measured Discharge ft\u00b3/s)")) + ggplot2::theme_bw() +
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 
   # Height graph
-  height_plot <- ggplot(discharge_per_day) + geom_line(aes(x = hms::as_hms(date), y = height)) + labs(title = paste("Stage Height at Waterholes Watershed, AZ:", discharge_date), x = "Time", y = "Measured Height (ft)") + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+  height_plot <- ggplot2::ggplot(discharge_per_day) +
+    ggplot2::geom_line(ggplot2::aes(x = hms::as_hms(date), y = height)) +
+    ggplot2::labs(title = paste("Stage Height at Waterholes Watershed, AZ:", discharge_date), x = "Time", y = "Measured Height (ft)") +
+    ggplot2::theme_bw() +
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 
   # Combine the two graphs
-  combined_plot <- grid.arrange(discharge_plot, height_plot)
+  combined_plot <- gridExtra::grid.arrange(discharge_plot, height_plot)
   # store the graph for the date
   if(saveGraphs){
     outputPlot <- paste0("discharge_height_plot_",discharge_date,".png")
-    ggsave(file.path(save_location, outputPlot), plot = combined_plot, width = 6)
+    ggplot2::ggsave(file.path(save_location, outputPlot), plot = combined_plot, width = 6)
   }
   # store the data as an output
   outputData <- paste0("discharge-data-", discharge_date, ".csv")

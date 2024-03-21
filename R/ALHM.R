@@ -17,6 +17,7 @@
 #' @param rainfall_method Optional rainfall method string. Default "gauges" creates weighted average of rainfall within a given watershed.
 #' The "gauges" data must be formatted correctly to apply rainfall. For additional options of rainfall see documenatatin for
 #' rainfallCreate.
+#' @param store Optional: T/F: If TRUE, will store graphs or plots in ModelFolder
 #' @param gif Optional: T/F: If TRUE, will create gif animations for each of the typical outputs - Surface water depth, surface water velocity, and soil moisture.
 #' @param crop Optional: T/F: If TRUE, will crop using terra::crop datasets to boundary layer. Boundary or extent mismatches in spatial data
 #' will prevent successful model simulations.
@@ -52,7 +53,7 @@ arid_model <- function(ModelFolder,
                        simulation_length = NA,
                        mini = F,
                        rainfall_method = "gauges",
-                       # store = T,
+                       store = T,
                        gif = T,
                        crop = T,
                        discharge = T,
@@ -132,10 +133,10 @@ if(!crop){ # if it isn't cropped, it will adjust to look for the demo file.
 }
 if(is.na(watershed_shape_path)){
   print("No computational boundary layer")
-}else if(file.exists(watershed_shape_path) | watershed){
+}else if(file.exists(watershed_shape_path)){
   print("Located computational boundary layer")
 }else{
-  error(paste0("Could not locate computaitonal boundary:", watershed_shape_path))
+  stop(paste0("Could not locate computational boundary:", watershed_shape_path))
 }
 # Function adjusts digital elevation model (smooths with preserved features)and land cover map is projected in same coordinate system and clipped to watershed.
 landcovername <- watershedElements(Outpath = WatershedElements, DEM = dem_path, WatershedShape = watershed_shape_path, land_cover_file = land_cover_file, ModelFolder = ModelFolder)
