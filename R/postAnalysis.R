@@ -91,14 +91,16 @@ totalVolume <- function(time, discharge){
 #' @param WatershedElements Watershed Folder with Watershed components. Assumes that
 #' @param time_step Time in minutes
 #' @param simulation_length Length of simulation in minutes
-#' @param discharge T/F: Default TRUE: If TRUE, will look for observed discharge hydrographs
-#' @param store T/F: Default TRUE: If TRUE, will store created plots in ModelFolder
+#' @param discharge T/F: Default TRUE: If TRUE, will look for observed discharge
+#' hydrographs
+#' @param store T/F: Default TRUE: If TRUE, will store created plots in
+#' ModelFolder
 #'
 #' @return Returns discharge excel table and plots from model simulation
 #' @export
 #'
-#' @examples
-#' See vignette
+#' @examples \dontrun{#See vignette}
+#'
 dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length, discharge = T, store = T){
   time <- Total_in <- NULL
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))

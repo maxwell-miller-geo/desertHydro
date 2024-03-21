@@ -22,9 +22,11 @@ dischargeAnalysis(
 
 \item{simulation_length}{Length of simulation in minutes}
 
-\item{discharge}{T/F: Default TRUE: If TRUE, will look for observed discharge hydrographs}
+\item{discharge}{T/F: Default TRUE: If TRUE, will look for observed discharge
+hydrographs}
 
-\item{store}{T/F: Default TRUE: If TRUE, will store created plots in ModelFolder}
+\item{store}{T/F: Default TRUE: If TRUE, will store created plots in
+ModelFolder}
 }
 \value{
 Returns discharge excel table and plots from model simulation
@@ -33,5 +35,6 @@ Returns discharge excel table and plots from model simulation
 Discharge Analysis after desertFlo simulation
 }
 \examples{
-See vignette
+\dontrun{#See vignette}
+
 }

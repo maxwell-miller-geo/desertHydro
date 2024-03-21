@@ -4,6 +4,7 @@
 #' The script will write and modify the elements present within the output folder.
 #' @param WatershedElements The folder path that contains all the necessary components to
 #' create and run the hydrological model.
+#' @param demFile Name of the digital elevation file within WatershedElements. Defaults to "dem.tif"
 #' @param date Optional date string. must be in format "YYYY-MM-DD".
 #' The date will be evaluated and pull necessary event information from downloaded .csv files - rain and discharge data.
 #' Not very flexible and is based on the formatting of the event file date columns. Uses tidyverse packages to filter date information.
@@ -49,6 +50,7 @@
 arid_model <- function(ModelFolder,
                        WatershedElements,
                        date = NULL,
+                       demFile = "dem.tif",
                        time_step = 1,
                        simulation_length = NA,
                        mini = F,

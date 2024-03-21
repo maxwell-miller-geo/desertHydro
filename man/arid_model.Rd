@@ -8,6 +8,7 @@ arid_model(
   ModelFolder,
   WatershedElements,
   date = NULL,
+  demFile = "dem.tif",
   time_step = 1,
   simulation_length = NA,
   mini = F,
@@ -35,6 +36,8 @@ create and run the hydrological model.}
 \item{date}{Optional date string. must be in format "YYYY-MM-DD".
 The date will be evaluated and pull necessary event information from downloaded .csv files - rain and discharge data.
 Not very flexible and is based on the formatting of the event file date columns. Uses tidyverse packages to filter date information.}
+
+\item{demFile}{Name of the digital elevation file within WatershedElements. Defaults to "dem.tif"}
 
 \item{time_step}{Optional based time step in fraction of minutes. Defaults to 1 minute. Recommended: 0.25 - 1 minute.
 The time step is the default evaluation time step for a model.
