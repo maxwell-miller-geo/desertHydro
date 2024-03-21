@@ -63,19 +63,22 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, dis
 # ##----------------------discharge totals
 # # Function that takes rainfall data from a watersheds gauges and gathers total rainfall
 dischargeTotal <- function(discharge_file, write = F){
-    stream_data <- readr::read_tsv(discharge_file, show_col_types = FALSE)
-
+    print("Calculating total discharge values")
+    date_time <- height <- discharge <- temp_c <-  NULL
+    stream_data <- data.table::fread(discharge_file) # reads tsv and csv files
+    #stream_data <- readr::read_tsv(discharge_file, show_col_types = FALSE)
     # Filter data with recorded discharge values
     observable_discharge <- as.data.frame(stream_data) |>
       dplyr::mutate(date_time = stream_data$`time (MST)`, height = stream_data$`Gage Height(ft)-GCMRC-GCLT1`, discharge = stream_data$`Discharge(cfs)-GCMRC-GCLT1`, temp_c = stream_data$`Air Temperature(°C)-GCMRC-GCLT1`) |>
       dplyr::select(date_time, height, discharge, temp_c) |>
-      dplyr::mutate(temp_c = ifelse(temp_c < -50, NA, temp_c)) |> # deal with values less then possible (-999)
-      dplyr::mutate(temp_c = na.approx(temp_c)) |>
+      dplyr::mutate(temp_c = ifelse(temp_c < -50, NA, temp_c)) |>   # deal with values less then possible (-999)
+      dplyr::mutate(temp_c = zoo::na.approx(temp_c)) |>
       dplyr::filter(discharge > 0) # filter out all the discharge greater than 0
+
   if(write){
-    readr::write_csv(observable_discharge, file = "observable-discharge.csv")
+    data.table::fwrite(observable_discharge, file = file.path(WatershedElements, "observable-discharge.csv"))
   }
-  return(observable_discharge)
+  return(as.data.frame(observable_discharge))
 }
 # # Test
 # # discharge_file <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Temporal_Data\Waterholes_Stream_gcmrc20231127132459.tsv)"
@@ -85,11 +88,11 @@ dischargeTotal <- function(discharge_file, write = F){
 # # date_time, height, discharge, temp_c
 dischargeResample <- function(dischargeDF, units = "day", write = F){
   resampledDF <- dischargeDF |>
-    aggregate(cbind(discharge, temp_c) ~ floor_date(date_time, unit = units), FUN = max) |>
-    set_names(units, "maxDischarge", "temp_c") # want the peaks
+    stats::aggregate(cbind(discharge, temp_c) ~ floor_date(date_time, unit = units), FUN = max) |>
+    purrr::set_names(units, "maxDischarge", "temp_c") # want the peaks
   if(write){
     filename <- paste0("max-discharge-per-", units, ".csv")
-    write_csv(resampledDF, filename)
+    readr::write_csv(resampledDF, file.path(ModelFolder, filename))
   }
   return(resampledDF)
 }
@@ -111,10 +114,9 @@ dischargeResample <- function(dischargeDF, units = "day", write = F){
 #
 #
 # # Create a function to look up if discharge is recorded on a particular date
-discharge_present <- function(data_folder, date, write = T){
+discharge_present <- function(data_folder, date, discharge_name = "example_discharge.csv", write = T){
   # Currently only works for 1 downloaded gauge - does select by stream gauge
-  stream_data <- file.path(data_folder, "example_discharge.csv")
-
+  stream_data <- file.path(data_folder, discharge_name)
   if(!file.exists(stream_data)){ # check file location
     stop(paste0("Could not locate discharge data in ", data_folder))
   }else{
