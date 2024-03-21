@@ -14,13 +14,13 @@ arid_model(
   rainfall_method = "gauges",
   store = T,
   gif = T,
-  crop = T,
+  boundary = NA,
   discharge = T,
   impervious = F,
   overwrite = F,
   write = T,
   restartModel = F,
-  land_cover_file = NA,
+  landCoverFile = NA,
   key = "NLCD_Key",
   ...
 )
@@ -54,7 +54,7 @@ rainfallCreate.}
 
 \item{gif}{Optional: T/F: If TRUE, will create gif animations for each of the typical outputs - Surface water depth, surface water velocity, and soil moisture.}
 
-\item{crop}{Optional: T/F: If TRUE, will crop using terra::crop datasets to boundary layer. Boundary or extent mismatches in spatial data
+\item{boundary}{Optional: T/F: If TRUE, will crop using terra::crop datasets to boundary layer. Boundary or extent mismatches in spatial data
 will prevent successful model simulations.}
 
 \item{discharge}{Optional: T/F: If TRUE, script will use observed discharge data -expected format ".tsv"-
@@ -71,7 +71,7 @@ Can be used to perform quicker model simulations to determine sensitivity or run
 \item{restartModel}{Optional: T/F: If TRUE, model will attempt to restart from last recorded time and water surface elevations
 Note: If files within Model Folder are edited, it may not work.}
 
-\item{land_cover_file}{Optional: Default NA: Expects string format of land cover tif file e.g. "landcover.tif" that is present within the WatershedElements fold.
+\item{landCoverFile}{Optional: Default NA: Expects string format of land cover tif file e.g. "landcover.tif" that is present within the WatershedElements fold.
 Note: If changed, the key parameter needs to be changed to match the category column name. See vignette for expected structure.}
 
 \item{key}{Optional: Default: "NLCD_Key" string for name of land cover types in excel table and the land cover map ".tif".

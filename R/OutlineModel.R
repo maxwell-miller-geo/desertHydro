@@ -23,10 +23,10 @@
 # overwrite = T
 # write = T
 # restartModel = T
-# land_cover_file = "land_cover_soils.shp"
+# landCoverFile = "land_cover_soils.shp"
 # key = "MUKEY"
 # library(profvis)
-# out <- arid_model(ModelFolder,date,time_step,simulation_length,WatershedElements,mini,rainfall_method,store,gif,crop,discharge,impervious,overwrite,write,restartModel,land_cover_file,key)
+# out <- arid_model(ModelFolder,date,time_step,simulation_length,WatershedElements,mini,rainfall_method,store,gif,crop,discharge,impervious,overwrite,write,restartModel,landCoverFile,key)
 # 
 # # Gif creation
 # gifCreation(ModelFolder, out[[1]], rainfall_method, gif = T)

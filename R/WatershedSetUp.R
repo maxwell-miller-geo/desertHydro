@@ -6,7 +6,7 @@
 # 4 - Voronoi polygons
 # Some of the scripts are created in external functions
 
-watershedElements <- function(Outpath, DEM, WatershedShape, land_cover_file = "land_cover_soils.shp", landcovername = "landcover_soil.tif", ModelFolder = NA){ # DEM should be unaltered
+watershedElements <- function(Outpath, DEM, WatershedShape, landCoverFile = "land_cover_soils.shp", landcovername = "landcover_soil.tif", ModelFolder = NA){ # DEM should be unaltered
   requireNamespace("terra")
   # DEM adjustments
   # Adjust the input DEM with the watershed shapefile.
@@ -50,12 +50,12 @@ watershedElements <- function(Outpath, DEM, WatershedShape, land_cover_file = "l
     # Landcover #
     #source("createWatershedModel.R", local = TRUE) # Land Cover script
     print("Land cover file not found. Searching additional location.")
-    #land_cover_file <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # school desktop
-    extension <- sub(".*\\.", "", land_cover_file) # use regular expression to get file extension
+    #landCoverFile <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # school desktop
+    extension <- sub(".*\\.", "", landCoverFile) # use regular expression to get file extension
     if(extension == "shp"){
-      land_cover <- terra::vect(file.path(Outpath, land_cover_file))
+      land_cover <- terra::vect(file.path(Outpath, landCoverFile))
     }else{
-      land_cover <- terra::rast(land_cover_file)
+      land_cover <- terra::rast(landCoverFile)
     }
 
     dem_local <- terra::rast(model_dem)

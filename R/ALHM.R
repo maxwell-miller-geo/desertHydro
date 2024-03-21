@@ -19,7 +19,7 @@
 #' rainfallCreate.
 #' @param store Optional: T/F: If TRUE, will store graphs or plots in ModelFolder
 #' @param gif Optional: T/F: If TRUE, will create gif animations for each of the typical outputs - Surface water depth, surface water velocity, and soil moisture.
-#' @param crop Optional: T/F: If TRUE, will crop using terra::crop datasets to boundary layer. Boundary or extent mismatches in spatial data
+#' @param boundary Optional: T/F: If TRUE, will crop using terra::crop datasets to boundary layer. Boundary or extent mismatches in spatial data
 #' will prevent successful model simulations.
 #' @param discharge Optional: T/F: If TRUE, script will use observed discharge data -expected format ".tsv"-
 #' to modify simulation length and create compiled hydrographs with containing predicted and observed discharges.
@@ -30,7 +30,7 @@
 #' @param write Optional to write outputs from model. Default = TRUE
 #' @param restartModel Optional: T/F: If TRUE, model will attempt to restart from last recorded time and water surface elevations
 #'  Note: If files within Model Folder are edited, it may not work.
-#' @param land_cover_file Optional: Default NA: Expects string format of land cover tif file e.g. "landcover.tif" that is present within the WatershedElements fold.
+#' @param landCoverFile Optional: Default NA: Expects string format of land cover tif file e.g. "landcover.tif" that is present within the WatershedElements fold.
 #' Note: If changed, the key parameter needs to be changed to match the category column name. See vignette for expected structure.
 #' @param key Optional: Default: "NLCD_Key" string for name of land cover types in excel table and the land cover map ".tif".
 #' This will convert excel table hydrological characteristics into a stacked raster map with each layer corresponding to a hydrological characteristic and spatially distributed them.
@@ -55,13 +55,13 @@ arid_model <- function(ModelFolder,
                        rainfall_method = "gauges",
                        store = T,
                        gif = T,
-                       crop = T,
+                       boundary = NA,
                        discharge = T,
                        impervious = F,
                        overwrite = F,
                        write = T,
                        restartModel = F,
-                       land_cover_file = NA,
+                       landCoverFile = NA,
                        key = "NLCD_Key",
                        ...){
 
@@ -120,26 +120,46 @@ if(file.exists(model_complete) & !overwrite){ # check if model complete
 # land_cover_path <-  r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # land cover - unclipped file.
 # watershed_shape_path <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\QGIS\waterholes_shape.shp)" # watershed boundary
 #print(rainfall_method)
-dem_path <- file.path(WatershedElements, "waterholes_extent.tif") # path of dem extent
-if(!crop){ # if it isn't cropped, it will adjust to look for the demo file.
-  watershed_shape_path <-  NA
-  dem_path <- file.path(WatershedElements, "demo_dem.tif")
-  #dem_path <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\DemoElements\demo_dem.tif)"
-}else if(mini){
-  watershed_shape_path <- file.path(WatershedElements,"mini_ws.shp")
-  file.exists(watershed_shape_path)# watershed boundary ### IF NOT MINI
-}else{
-  watershed_shape_path <- file.path(WatershedElements,"waterholes_shape.shp") # watershed boundary ### IF NOT MINI
+# DEM
+if(!is.na(demFile)){
+  dem_path <- filePresent(demFile, WatershedElements)
+}else{ # Assuming default parameters
+  dem_path <- filePresent("dem.tif", WatershedElements)
 }
-if(is.na(watershed_shape_path)){
-  print("No computational boundary layer")
-}else if(file.exists(watershed_shape_path)){
-  print("Located computational boundary layer")
+# Boundary file
+if(!is.na(boundary)){
+  watershed_shape_path <- filePresent(boundary, WatershedElements)
 }else{
-  stop(paste0("Could not locate computational boundary:", watershed_shape_path))
+  print("No boundary layer input: Using DEM extent...")
+  watershed_shape_path <- NA
 }
+# Land cover file
+if(!is.na(landCoverFile)){
+  landCoverFile <- filePresent(landCoverFile, WatershedElements)
+}else{
+  print("Attempting to find file 'landcover.tif'")
+  landCoverFile <- filePresent("landcover.tif", WatershedElements)
+  print(paste0("Found a land cover file at: ", landCoverFile)," using file as input.")
+}
+# if(!crop){ # if it isn't cropped, it will adjust to look for the demo file.
+#   watershed_shape_path <-  NA
+#   dem_path <- file.path(WatershedElements, "demo_dem.tif")
+#   #dem_path <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\DemoElements\demo_dem.tif)"
+# }else if(mini){
+#   watershed_shape_path <- file.path(WatershedElements,"mini_ws.shp")
+#   file.exists(watershed_shape_path)# watershed boundary ### IF NOT MINI
+# }else{
+#   watershed_shape_path <- file.path(WatershedElements,"waterholes_shape.shp") # watershed boundary ### IF NOT MINI
+# }
+# if(is.na(watershed_shape_path)){
+#   print("No computational boundary layer")
+# }else if(file.exists(watershed_shape_path)){
+#   print("Located computational boundary layer")
+# }else{
+#   stop(paste0("Could not locate computational boundary:", watershed_shape_path))
+# }
 # Function adjusts digital elevation model (smooths with preserved features)and land cover map is projected in same coordinate system and clipped to watershed.
-landcovername <- watershedElements(Outpath = WatershedElements, DEM = dem_path, WatershedShape = watershed_shape_path, land_cover_file = land_cover_file, ModelFolder = ModelFolder)
+landcovername <- watershedElements(Outpath = WatershedElements, DEM = dem_path, WatershedShape = watershed_shape_path, landCoverFile = landCoverFile, ModelFolder = ModelFolder)
 
 # Initial conditions
 ##--------------------------------
@@ -165,7 +185,7 @@ if(key == "NLCD_Key"){
 }else if(key == "MUKEY"){
   LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
 }else if(key == "KEY"){
-
+  # Land Cover characteristics
 }
 
 ClassificationMap <- file.path(WatershedElements, landcovername) # adjusted/cropped classification map - must be named correctly

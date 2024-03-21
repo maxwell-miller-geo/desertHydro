@@ -126,7 +126,7 @@ rainfallAccum <- function(rain, beginning_time, end_time, rainfall_method = "gau
     # Get rainfall from shape
     rainForGauges <- cumulativeRain(rain, left = beginning_time, right = end_time, spatial = T)
     # Could adjust voronoi
-    rainfall_for_timestep <- rasterizeRainfall(voronoi_shape = "Example/WatershedElements/waterholes_voronoi.shp",
+    rainfall_for_timestep <- rasterizeRainfall(voronoi_shape = "voronoi.shp",
                                                rainAtGauges = rainForGauges,
                                                rainfallRaster = terra::rast(file.path(WatershedElements, "model_dem.tif")))
     return(rainfall_for_timestep)

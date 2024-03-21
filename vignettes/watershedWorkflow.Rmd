@@ -17,9 +17,9 @@ knitr::opts_chunk$set(
 )
 ```
 
-$$(K_{macro} -  K_{FieldCond}) {\frac{W_{surf}-Field_{cap}}{d_{soil}}} ({\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}})^{-1}$$
-$${\frac{W_{surf}-Field_{cap}}{d_{soil}}}$$
-$$ {\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}$$
+<!-- $$(K_{macro} -  K_{FieldCond}) {\frac{W_{surf}-Field_{cap}}{d_{soil}}} ({\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}})^{-1}$$ -->
+<!-- $${\frac{W_{surf}-Field_{cap}}{d_{soil}}}$$ -->
+<!-- $$ {\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}$$ -->
 ```{r setup}
 library(desertHydro) # loads installed version not vignette version
 # Only use other packages that are already required
@@ -31,9 +31,17 @@ library(desertHydro) # loads installed version not vignette version
 # Location or file path to save the 
 ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
 # # # ModelFolder <- r"(~TestFolderPackage)"
-# WatershedElements <- file.path("inst/extdata/DemoElements")
-print("Check for vignette!")
-# desertHydro:::arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements,crop = F)
+WatershedElements <- "inst/extdata/DemoElements"
+# File names
+
+dem <- "dem.tif" # Necessary
+boundary <- NA # Optional
+landCoverFile <- "landcover.tif"
+
+
+# print("Check for vignette!")
+desertHydro::arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements,)
+
 ```
 
 # Use vignettes -

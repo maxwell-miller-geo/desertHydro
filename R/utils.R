@@ -2,6 +2,26 @@
 # This script contains functions that contain functions that I don't know where else
 # to put
 
+## ---------------------------------- Wrapper finder function
+stringMatch <- function(dataset, guessName = "Discharge"){
+  matchLocations <- grep(guessName, colnames(dataset)) # index of guesses
+  if(length(matchLocations) == 1){
+    stringName <- colnames(dataset)[matchLocations]
+  }else if(length(matchLocations > 1)){
+    print("Found multiple matches with data sheet, using first match")
+    stringName <- colnames(dataset)[matchLocations][1]
+  }else{
+    print("Could not find matches for input string: Please check input string")
+    stringName <- NA
+  }
+  return(stringName) # index of matching column
+}
+# Test
+# dataset <- streams
+# columnName <- stringMatch(dataset, "Discharge") #
+# reduced <- dataset[get(columnName) > 0]
+# data.table::fwrite(reduced, file = file.path(WatershedElements, "example_discharge.csv"))
+
 # Function that creates and plots linear model
 quadratic_lm <- function(X, Y, poly = T){
   ones <- matrix(1, nrow = length(Y))
@@ -139,4 +159,15 @@ convert_string <- function(x) {
   # Convert the data frame back to a named vector
   sorted_dict <- stats::setNames(df$converted_value, df$original_string)
   return(sorted_dict)
+}
+
+## -----------------------------
+# Function to check if file is present - returns combined string if file exists
+filePresent <- function(filename, Folder){
+  combined_path <- file.path(Folder, filename)
+  if(!file.exists(combined_path)){
+    stop(paste0("Could not locate '", filename, "' in: ",combined_path))
+  }else{
+    return(combined_path)
+  }
 }
