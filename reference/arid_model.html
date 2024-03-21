@@ -62,6 +62,7 @@
 <span>  simulation_length <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  mini <span class="op">=</span> <span class="cn">F</span>,</span>
 <span>  rainfall_method <span class="op">=</span> <span class="st">"gauges"</span>,</span>
+<span>  store <span class="op">=</span> <span class="cn">T</span>,</span>
 <span>  gif <span class="op">=</span> <span class="cn">T</span>,</span>
 <span>  crop <span class="op">=</span> <span class="cn">T</span>,</span>
 <span>  discharge <span class="op">=</span> <span class="cn">T</span>,</span>
@@ -113,6 +114,10 @@ Large computational areas + 1 million cells will take considerable time dependin
 <dd><p>Optional rainfall method string. Default "gauges" creates weighted average of rainfall within a given watershed.
 The "gauges" data must be formatted correctly to apply rainfall. For additional options of rainfall see documenatatin for
 rainfallCreate.</p></dd>
+
+
+<dt>store</dt>
+<dd><p>Optional: T/F: If TRUE, will store graphs or plots in ModelFolder</p></dd>
 
 
 <dt>gif</dt>
