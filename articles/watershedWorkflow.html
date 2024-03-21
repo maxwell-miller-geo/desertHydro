@@ -78,11 +78,9 @@
 
     
     
-<p><span class="math display">\[(K_{macro} -  K_{FieldCond})
-{\frac{W_{surf}-Field_{cap}}{d_{soil}}} ({\frac{Sat_{mc} -
-Field_{cap}}{d_{soil} + K_{FieldCond}}})^{-1}\]</span> <span class="math display">\[{\frac{W_{surf}-Field_{cap}}{d_{soil}}}\]</span>
-<span class="math display">\[ {\frac{Sat_{mc} - Field_{cap}}{d_{soil} +
-K_{FieldCond}}\]</span></p>
+<!-- $$(K_{macro} -  K_{FieldCond}) {\frac{W_{surf}-Field_{cap}}{d_{soil}}} ({\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}})^{-1}$$ -->
+<!-- $${\frac{W_{surf}-Field_{cap}}{d_{soil}}}$$ -->
+<!-- $$ {\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}$$ -->
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">desertHydro</span><span class="op">)</span> <span class="co"># loads installed version not vignette version</span></span>
 <span><span class="co"># Only use other packages that are already required</span></span></code></pre></div>
@@ -91,10 +89,17 @@ K_{FieldCond}}\]</span></p>
 <span><span class="co"># Location or file path to save the </span></span>
 <span><span class="va">ModelFolder</span> <span class="op">&lt;-</span> <span class="st">r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)"</span> </span>
 <span><span class="co"># # # ModelFolder &lt;- r"(~TestFolderPackage)"</span></span>
-<span><span class="co"># WatershedElements &lt;- file.path("inst/extdata/DemoElements")</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="st">"Check for vignette!"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Check for vignette!"</span></span>
-<span><span class="co"># desertHydro:::arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements,crop = F)</span></span></code></pre></div>
+<span><span class="co">#WatershedElements &lt;- "./inst/extdata/DemoElements"</span></span>
+<span><span class="va">WatershedElements</span> <span class="op">&lt;-</span> <span class="st">"inst/extdata/DemoElements"</span></span>
+<span><span class="co"># File names</span></span>
+<span></span>
+<span><span class="va">dem</span> <span class="op">&lt;-</span> <span class="st">"dem.tif"</span> <span class="co"># Necessary</span></span>
+<span><span class="va">boundary</span> <span class="op">&lt;-</span> <span class="cn">NA</span> <span class="co"># Optional</span></span>
+<span><span class="va">landCoverFile</span> <span class="op">&lt;-</span> <span class="st">"landcover.tif"</span></span>
+<span></span>
+<span></span>
+<span><span class="co"># # print("Check for vignette!")</span></span>
+<span><span class="co"># desertHydro::arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements, demFile = dem, boundary = landCoverFile)</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="use-vignettes--">Use vignettes -<a class="anchor" aria-label="anchor" href="#use-vignettes--"></a>
 </h2>

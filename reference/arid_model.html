@@ -58,19 +58,20 @@
 <span>  <span class="va">ModelFolder</span>,</span>
 <span>  <span class="va">WatershedElements</span>,</span>
 <span>  date <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  demFile <span class="op">=</span> <span class="st">"dem.tif"</span>,</span>
 <span>  time_step <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  simulation_length <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  mini <span class="op">=</span> <span class="cn">F</span>,</span>
 <span>  rainfall_method <span class="op">=</span> <span class="st">"gauges"</span>,</span>
 <span>  store <span class="op">=</span> <span class="cn">T</span>,</span>
 <span>  gif <span class="op">=</span> <span class="cn">T</span>,</span>
-<span>  crop <span class="op">=</span> <span class="cn">T</span>,</span>
+<span>  boundary <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  discharge <span class="op">=</span> <span class="cn">T</span>,</span>
 <span>  impervious <span class="op">=</span> <span class="cn">F</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">F</span>,</span>
 <span>  write <span class="op">=</span> <span class="cn">T</span>,</span>
 <span>  restartModel <span class="op">=</span> <span class="cn">F</span>,</span>
-<span>  land_cover_file <span class="op">=</span> <span class="cn">NA</span>,</span>
+<span>  landCoverFile <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  key <span class="op">=</span> <span class="st">"NLCD_Key"</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -92,6 +93,10 @@ create and run the hydrological model.</p></dd>
 <dd><p>Optional date string. must be in format "YYYY-MM-DD".
 The date will be evaluated and pull necessary event information from downloaded .csv files - rain and discharge data.
 Not very flexible and is based on the formatting of the event file date columns. Uses tidyverse packages to filter date information.</p></dd>
+
+
+<dt>demFile</dt>
+<dd><p>Name of the digital elevation file within WatershedElements. Defaults to "dem.tif"</p></dd>
 
 
 <dt>time_step</dt>
@@ -124,7 +129,7 @@ rainfallCreate.</p></dd>
 <dd><p>Optional: T/F: If TRUE, will create gif animations for each of the typical outputs - Surface water depth, surface water velocity, and soil moisture.</p></dd>
 
 
-<dt>crop</dt>
+<dt>boundary</dt>
 <dd><p>Optional: T/F: If TRUE, will crop using terra::crop datasets to boundary layer. Boundary or extent mismatches in spatial data
 will prevent successful model simulations.</p></dd>
 
@@ -153,7 +158,7 @@ Can be used to perform quicker model simulations to determine sensitivity or run
 Note: If files within Model Folder are edited, it may not work.</p></dd>
 
 
-<dt>land_cover_file</dt>
+<dt>landCoverFile</dt>
 <dd><p>Optional: Default NA: Expects string format of land cover tif file e.g. "landcover.tif" that is present within the WatershedElements fold.
 Note: If changed, the key parameter needs to be changed to match the category column name. See vignette for expected structure.</p></dd>
 
