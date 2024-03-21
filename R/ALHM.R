@@ -1,7 +1,4 @@
-# Complete Model
-# Wrap it up
-
-#' Desert Hydrology
+#' Desert Hydrology Model Full Suite
 #'
 #' @param ModelFolder The designated folder path to save the outputs from the files.
 #' The script will write and modify the elements present within the output folder.
@@ -14,23 +11,40 @@
 #' The time step is the default evaluation time step for a model.
 #' The script will dynamically adjust the time step based on the calculated surface velocities.
 #' @param simulation_length Optional length of simulation in minutes. Defaults to rainfall duration + discharge duration.
-#' @param mini Optional boolean. Default False. If
-#' @param rainfall_method
-#' @param gif
-#' @param crop
-#' @param discharge
-#' @param impervious
-#' @param overwrite
-#' @param write
-#' @param restartModel
-#' @param land_cover_file
-#' @param key
-#' @param ...
+#' @param mini Optional: T/F. Default False. If TRUE, script will look for "mini-ws.shp" within the Watershed Elements to crop
+#' and reduce the size of the computational boundary. Best used for testing smaller portions of watershed.
+#' Large computational areas + 1 million cells will take considerable time depending on the length of simulation.
+#' @param rainfall_method Optional rainfall method string. Default "gauges" creates weighted average of rainfall within a given watershed.
+#' The "gauges" data must be formatted correctly to apply rainfall. For additional options of rainfall see documenatatin for
+#' rainfallCreate.
+#' @param gif Optional: T/F: If TRUE, will create gif animations for each of the typical outputs - Surface water depth, surface water velocity, and soil moisture.
+#' @param crop Optional: T/F: If TRUE, will crop using terra::crop datasets to boundary layer. Boundary or extent mismatches in spatial data
+#' will prevent successful model simulations.
+#' @param discharge Optional: T/F: If TRUE, script will use observed discharge data -expected format ".tsv"-
+#' to modify simulation length and create compiled hydrographs with containing predicted and observed discharges.
+#' Expects ESRI shapefile point at gauged location named "gauges.shp" within WatershedElements folder.
+#' @param impervious Optional: T/F: If TRUE, model calculate runoff without infiltration.
+#' Can be used to perform quicker model simulations to determine sensitivity or runoff potential.
+#' @param overwrite Optional: T/F: If TRUE, overwrite elements within WatershedElements folder and ModelFolder when necessary.
+#' @param write Optional to write outputs from model. Default = TRUE
+#' @param restartModel Optional: T/F: If TRUE, model will attempt to restart from last recorded time and water surface elevations
+#'  Note: If files within Model Folder are edited, it may not work.
+#' @param land_cover_file Optional: Default NA: Expects string format of land cover tif file e.g. "landcover.tif" that is present within the WatershedElements fold.
+#' Note: If changed, the key parameter needs to be changed to match the category column name. See vignette for expected structure.
+#' @param key Optional: Default: "NLCD_Key" string for name of land cover types in excel table and the land cover map ".tif".
+#' This will convert excel table hydrological characteristics into a stacked raster map with each layer corresponding to a hydrological characteristic and spatially distributed them.
+#' See vignette for expected structure.
+#' @param ... Additional parameters to pass into inner functions.
 #'
-#' @return
+#' @return Returns nothing outputs written to input model folder
 #' @export
 #'
-#' @examples
+#' @examples \dontrun{
+#' # Change this to output folder
+#' ModelFolder <- r"(C:/Thesis/Arid-Land-Hydrology/R/Example/SampleModel)"
+#' WatershedElements <- file.path("inst/extdata/DemoElements") # demo elements
+#' arid_model(ModelFolder, WatershedElements)
+#' }
 arid_model <- function(ModelFolder,
                        WatershedElements,
                        date = NULL,
