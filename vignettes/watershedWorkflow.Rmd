@@ -29,10 +29,10 @@ library(desertHydro) # loads installed version not vignette version
 ```{r}
 # Important steps
 # Location or file path to save the 
-ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
+ModelFolder <- r"(Z:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
 # # # ModelFolder <- r"(~TestFolderPackage)"
 #WatershedElements <- "./inst/extdata/DemoElements"
-WatershedElements <- "inst/extdata/DemoElements"
+WatershedElements <- "../inst/extdata/DemoElements" # Moves out a level to get to data folder
 # File names
 
 dem <- "dem.tif" # Necessary
@@ -41,9 +41,9 @@ landCoverFile <- "landcover.tif"
 
 
 # # print("Check for vignette!")
-# desertHydro::arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements, demFile = dem, boundary = landCoverFile)
-
+arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements)
+getwd()
 ```
 
 # Use vignettes -
-build_rmd("vignettes/watershedWorkflow.Rmd")
+# build_rmd("vignettes/watershedWorkflow.Rmd")

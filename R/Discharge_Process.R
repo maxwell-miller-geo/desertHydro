@@ -27,17 +27,14 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, dis
       date <- lubridate::date(discharge_present(WatershedElements, date))[1] # returns discharge date or next day (first     entry)
       print(date)
       # Load in stream data from Waterholes - GCMRC
-      dischargeDataPath <- file.path(WatershedElements, "Waterholes_Stream_gcmrc20231127132459.tsv") #- sloppy
-      print("discharge path complete")
+      dischargeDataPath <- file.path(WatershedElements, "example_discharge.csv") #- sloppy
       # Calculate the daily discharge for given date
       dischargeDF <- dailyDischarge(discharge_file_path = dischargeDataPath,
                                     discharge_date = date,
                                     save_location = ModelFolder,
                                     saveGraphs = store)
-      print('rain filtered')
-      # Create
+      # Create filtered rainfall
       rainFiltered <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = F)
-      print('combining discharge')
       # Combine the rainfall and discharge into a single .csv file
       rain_discharge <- rainfall_discharge_combine(rainfallDF = rainFiltered,
                                                    dischargeDF,
@@ -65,37 +62,37 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, dis
 #
 # ##----------------------discharge totals
 # # Function that takes rainfall data from a watersheds gauges and gathers total rainfall
-# dischargeTotal <- function(discharge_file, write = F){
-#     stream_data <- readr::read_tsv(discharge_file, show_col_types = FALSE)
-#
-#     # Filter data with recorded discharge values
-#     observable_discharge <- as.data.frame(stream_data) |>
-#       mutate(date_time = stream_data$`time (MST)`, height = stream_data$`Gage Height(ft)-GCMRC-GCLT1`, discharge = stream_data$`Discharge(cfs)-GCMRC-GCLT1`, temp_c = stream_data$`Air Temperature(°C)-GCMRC-GCLT1`) |>
-#       select(date_time, height, discharge, temp_c) |>
-#       mutate(temp_c = ifelse(temp_c < -50, NA, temp_c)) |> # deal with values less then possible (-999)
-#       mutate(temp_c = na.approx(temp_c)) |>
-#       filter(discharge > 0) # filter out all the discharge greater than 0
-#   if(write){
-#     write_csv(observable_discharge, file = "observable-discharge.csv")
-#   }
-#   return(observable_discharge)
-# }
+dischargeTotal <- function(discharge_file, write = F){
+    stream_data <- readr::read_tsv(discharge_file, show_col_types = FALSE)
+
+    # Filter data with recorded discharge values
+    observable_discharge <- as.data.frame(stream_data) |>
+      dplyr::mutate(date_time = stream_data$`time (MST)`, height = stream_data$`Gage Height(ft)-GCMRC-GCLT1`, discharge = stream_data$`Discharge(cfs)-GCMRC-GCLT1`, temp_c = stream_data$`Air Temperature(°C)-GCMRC-GCLT1`) |>
+      dplyr::select(date_time, height, discharge, temp_c) |>
+      dplyr::mutate(temp_c = ifelse(temp_c < -50, NA, temp_c)) |> # deal with values less then possible (-999)
+      dplyr::mutate(temp_c = na.approx(temp_c)) |>
+      dplyr::filter(discharge > 0) # filter out all the discharge greater than 0
+  if(write){
+    readr::write_csv(observable_discharge, file = "observable-discharge.csv")
+  }
+  return(observable_discharge)
+}
 # # Test
 # # discharge_file <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Temporal_Data\Waterholes_Stream_gcmrc20231127132459.tsv)"
 # # dischargeDF <- dischargeTotal(discharge_file = discharge_file, write = F)
 #
 # # Function that resamples the data to different time scales - mean approximation
 # # date_time, height, discharge, temp_c
-# dischargeResample <- function(dischargeDF, units = "day", write = F){
-#   resampledDF <- dischargeDF |>
-#     aggregate(cbind(discharge, temp_c) ~ floor_date(date_time, unit = units), FUN = max) |>
-#     set_names(units, "maxDischarge", "temp_c") # want the peaks
-#   if(write){
-#     filename <- paste0("max-discharge-per-", units, ".csv")
-#     write_csv(resampledDF, filename)
-#   }
-#   return(resampledDF)
-# }
+dischargeResample <- function(dischargeDF, units = "day", write = F){
+  resampledDF <- dischargeDF |>
+    aggregate(cbind(discharge, temp_c) ~ floor_date(date_time, unit = units), FUN = max) |>
+    set_names(units, "maxDischarge", "temp_c") # want the peaks
+  if(write){
+    filename <- paste0("max-discharge-per-", units, ".csv")
+    write_csv(resampledDF, filename)
+  }
+  return(resampledDF)
+}
 #
 # # Test
 # # discharge_file <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Temporal_Data\Waterholes_Stream_gcmrc20231127132459.tsv)"
@@ -114,43 +111,43 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, dis
 #
 #
 # # Create a function to look up if discharge is recorded on a particular date
-# discharge_present <- function(data_folder, date){
-#   # Currently only works for 1 downloaded gauge - does select by stream gauge
-#   stream_data <- file.path(data_folder, "Waterholes_Stream_gcmrc20231127132459.tsv")
-#
-#   if(!file.exists(stream_data)){ # check file location
-#     stop(paste0("Could not locate discharge data in ", data_folder))
-#   }else{
-#     print("Located discharge data.")
-#   }
-#
-#   # Use the discharge - total function to reorganize the stream gauges by day
-#   # then compare if input date - before or after exists
-#   dischargeDF <- suppressWarnings(dischargeTotal(stream_data, write = F)) # dataframe with recorded discharge values (>0)
-#
-#   # use the dischargeResample function to obtain the highest discharge for a each day
-#   dischargeDaily <- dischargeResample(dischargeDF, units = "day") # dataframe with discharge per day
-#
-#   # Assuming the input date is in YYYY/MM/DD
-#   #date <- lubridate::ymd(date) # convert date
-#   date <- lubridate::parse_date_time(date, "ymd")
-#   date_after <- date + days(1) # day after
-#   date_before <- date + days(-1)
-#   discharge_dates <- c()
-#   # Check search date, before, and after
-#   if(date %in% dischargeDaily$day){
-#     print(paste0("Discharge recorded on ", date))
-#     discharge_dates <- append(discharge_dates, date)
-#   }
-#   if(date_after %in% dischargeDaily$day){
-#     print(paste0("Discharge recorded on ", date_after))
-#     discharge_dates <- append(discharge_dates, date_after)
-#   }
-#   if(is.null(discharge_dates)){
-#     stop(paste0("No recorded discharge found on ", date, " or ", date_after))
-#   }
-#   return(discharge_dates)
-# }
+discharge_present <- function(data_folder, date, write = T){
+  # Currently only works for 1 downloaded gauge - does select by stream gauge
+  stream_data <- file.path(data_folder, "example_discharge.csv")
+
+  if(!file.exists(stream_data)){ # check file location
+    stop(paste0("Could not locate discharge data in ", data_folder))
+  }else{
+    print("Located discharge data.")
+  }
+
+  # Use the discharge - total function to reorganize the stream gauges by day
+  # then compare if input date - before or after exists
+  dischargeDF <- suppressWarnings(dischargeTotal(stream_data, write = write)) # dataframe with recorded discharge values (>0)
+
+  # use the dischargeResample function to obtain the highest discharge for a each day
+  dischargeDaily <- dischargeResample(dischargeDF, units = "day") # dataframe with discharge per day
+
+  # Assuming the input date is in YYYY/MM/DD
+  #date <- lubridate::ymd(date) # convert date
+  date <- lubridate::parse_date_time(date, "ymd")
+  date_after <- date + days(1) # day after
+  date_before <- date + days(-1)
+  discharge_dates <- c()
+  # Check search date, before, and after
+  if(date %in% dischargeDaily$day){
+    print(paste0("Discharge recorded on ", date))
+    discharge_dates <- append(discharge_dates, date)
+  }
+  if(date_after %in% dischargeDaily$day){
+    print(paste0("Discharge recorded on ", date_after))
+    discharge_dates <- append(discharge_dates, date_after)
+  }
+  if(is.null(discharge_dates)){
+    stop(paste0("No recorded discharge found on ", date, " or ", date_after))
+  }
+  return(discharge_dates)
+}
 #
 # # Example - folder location
 #

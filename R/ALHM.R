@@ -141,7 +141,7 @@ if(!is.na(landCoverFile)){
 }else{
   print("Attempting to find file 'landcover.tif'")
   landCoverFile <- filePresent("landcover.tif", WatershedElements)
-  print(paste0("Found a land cover file at: ", landCoverFile)," using file as input.")
+  #print(paste0("Found a land cover file at: ", landCoverFile)," using file as input.")
 }
 # if(!crop){ # if it isn't cropped, it will adjust to look for the demo file.
 #   watershed_shape_path <-  NA
