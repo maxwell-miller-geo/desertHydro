@@ -60,6 +60,7 @@ flowModel <- function(SoilStack_file,
   # Attach slope to rast
   #SoilStack$slope <- terra::rast(slope_file)
   flowStack <- terra::rast(flowStack_file)
+
   land_cover_raster <- terra::rast(landCover_file)
   gridsize <- 10 # manually set grid-size, based on DEM
 

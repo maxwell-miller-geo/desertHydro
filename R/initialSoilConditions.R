@@ -31,22 +31,14 @@ storage_amount <- function(landCoverTable){
 createSoilRasters <- function(ClassMapFile, soilTable, key = "MUKEY"){
   requireNamespace("terra")
   # Load in the class map
-  print(ClassMap)
-  print(key)
-  print(soilTable)
   ClassMap <- terra::rast(ClassMapFile)
-
-  #terra::plot(ClassMap)
-  #ClassMapNumeric <- terra::catalyze(ClassMap)
-  #terra::plot(ClassMap)
-  landtypes <- unique(terra::values(ClassMap, na.rm = TRUE))
   outStack <- c() # creates empty vector
   for(x in 1:length(soilTable)){
     if(is.character(soilTable[[x]])){
       next # Breaks if the value in the table is a character (names)
     }
     c_matrix <- matrix(cbind(soilTable[[key]], soilTable[[x]]), ncol = 2) # Create classification matrix
-    temp <- terra::classify(x = ClassMapNumeric, rcl = c_matrix) # classify ClassMap based on matrix
+    temp <- terra::classify(x = ClassMap, rcl = c_matrix) # classify ClassMap based on matrix
     #temp <- terra::subst(ClassMap, as.numeric(soilTable[[key]]), round(as.numeric(soilTable[[x]]),3)) # classify ClassMap based on matrix
     names(temp) <- names(soilTable[x]) # Assign a name to the Raster Layer
     outStack <- append(outStack, temp) # Append raster layer to raster 'brick'
@@ -60,7 +52,9 @@ createSoilRasters <- function(ClassMapFile, soilTable, key = "MUKEY"){
 # soilRaster <- createSoilRasters(ClassificationMap, LandCoverCharacteristics)
 
 
-initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap, DEM, ModelOutputs, key = "NLCD_Key", depthAdj = T, saturatedPercentage = 0.2, overwrite = F){
+initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap, DEM,
+                                    ModelOutputs, key = "NLCD_Key", outline = "",
+                                    depthAdj = T, saturatedPercentage = 0.2, overwrite = F){
 
   soilstack_file <- file.path(ModelOutputs, "model_soil_stack.tif")
   if(file.exists(soilstack_file)){
@@ -108,11 +102,16 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   # Attach the slope map to the land cover stack
   dem <- terra::rast(DEM)
   slopeInitial <- terra::terrain(dem, v="slope", neighbors=8, unit="degrees")
+  terra::plot(slopeInitial)
   # Adjust zero slopes to 0.01 degrees to prevent pooling of water
   slopeAdj <- terra::ifel(slopeInitial < 0.01, 0.01, slopeInitial)
+  terra::plot(slopeAdj)
   slopeName <- file.path(ModelOutputs, "slope.tif")
+  terra::plot(SoilStack)
   print(ext(slopeAdj))
   print(ext(SoilStack))
+  # Crop the map to the extent of the input dep
+  SoilStack <- terra::crop(SoilStack, slopeAdj)
   SoilStack$slope <- slopeAdj
   names(SoilStack$slope) <- "slope"
   terra::writeRaster(SoilStack$slope, slopeName, overwrite = T)
@@ -128,6 +127,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
                     30, 40, .80,
                     40, 45, .50,
                     45, 90, .01)
+
   reclassMatrix <- matrix(reclassTable, ncol = 3, byrow = T)
   depthModifier <- terra::classify(SoilStack$slope, reclassMatrix, include.lowest = T)
 

@@ -199,6 +199,7 @@ ClassificationMap <- landCoverFile # adjusted/cropped classification map - must 
 initial_soil_conditions(LandCoverCharacteristics = LandCoverCharacteristics,
                         ClassificationMap = ClassificationMap,
                         DEM = model_dem,
+                        outline = watershed_shape_path,
                         ModelOutputs = ModelFolder,
                         key = key,
                         overwrite = overwrite
@@ -242,10 +243,11 @@ if(store & discharge){
 # Don't run model if the files are not present
 
 # Necessary elements for the model
-SoilStack_file <- file.path(ModelFolder, "model_soil_stack.tif")
+
 flowStack_file <- file.path(WatershedElements, "stack_flow.tif")
 landCover_file <- file.path(WatershedElements, "landcover.tif")
 slope_file <- file.path(WatershedElements, "model_slope.tif")
+SoilStack_file <- file.path(ModelFolder, "model_soil_stack.tif")
 rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
 #rain_file <- file.path(ModelFolder, "Model-Rainfall.csv") #Uncheck for troubleshooting
 files_needed <- c(WatershedElements, ModelFolder, landCover_file, SoilStack_file, flowStack_file, rain_file, slope_file, rain_discharge_file)
