@@ -12,7 +12,6 @@
 #' The time step is the default evaluation time step for a model.
 #' The script will dynamically adjust the time step based on the calculated surface velocities.
 #' @param simulation_length Optional length of simulation in minutes. Defaults to rainfall duration + discharge duration.
-#' @param mini Optional: T/F. Default False. If TRUE, script will look for "mini-ws.shp" within the Watershed Elements to crop
 #' and reduce the size of the computational boundary. Best used for testing smaller portions of watershed.
 #' Large computational areas + 1 million cells will take considerable time depending on the length of simulation.
 #' @param rainfall_method Optional rainfall method string. Default "gauges" creates weighted average of rainfall within a given watershed.
@@ -49,22 +48,22 @@
 #' }
 arid_model <- function(ModelFolder,
                        WatershedElements,
-                       date = NULL,
                        demFile = "dem.tif",
-                       time_step = 1,
-                       simulation_length = NA,
-                       mini = F,
+                       date = NULL,
+                       boundary = NA,
+                       landCoverFile = "landcover_soil.tif",
+                       LandCoverCharacteristics = "LandCoverCharacteristics_soils.xlsx",
+                       key = "NLCD_Key",
+                       impervious = F,
                        rainfall_method = "gauges",
                        store = T,
                        gif = T,
-                       boundary = NA,
                        discharge = F,
-                       impervious = F,
+                       time_step = 0.5,
+                       simulation_length = NA,
                        overwrite = T,
                        write = T,
                        restartModel = F,
-                       landCoverFile = NA,
-                       key = "NLCD_Key",
                        ...){
 
 # ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\Test_1)"
@@ -125,12 +124,14 @@ if(file.exists(model_complete) & !overwrite){ # check if model complete
 # DEM
 if(!is.na(demFile)){
   dem_path <- filePresent(demFile, WatershedElements)
+  print("Found DEM...")
 }else{ # Assuming default parameters
   dem_path <- filePresent("dem.tif", WatershedElements)
 }
 # Boundary file
 if(!is.na(boundary)){
   watershed_shape_path <- filePresent(boundary, WatershedElements)
+  print("Found boundary shapefile...")
 }else{
   print("No boundary layer input: Using DEM extent...")
   watershed_shape_path <- NA
@@ -138,11 +139,31 @@ if(!is.na(boundary)){
 # Land cover file
 if(!is.na(landCoverFile)){
   landCoverFile <- filePresent(landCoverFile, WatershedElements)
+  print("Found Land Cover file...")
 }else{
-  print("Attempting to find file 'landcover.tif'")
-  landCoverFile <- filePresent("landcover.tif", WatershedElements)
+  print("Using file 'landcover_soil.shp'")
+  #landCoverFile <- filePresent("landcover_soil.tif", WatershedElements)
+  landCoverFile <- filePresent("landcover_soil.shp", WatershedElements)
   #print(paste0("Found a land cover file at: ", landCoverFile)," using file as input.")
 }
+# Check land cover file
+LandCoverCharacteristics <- filePresent(LandCoverCharacteristics, WatershedElements) # returns full path
+# Check key matches
+keyCheck <- readxl::read_xlsx(LandCoverCharacteristics)
+
+if(key %in% colnames(keyCheck)){
+  if("mannings_n" %in% colnames(keyCheck)){
+    print(paste0("Found '", key, "' and 'mannings_n' columns in LandCoverCharacteristics file"))
+  }else{
+    stop("'mannings_n' could not be found in excel file. Check that one of the columns in
+       the land cover excel spreadsheet matches the input key.")
+  }
+  rm(keyCheck)
+}else{
+  stop("Key could not be found in excel file. Check that one of the columns in
+       the land cover excel spreadsheet matches the input key.")
+}
+
 # if(!crop){ # if it isn't cropped, it will adjust to look for the demo file.
 #   watershed_shape_path <-  NA
 #   dem_path <- file.path(WatershedElements, "demo_dem.tif")
@@ -161,7 +182,13 @@ if(!is.na(landCoverFile)){
 #   stop(paste0("Could not locate computational boundary:", watershed_shape_path))
 # }
 # Function adjusts digital elevation model (smooths with preserved features)and land cover map is projected in same coordinate system and clipped to watershed.
-landcovername <- watershedElements(Outpath = WatershedElements, DEM = dem_path, WatershedShape = watershed_shape_path, landCoverFile = landCoverFile, ModelFolder = ModelFolder)
+WatershedStack <- watershedElementsCreate(WatershedElements = WatershedElements,
+                                         DEM = dem_path,
+                                         WatershedShape = watershed_shape_path,
+                                         landCoverFile = landCoverFile,
+                                         ModelFolder = ModelFolder,
+                                         LandCoverCharacteristics = LandCoverCharacteristics,
+                                         key = key)
 
 # Initial conditions
 ##--------------------------------
@@ -182,28 +209,21 @@ initial_conditions(ModelOutputs = ModelFolder, model_dem = model_dem) # saves in
 
 #source("initialSoilConditions.R")
 
-if(key == "NLCD_Key"){
-  LandCoverCharacteristics <- file.path(WatershedElements, "LandCoverCharacteristics.xlsx") # default excel file within current project folder
-}else if(key == "MUKEY"){
-  LandCoverCharacteristics <- file.path(WatershedElements, "LandCoverCharacteristics_Soils.xlsx")
-}else if(key == "KEY"){
-  # Land Cover characteristics
-}
-ClassificationMap <- landCoverFile # adjusted/cropped classification map - must be named correctly
-
-#DEM <- file.path(WatershedElements, "cropped_dem.tif") # clipped dem, elevations unaltered - must be named correctly
-#DEM <- file.path(WatershedElements, "model_dem.tif") # modified dem, elevations unaltered - must be named correctly
-# Initial soil conditions for model - a stacked map of soil characteristics including:
-# Initial saturation, porosity, soil depth, hydraulic conductivity, etc.
-# See initialSoilConditions.R for more details
-initial_soil_conditions(LandCoverCharacteristics = LandCoverCharacteristics,
-                        ClassificationMap = ClassificationMap,
-                        DEM = model_dem,
-                        outline = watershed_shape_path,
-                        ModelOutputs = ModelFolder,
-                        key = key,
-                        overwrite = overwrite
-                        ) # Saves the modeled soil stack as raster brick
+# ClassificationMap <- landCoverFile # adjusted/cropped classification map - must be named correctly
+#
+# #DEM <- file.path(WatershedElements, "cropped_dem.tif") # clipped dem, elevations unaltered - must be named correctly
+# #DEM <- file.path(WatershedElements, "model_dem.tif") # modified dem, elevations unaltered - must be named correctly
+# # Initial soil conditions for model - a stacked map of soil characteristics including:
+# # Initial saturation, porosity, soil depth, hydraulic conductivity, etc.
+# # See initialSoilConditions.R for more details
+# initial_soil_conditions(LandCoverCharacteristics = LandCoverCharacteristics,
+#                         ClassificationMap = ClassificationMap,
+#                         DEM = model_dem,
+#                         outline = watershed_shape_path,
+#                         ModelOutputs = ModelFolder,
+#                         key = key,
+#                         overwrite = overwrite
+#                         ) # Saves the modeled soil stack as raster brick
 
 ## Rainfall
 ##--------------------------------------
@@ -244,21 +264,21 @@ if(store & discharge){
 
 # Necessary elements for the model
 
-flowStack_file <- file.path(WatershedElements, "stack_flow.tif")
-landCover_file <- file.path(WatershedElements, "landcover.tif")
-slope_file <- file.path(WatershedElements, "model_slope.tif")
+# flowStack_file <- file.path(WatershedElements, "stack_flow.tif")
+# landCover_file <- file.path(WatershedElements, "landcover.tif")
+# slope_file <- file.path(WatershedElements, "model_slope.tif")
 SoilStack_file <- file.path(ModelFolder, "model_soil_stack.tif")
 rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
 #rain_file <- file.path(ModelFolder, "Model-Rainfall.csv") #Uncheck for troubleshooting
-files_needed <- c(WatershedElements, ModelFolder, landCover_file, SoilStack_file, flowStack_file, rain_file, slope_file, rain_discharge_file)
-
-for(x in files_needed){
-  if(!file.exists(x)){
-    print(paste0("The file ", x, " does not exist in this current location. \n"))
-    break
-  }
-}
-print("All files checked.")
+# files_needed <- c(WatershedElements, ModelFolder, landCover_file, SoilStack_file, flowStack_file, rain_file, slope_file, rain_discharge_file)
+#
+# for(x in files_needed){
+#   if(!file.exists(x)){
+#     print(paste0("The file ", x, " does not exist in this current location. \n"))
+#     break
+#   }
+# }
+# print("All files checked.")
 
 #time_step <- .25
 if(is.na(simulation_length)){

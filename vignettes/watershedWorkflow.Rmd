@@ -29,20 +29,46 @@ library(desertHydro) # loads installed version not vignette version
 ```{r}
 # Important steps
 # Location or file path to save the 
-ModelFolder <- r"(Z:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
+
 # # # ModelFolder <- r"(~TestFolderPackage)"
-#WatershedElements <- "./inst/extdata/DemoElements"
-WatershedElements <- "../inst/extdata/DemoElements" # Moves out a level to get to data folder
+
+#WatershedElements <- "../inst/extdata/DemoElements" # Moves out a level to get to data folder
 # File names
-
-dem <- "dem.tif" # Necessary
-boundary <- NA # Optional
-landCoverFile <- "landcover1.tif"
-
+ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
+WatershedElements <- r"(C:\PackageDev\desertHydro\inst\extdata\DemoElements)"
+date <- NULL
+demFile <- "dem.tif" # Necessary
+boundary <- "boundary.shp" # Optional
+landCoverFile <- "soils.shp"
+LandCoverCharacteristics <- "LandCoverCharacteristics_soils.xlsx"
+key <- "MUSYM"
+rainFile <- "USGS_Rain_2001_2021.xlsx"
+dischargeFile <- "example_discharge.csv"
+rainfall_method <- "Synthetic"
 
 # # print("Check for vignette!")
-a <- arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements, landCoverFile = landCoverFile)
-getwd()
+# a <- arid_model(ModelFolder,
+#                 WatershedElements,
+#                 date = NULL,
+#                 demFile = "dem.tif",
+#                 boundary = NA,
+#                 landCoverFile = "landcover_soil.tif",
+#                 LandCoverCharacteristics = "LandCoverCharacteristics_soils.xlsx",
+#                 key = "NLCD_Key",
+#                 impervious = F,
+#                 rainfall_method = "gauges",
+#                 store = T,
+#                 gif = T,
+#                 discharge = F,
+#                 time_step = 0.5,
+#                 simulation_length = NA,
+#                 overwrite = T,
+#                 write = T,
+#                 restartModel = F
+#                 )
+# SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
+# terra::plot(SoilStack)
+# getwd()
 ```
 
 # Use vignettes -

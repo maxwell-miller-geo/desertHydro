@@ -177,6 +177,7 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
   # # Create zeros within the data create a sequence of time from the rainfall DF
   # time_seq <- data.frame(Time_minute = seq(rainfallDF$Time_minute[1], tail(rainfallDF$Time_minute,1), by = "min"))
   # # Change gauge names
+  time <- Time_minute <- NULL
   colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "-", "_")
   colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "[.]", "_")
   # # This step combines the rainfall and the discharge data into 1 dataframe - dirty
@@ -200,35 +201,35 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
       dplyr::arrange(Time_minute)
   }
 
-  rain_discharge <- dplyr::full_join(rainfallDF, dischargeDF, by = join_by("Time_minute" == "time (MST)"))
+  rain_discharge <- dplyr::full_join(rainfallDF, dischargeDF, by = dplyr::join_by("Time_minute" == "time (MST)"))
   # interpolate between values
   # Selectable columns
   cols <- c("Time_minute", "Total_in", "discharge", "height")
 
   # Filter columns
   rain_discharge <- rain_discharge |>
-    select(cols) |>
-    arrange(rain_discharge$`Time-minute`) |>
-    mutate(time = (as.numeric(rain_discharge$`Time_minute` - base::min(rain_discharge$`Time_minute`)
+    dplyr::select(cols) |>
+    dplyr::arrange(rain_discharge$`Time-minute`) |>
+    dplyr::mutate(time = (as.numeric(rain_discharge$`Time_minute` - base::min(rain_discharge$`Time_minute`)
                              ) / 60) + 1)
 
   return(rain_discharge)
   # Perform linear approximation on discharge and height values
-  rain_discharge$discharge <- round(na.approx(rain_discharge$discharge, na.rm = F), 4)
-  rain_discharge$height <- round(na.approx(rain_discharge$height, na.rm = F), 2)
+  rain_discharge$discharge <- round(zoo::na.approx(rain_discharge$discharge, na.rm = F), 4)
+  rain_discharge$height <- round(zoo::na.approx(rain_discharge$height, na.rm = F), 2)
   #return(rain_discharge)
   # Replace NA values with 0s
   rain_discharge[is.na(rain_discharge)] <- as.integer(0)
 
   # Add a line of zeros at the beginning
   rain_discharge <-  rain_discharge |>
-      dplyr::add_row(Time_minute = c(rain_discharge[1,1] - minutes(1)),
+      dplyr::add_row(Time_minute = c(rain_discharge[1,1] - lubridate::minutes(1)),
                         Total_in = 0,
                        discharge = 0,
                           height = 0,
                             time = 0, .before = 1) |>
-                          arrange(time) |>
-                      mutate(difftime = c(0, diff(time)))
+                      dplyr::arrange(time) |>
+                      dplyr::mutate(difftime = c(0, diff(time)))
 
   # Cut off values if rainfall occurs after discharge recedes
   #which(rain_discharge$difftime > 60)[1])){

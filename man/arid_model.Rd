@@ -7,22 +7,22 @@
 arid_model(
   ModelFolder,
   WatershedElements,
-  date = NULL,
   demFile = "dem.tif",
-  time_step = 1,
-  simulation_length = NA,
-  mini = F,
+  date = NULL,
+  boundary = NA,
+  landCoverFile = "landcover_soil.tif",
+  LandCoverCharacteristics = "LandCoverCharacteristics_soils.xlsx",
+  key = "NLCD_Key",
+  impervious = F,
   rainfall_method = "gauges",
   store = T,
   gif = T,
-  boundary = NA,
   discharge = F,
-  impervious = F,
+  time_step = 0.5,
+  simulation_length = NA,
   overwrite = T,
   write = T,
   restartModel = F,
-  landCoverFile = NA,
-  key = "NLCD_Key",
   ...
 )
 }
@@ -33,21 +33,24 @@ The script will write and modify the elements present within the output folder.}
 \item{WatershedElements}{The folder path that contains all the necessary components to
 create and run the hydrological model.}
 
+\item{demFile}{Name of the digital elevation file within WatershedElements. Defaults to "dem.tif"}
+
 \item{date}{Optional date string. must be in format "YYYY-MM-DD".
 The date will be evaluated and pull necessary event information from downloaded .csv files - rain and discharge data.
 Not very flexible and is based on the formatting of the event file date columns. Uses tidyverse packages to filter date information.}
 
-\item{demFile}{Name of the digital elevation file within WatershedElements. Defaults to "dem.tif"}
+\item{boundary}{Optional: T/F: If TRUE, will crop using terra::crop datasets to boundary layer. Boundary or extent mismatches in spatial data
+will prevent successful model simulations.}
 
-\item{time_step}{Optional based time step in fraction of minutes. Defaults to 1 minute. Recommended: 0.25 - 1 minute.
-The time step is the default evaluation time step for a model.
-The script will dynamically adjust the time step based on the calculated surface velocities.}
+\item{landCoverFile}{Optional: Default NA: Expects string format of land cover tif file e.g. "landcover.tif" that is present within the WatershedElements fold.
+Note: If changed, the key parameter needs to be changed to match the category column name. See vignette for expected structure.}
 
-\item{simulation_length}{Optional length of simulation in minutes. Defaults to rainfall duration + discharge duration.}
+\item{key}{Optional: Default: "NLCD_Key" string for name of land cover types in excel table and the land cover map ".tif".
+This will convert excel table hydrological characteristics into a stacked raster map with each layer corresponding to a hydrological characteristic and spatially distributed them.
+See vignette for expected structure.}
 
-\item{mini}{Optional: T/F. Default False. If TRUE, script will look for "mini-ws.shp" within the Watershed Elements to crop
-and reduce the size of the computational boundary. Best used for testing smaller portions of watershed.
-Large computational areas + 1 million cells will take considerable time depending on the length of simulation.}
+\item{impervious}{Optional: T/F: If TRUE, model calculate runoff without infiltration.
+Can be used to perform quicker model simulations to determine sensitivity or runoff potential.}
 
 \item{rainfall_method}{Optional rainfall method string. Default "gauges" creates weighted average of rainfall within a given watershed.
 The "gauges" data must be formatted correctly to apply rainfall. For additional options of rainfall see documenatatin for
@@ -57,15 +60,17 @@ rainfallCreate.}
 
 \item{gif}{Optional: T/F: If TRUE, will create gif animations for each of the typical outputs - Surface water depth, surface water velocity, and soil moisture.}
 
-\item{boundary}{Optional: T/F: If TRUE, will crop using terra::crop datasets to boundary layer. Boundary or extent mismatches in spatial data
-will prevent successful model simulations.}
-
 \item{discharge}{Optional: T/F: If TRUE, script will use observed discharge data -expected format ".tsv"-
 to modify simulation length and create compiled hydrographs with containing predicted and observed discharges.
 Expects ESRI shapefile point at gauged location named "gauges.shp" within WatershedElements folder.}
 
-\item{impervious}{Optional: T/F: If TRUE, model calculate runoff without infiltration.
-Can be used to perform quicker model simulations to determine sensitivity or runoff potential.}
+\item{time_step}{Optional based time step in fraction of minutes. Defaults to 1 minute. Recommended: 0.25 - 1 minute.
+The time step is the default evaluation time step for a model.
+The script will dynamically adjust the time step based on the calculated surface velocities.}
+
+\item{simulation_length}{Optional length of simulation in minutes. Defaults to rainfall duration + discharge duration.
+and reduce the size of the computational boundary. Best used for testing smaller portions of watershed.
+Large computational areas + 1 million cells will take considerable time depending on the length of simulation.}
 
 \item{overwrite}{Optional: T/F: If TRUE, overwrite elements within WatershedElements folder and ModelFolder when necessary.}
 
@@ -73,13 +78,6 @@ Can be used to perform quicker model simulations to determine sensitivity or run
 
 \item{restartModel}{Optional: T/F: If TRUE, model will attempt to restart from last recorded time and water surface elevations
 Note: If files within Model Folder are edited, it may not work.}
-
-\item{landCoverFile}{Optional: Default NA: Expects string format of land cover tif file e.g. "landcover.tif" that is present within the WatershedElements fold.
-Note: If changed, the key parameter needs to be changed to match the category column name. See vignette for expected structure.}
-
-\item{key}{Optional: Default: "NLCD_Key" string for name of land cover types in excel table and the land cover map ".tif".
-This will convert excel table hydrological characteristics into a stacked raster map with each layer corresponding to a hydrological characteristic and spatially distributed them.
-See vignette for expected structure.}
 
 \item{...}{Additional parameters to pass into inner functions.}
 }

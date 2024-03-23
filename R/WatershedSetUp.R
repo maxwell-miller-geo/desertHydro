@@ -6,71 +6,71 @@
 # 4 - Voronoi polygons
 # Some of the scripts are created in external functions
 
-watershedElements <- function(Outpath, DEM, WatershedShape, landCoverFile = "land_cover_soils.shp", landcovername = "landcover_soil.tif", ModelFolder = NA){ # DEM should be unaltered
+watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, WatershedShape, LandCoverCharacteristics, landCoverFile, landcovername = "landcover_soil.tif", key = "MUSYM", overwrite = T){ # DEM should be unaltered
   requireNamespace("terra")
   # DEM adjustments
   # Adjust the input DEM with the watershed shapefile.
   # Creates the following maps using the Whitebox package <- https://github.com/cran/whitebox
-  #breached_dem <- file.path(Outpath, "breached.tif") # adjust string name to output of flow-accumulation
-  #smoothed_dem <- file.path(Outpath, "smoothed_dem.tif")
+  #breached_dem <- file.path(WatershedElements, "breached.tif") # adjust string name to output of flow-accumulation
+  #smoothed_dem <- file.path(WatershedElements, "smoothed_dem.tif")
   model_dem <- file.path(WatershedElements, "model_dem.tif")
   print('Locating adjusted digital elevation model.')
   if(!file.exists(model_dem)){
     print('Creating adjusted digital elevation model.')
     #library(whitebox)
     #source("demProcessing.R", local = TRUE) # Custom function with whitebox scripts
-    flow_accumlation_wb(dem_file_path = DEM, Outpath = Outpath, watershed_shape_path = WatershedShape, ModelFolder = ModelFolder) # Does not overwrite - creates many rasters
+    flow_accumlation_wb(dem_file_path = DEM,
+                        Outpath = WatershedElements,
+                        watershed_shape_path = WatershedShape,
+                        ModelFolder = ModelFolder) # Does not overwrite - creates many rasters
     print('Finished creating adjusted DEM.')
   } else{
-    # Local breached DEM
-    #breached_dem <- file.path(Outpath, "breached.tif") # adjust string name to output of flow-accumulation
-    # Local smoothed DEM
     print("Located DEM")
-    model_dem <- file.path(WatershedElements, "model_dem.tif")
-    #smoothed_dem <- file.path(Outpath, "smoothed_dem.tif")
   }
   # Slope creation
-  slope <- file.path(Outpath, "model_slope.tif") # default name of slope file
+  slope <- file.path(WatershedElements, "model_slope.tif") # default name of slope file
   print('Locating slope file')
   if(!file.exists(slope)){
     # Expects one of the outputs from previous function to produce "cropped_dem.tif"
-    #cropped_dem <- file.path(Outpath, "cropped_dem.tif")
+    #cropped_dem <- file.path(WatershedElements, "cropped_dem.tif")
     slope_temp <- terra::terrain(terra::rast(model_dem), v = "slope", neighbors = 8, unit = "degrees")
+    edges <- terra::focal(slope_temp, w = 3, "modal", na.policy = "only", na.rm = F)
+    names(edges) <- "slope"
     # NOTE - slope does not compute for boundary cells
-    terra::writeRaster(slope_temp, filename = file.path(Outpath, "model_slope.tif"))
+    terra::writeRaster(edges, filename = file.path(WatershedElements, "model_slope.tif"), overwrite = T)
   }
   # Land Cover
   # Project the land cover data into same coordinate system of the DEM
   # Check if the landcover raster is already there
-  landcovername <- landcovername
-  land_cover_clip_file <- file.path(Outpath, landcovername)
-  print(land_cover_clip_file)
+  model_landcover <- file.path(WatershedElements, "model_landcover.tif")
+  fileExists <- file.exists(model_landcover)
   print('Locating adjusted land cover map.')
-  if(!file.exists(land_cover_clip_file)){
-    # Landcover #
-    #source("createWatershedModel.R", local = TRUE) # Land Cover script
-    print("Land cover file not found. Searching additional location.")
-    #landCoverFile <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # school desktop
-    extension <- sub(".*\\.", "", landCoverFile) # use regular expression to get file extension
-    if(extension == "shp"){
-      land_cover <- terra::vect(file.path(Outpath, landCoverFile))
-    }else{
-      land_cover <- terra::rast(landCoverFile)
-    }
-
-    dem_local <- terra::rast(model_dem)
-    land_cover_raster <- resizeShape(spatialObject = land_cover, extent_raster = dem_local, watershedboundary = WatershedShape, save = F)
-    terra::writeRaster(land_cover_raster, file.path(land_cover_clip_file), overwrite = TRUE)
-    print("Land Cover file clipped and resized.")
+  if(!fileExists | overwrite){
+      #source("createWatershedModel.R", local = TRUE) # Land Cover script
+      print("Processing land cover...")
+      #landCoverFile <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # school desktop
+      extension <- sub(".*\\.", "", landCoverFile) # use regular expression to get file extension
+      if(extension == "shp"){
+        land_cover <- terra::vect(landCoverFile)
+      }else{
+        land_cover <- terra::rast(landCoverFile)
+      }
+      dem_local <- terra::rast(model_dem)
+      land_cover_raster <- resizeShape(spatialObject = land_cover,
+                                       extent_raster = dem_local,
+                                       watershedboundary = WatershedShape,
+                                       key = key,
+                                       save = F)
+      terra::writeRaster(land_cover_raster, model_landcover, overwrite = TRUE)
+      print("Land Cover file clipped and resized.")
   } else{
     # Local land cover raster
     print("Found Land Cover raster.")
-    land_cover_raster <- terra::rast(land_cover_clip_file)
+    land_cover_raster <- terra::rast(model_landcover)
   }
-
   # Flow Calculations
   flow_filename <- "stack_flow.tif" # must be created with names of layers
-  flow_file <- file.path(Outpath, flow_filename)
+  flow_file <- file.path(WatershedElements, flow_filename)
   print('Locating flow partition map.')
   if(!file.exists(flow_file)){ # Can take a few minutes if not already created
     print("No flow partition map found.")
@@ -90,18 +90,38 @@ watershedElements <- function(Outpath, DEM, WatershedShape, landCoverFile = "lan
     copyflowStack <- terra::crop(flowStack, land_cover_raster, snap = "near")
     terra::writeRaster(copyflowStack, flow_file, overwrite = T)
   }
-  print(paste0("Finished creating/checking files. Watershed elements files located in: ", Outpath))
+
+  # Stack them all up
+  WatershedStack <- c(terra::rast(model_dem),
+                      terra::rast(slope),
+                      terra::rast(flow_file),
+                      terra::rast(model_landcover))
+
+  terra::writeRaster(WatershedStack, file.path(WatershedElements, "watershed_stack.tif"), overwrite = T)
+  print(paste0("Finished creating/checking files. Watershed elements files located in: ", WatershedElements))
   # Check files were written into folder
-  return(landcovername)
+  #return(WatershedStack)
+
+  ClassificationMap <- model_landcover # adjusted/cropped classification map - must be named correctly
+
+  initial_soil_conditions(LandCoverCharacteristics = LandCoverCharacteristics,
+                          ClassificationMap = ClassificationMap,
+                          WatershedStack = WatershedStack,
+                          outline = watershed_shape_path,
+                          ModelOutputs = ModelFolder,
+                          key = key,
+                          overwrite = overwrite
+                          )
+  SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
 }
 
 # Test
-# fileOutpath <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements)"
+# fileWatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements)"
 # dem_path <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\QGIS\waterholes_extent.tif)"
 # land_cover_path <-  r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # school desktop
 # watershed_shape_path <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\QGIS\waterholes_shape.shp)"
 #
-# watershedElements(Outpath = fileOutpath, DEM = dem_path, LandCover = land_cover_path, WatershedShape = watershed_shape_path)
+# watershedElements(WatershedElements = fileWatershedElements, DEM = dem_path, LandCover = land_cover_path, WatershedShape = watershed_shape_path)
 
 ## Create voronoi polygons - not run
 createVoronoi <- function(coords, combined, shapefile, write = F){ # Not run

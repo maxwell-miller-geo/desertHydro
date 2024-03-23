@@ -190,6 +190,9 @@ gifCreation <- function(ModelFolder, rain_file, rainfall_method = "", gif = T, d
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
   velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
   subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
+  rasterCompile(ModelFolder, "velocity", remove = T)
+  rasterCompile(ModelFolder, "soil", remove = T)
+  rasterCompile(ModelFolder, "surface", remove = T)
   xvalues <-as.vector(na.omit(as.numeric(names(surfaceStorage))))
   if(discharge & rainfall_method != "goes"){ # gathers total rain and rain duration values
     print("Retrieving rainfall data from simulation: rain_discharge")

@@ -54,90 +54,59 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
 
 flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = NA, ModelFolder = NA, smooth_tif = "smoothed_dem.tif", filled_dem = "filled_dem.tif", breached_tif = "breached.tif", out_accum = "flow_accumulation.tif", max_change = 25){
   # List of created rasters
-  model_dem <- file.path(Outpath, "model_dem.tif")
-  cropped_dem <- file.path(Outpath, "cropped_dem.tif")
-  smooth_tif <- file.path(Outpath, "smoothed_dem.tif")
-  filled_tif <- file.path(Outpath, "filled_dem.tif")
-  # filled_tif_planchon_and_darboux <- file.path(Outpath, "filled_dem_planchon_and_darboux.tif")
-  # filled_tif_wang_and_liu <- file.path(Outpath, "filled_tif_wang_and_liu.tif")
-  breached_tif <- file.path(Outpath, "breached.tif")
-  flow_accum <- file.path(Outpath, "flow_accumulation.tif")
-  flow_direct <- file.path(Outpath, "flow_d8.tif")
-
-  # Store the coordinate system codes
   crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
-  # Requirements for function and optional clip step
-    # Initialize whitebox
-    #whitebox::wbt_init()
-    if(!is.na(watershed_shape_path)){
-      # Clip the dem, if a shapefile is present
-      # Projection Check
-      dem_code <- terra::crs(terra::rast(dem_file_path), describe = T)[[3]] # crs of dem
-      shape_crs_code <-  terra::crs(terra::vect(watershed_shape_path), describe = T)[[3]] # crs of shapefile
-      if(dem_code == shape_crs_code){
-        # if coordinate systems match
-        temp_dem <- terra::rast(dem_file_path) # load in dem
-        temp_shape <- terra::vect(watershed_shape_path) # load in boundary vector
-        clipped_dem <- terra::crop(temp_dem, temp_shape, ext = F, mask = T)
-        terra::writeRaster(clipped_dem, filename = cropped_dem, overwrite = T) # creates cropped
-        # should have a slightly different name to keep path stable
-        # might need to add another line to make sure the clipped dem shows up right.
-      }else{ # Breaks if coordinates do not match
-        stop("The coordinates for the input files do not match.")
-      }
+  model_dem <- file.path(Outpath, "model_dem.tif")
+  flow_accum <- file.path(Outpath, "flow_accumulation.tif")
 
-    }else{
-      cropped_dem <- dem_file_path # sets input dem to clipped version
-    }
+  # Remove model dem if present
+  if(file.exists(model_dem)){
+    print("Overwriting model dem")
+    file.remove(model_dem)
+  }
 
-
-  #clipped_dem_rast <- terra::rast(clipped_dem)
-  # 1. Feature Presvering Smoothings
-  # Now, we want to smooth the DEM, preserving the features, leaving the maximum changes default = 0.5
-  whitebox::wbt_feature_preserving_smoothing(dem = cropped_dem,
-                                             output = smooth_tif,
-                                              max_diff = max_change)
-  # Save the coordinate system to new file
-  crsAssign(smooth_tif, coordinateSystem = crs_dem)
-
-  # 2a. Fill Depressions
-  whitebox::wbt_fill_depressions(dem = cropped_dem, output = filled_tif)
-  crsAssign(filled_tif, coordinateSystem = crs_dem)
-
-  # whitebox::wbt_fill_depressions_planchon_and_darboux(dem = clipped_dem, output = filled_tif_planchon_and_darboux)
-  # crsAssign(filled_tif_planchon_and_darboux, coordinateSystem = crs_dem)
-  #
-  # whitebox::wbt_fill_depressions_wang_and_liu(dem = clipped_dem, output = filled_tif_wang_and_liu)
-  # crsAssign(filled_tif_wang_and_liu, coordinateSystem = crs_dem)
-
-  # 2b. BreachDepressions
-  whitebox::wbt_breach_depressions_least_cost(dem = smooth_tif, output = breached_tif, dist = 1, max_cost = max_change)
-  ##### The curent model dem ####### KEY!
-  # model_dem <- file.path(WatershedElements, "model_dem_5.tif")
-  # max_change <- 5
-  whitebox::wbt_breach_depressions_least_cost(dem = cropped_dem, output = model_dem, dist = max_change, max_cost = max_change)
-  whitebox::wbt_d8_pointer(model_dem, flow_direct)
-  crsAssign(flow_direct, coordinateSystem = crs_dem)
-
-  # Save the coordinate system to new file
-  crsAssign(breached_tif, coordinateSystem = crs_dem)
-  # Save the coordinate system to new file
+  whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_change)
   crsAssign(model_dem, coordinateSystem = crs_dem)
-  #plot(rast(breached_tif))# Display output
 
-  # 3. D8 Flow accumulation
-  #whitebox::wbt_d_inf_flow_accumulation(input = breached_tif, output = flow_accum)
+  if(file.exists(flow_accum)){
+    print("Overwriting flow accumulation")
+    file.remove(flow_accum)
+  }
   whitebox::wbt_d8_flow_accumulation(input = model_dem, output = flow_accum)
-  # Save the coordinate system to new file
   crsAssign(flow_accum, coordinateSystem = crs_dem)
 
-  # Additional D8 Flow accumulation calculations
-  #d8_flow_accumulation(raster_path = filled_tif, coordinateSys = crs_dem, creation_method = "fill")
-  # d8_flow_accumulation(raster_path = filled_tif_planchon_and_darboux, coordinateSys = crs_dem, creation_method = "fill_planch_and_darboux")
-  # d8_flow_accumulation(raster_path = filled_tif_wang_and_liu, coordinateSys = crs_dem, creation_method = "fill_wang_and_liu")
-  #d8_flow_accumulation(raster_path = smooth_tif, coordinateSys = crs_dem, creation_method = "smooth")
+  # Extract streams
+  extracted_streams <- file.path(Outpath, "stream_extracted.tif")
+  if(file.exists(extracted_streams)){
+    print("Overwriting extracted streams")
+    file.remove(extracted_streams)
+  }
 
-  #plot(rast(flow_accum))
+  whitebox::wbt_extract_streams(flow_accum, extracted_streams, threshold = 100)
+  crsAssign(extracted_streams, coordinateSystem = crs_dem)
+
+  # Clip files if necessary
+  if(!is.na(watershed_shape_path)){
+    # Clip the dem, if a shapefile is present
+    # Projection Check
+    dem_code <- terra::crs(terra::rast(model_dem), describe = T)[[3]] # crs of dem
+    shape_crs_code <-  terra::crs(terra::vect(watershed_shape_path), describe = T)[[3]] # crs of shapefile
+    if(dem_code == shape_crs_code){
+      # if coordinate systems match
+      temp_dem <- terra::rast(model_dem) + 0 # load in dem
+      temp_streams <- terra::rast(extracted_streams) + 0
+      temp_shape <- terra::vect(watershed_shape_path) # load in boundary vector
+
+      clipped_model_dem <- terra::crop(temp_dem, temp_shape, ext = F, mask = T)
+      clipped_streams <- terra::crop(temp_streams, temp_shape, ext = F, mask = T)
+
+      terra::writeRaster(clipped_model_dem, filename = model_dem, overwrite = T) # creates cropped
+      terra::writeRaster(clipped_streams, filename = extracted_streams, overwrite = T) # creates cropped
+      # should have a slightly different name to keep path stable
+      # might need to add another line to make sure the clipped dem shows up right.
+    }else{ # Breaks if coordinates do not match
+      stop("The coordinates for the input files do not match.")
+    }
+  }
 }
 
 d8_flow_accumulation <- function(raster_path, coordinateSys, creation_method = "fill"){
@@ -154,28 +123,30 @@ d8_flow_accumulation <- function(raster_path, coordinateSys, creation_method = "
 
 ## --------------------- Stream network creation
 # Create a stream network from flow accumulation raster
-streamCreate <- function(flowRasterPath, Outpath, threshold = 1000, DemFolder = NA, dem = "model_dem.tif"){
+streamCreate <- function(flowRasterPath, model_dem, Outpath, threshold = 100){
   # Whitebox tool to extract stream network
   extracted_streams <- file.path(Outpath, "stream_extracted.tif")
   whitebox::wbt_extract_streams(flowRasterPath, extracted_streams, threshold = threshold)
+  crsAssign(extracted_streams, coordinateSystem = terra::crs(terra::rast(flowRasterPath)))
   # Flow accumulation raster
   #flowRaster <- terra::rast(file.path(WatershedElements, "flow_accumulation.tif"))
-  demFile <- file.path(DemFolder, dem)
+  demFile <- dem
   dem_alternate <- file.path(Outpath, dem)
   streams <- file.path(Outpath, "streams.shp")
   flow_direction <- file.path(Outpath, "flow_d8.tif")
-  if(!file.exists(flow_direction)){
-    if(file.exists(demFile)){
-      whitebox::wbt_d8_pointer(demFile, flow_direction)
-      crsAssign(flow_direction, crs(terra::rast(demFile))) # flow direction
 
-    }else if(file.exists(dem_alternate)){
-      whitebox::wbt_d8_pointer(dem_alternate, flow_direction) # flow direction
-      crsAssign(flow_direction, crs(terra::rast(dem_alternate))) # coords
-    }else{
-      errorCondition("Could not find digital elevation model in input folders.")
-    }
-  }
+  # if(!file.exists(flow_direction)){
+  #   if(file.exists(demFile)){
+  #     whitebox::wbt_d8_pointer(demFile, flow_direction)
+  #     crsAssign(flow_direction, terra::crs(terra::rast(demFile))) # flow direction
+  #
+  #   }else if(file.exists(dem_alternate)){
+  #     whitebox::wbt_d8_pointer(dem_alternate, flow_direction) # flow direction
+  #     crsAssign(flow_direction, terra::crs(terra::rast(dem_alternate))) # coords
+  #   }else{
+  #     errorCondition("Could not find digital elevation model in input folders.")
+  #   }
+  # }
   coords <- terra::crs(terra::rast(flow_direction)) # coordinates of flow direction
   whitebox::wbt_raster_streams_to_vector(extracted_streams, flow_direction, streams)
   crsAssign(streams, coordinateSystem = coords)

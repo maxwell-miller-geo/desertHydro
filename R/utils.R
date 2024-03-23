@@ -63,7 +63,7 @@ dfMax <- function(raster, rename = NA){
 # ---------------------------------
 # Function that creates vector file from data.frame
 vectCreation <- function(df, saveLoc, name, coords){ # df must contain xy
-  shapefile <- terra::vect(df, geom = c("x", "y"), crs = crs(coords), keepgeom = T)
+  shapefile <- terra::vect(df, geom = c("x", "y"), crs = terra::crs(coords), keepgeom = T)
   terra::writeVector(shapefile, filename = file.path(saveLoc, name), overwrite = T)
   return(shapefile)
 }
@@ -117,7 +117,7 @@ rasterWrite <- function(raster, ModelFolder, end_time, layername = "surface"){
 # raster2 <- rast(rasterPath2)
 ## -------------------------- Combine rasters
 # Function that takes a bunch of rasters and combined them by name
-rasterCompile <- function(ModelFolder, layername){ # layername must be present in folder
+rasterCompile <- function(ModelFolder, layername, remove = F){ # layername must be present in folder
   # Find files with names and combined them by time
   tifFiles <- list.files(ModelFolder, pattern = "*.tif")
   layerFiles <- grep(paste0(layername,"-time-"), tifFiles, value = T)
@@ -134,7 +134,9 @@ rasterCompile <- function(ModelFolder, layername){ # layername must be present i
   # Remove temporary files
   fullPaths <- lapply(layerFiles, FUN = function(x)(file.path(ModelFolder, x)))
   # Remove temp files
-  #remove <- lapply(fullPaths, file.remove)
+  if(remove){
+    lapply(fullPaths, file.remove)
+  }
   return(layerStack)
 }
 # Test

@@ -8,7 +8,7 @@ createSoilRasters <- function(ClassMap, soilTable){
   landtypes <- unique(terra::values(ClassMap, na.rm = TRUE))
   outStack <- c() # creates empty vector
   for(x in 1:length(soilTable)){
-    
+
     if(is.character(soilTable[[x]])){
       next # Breaks if the value in the table is a character (names)
     }
@@ -22,36 +22,34 @@ createSoilRasters <- function(ClassMap, soilTable){
 
 # Function to read in the land cover map - assumes NLCD - crops and resamples
 # to computational watershed
-resizeShape <- function(spatialObject, extent_raster, watershedboundary, save = FALSE, save_name = "", save_location = "", key = "MUSYM"){
+resizeShape <- function(spatialObject, extent_raster, watershedboundary, save = FALSE, key = "MUSYM"){
   land_cover_proj <- terra::project(spatialObject, extent_raster)
   # crop the landcover to the extend boundary
   if(!is.na(watershedboundary)){
     if(class(land_cover_proj)[1] == "SpatVector"){
       land_cover_crop <- terra::crop(land_cover_proj, terra::vect(watershedboundary), ext = FALSE)
-      
+
       # Find KEY within names
       if(key %in% names(land_cover_crop)){
-        land_cover_adj <- terra::rasterize(land_cover_crop, extent_raster, field = key)
+        land_cover_adj <- terra::rasterize(land_cover_crop, extent_raster, field = key, touches = T)
       }
-      
-      
     }else{
       land_cover_adj <- terra::crop(land_cover_proj, terra::vect(watershedboundary), ext = FALSE, mask = TRUE)
     }
-    
+
   }else{
     land_cover_adj <- terra::crop(land_cover_proj, terra::rast(extent_raster), ext = TRUE)
   }
-  
+
   if(save){
     # write the raster into the saved location
     outpath <- file.path(save_location, save_name)
-    writeRaster(land_cover_adj, outpath, overwrite = FALSE)
+    terra::writeRaster(land_cover_adj, outpath, overwrite = FALSE)
   }
   return(land_cover_adj)
   #plot(land_cover)
 }
-# Check 
+# Check
 # Function to set the initial storage amount based upon table values
 storage_amount <- function(landCoverTable){
   # Function changes the table values and returns two column list with NLCD land type and corresponding storage

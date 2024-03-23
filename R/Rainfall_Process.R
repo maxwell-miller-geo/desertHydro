@@ -152,7 +152,7 @@ rainfallProcess <- function(rainfall, filepath = T, inches = T){
   # Assuming first line is a zero
   # Assumes data structure: Time (min) | Cumulative Rain (in)
   if(filepath){
-    rain <- as.data.frame(read_csv(rainfall_file, show_col_types = FALSE))
+    rain <- as.data.frame(readr::read_csv(rainfall_file, show_col_types = FALSE))
   }
   else{
     rain <- rainfall
@@ -185,7 +185,7 @@ rainfallProcess <- function(rainfall, filepath = T, inches = T){
 
 # Get the total rainfall for a particular day
 rainfallTotal <- function(rainfall, filepath = T, inches = T){
-  rain <- as.data.frame(read_csv(rainfall_file, show_col_types = FALSE))
+  rain <- as.data.frame(readr::read_csv(rainfall_file, show_col_types = FALSE))
   # assuming second column is the rainfall amount
   rainfall_total <- dplyr::last(rain[,2]) - rain[1,2]
   return(rainfall_total)
@@ -200,7 +200,7 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("
   if(substr(date, 1, 4) == "2022"){ # Year 2022
     rainfall_file <- file.path(rainfall_folder, "USGS_Rain_2022.xlsx")
   }else{
-    rainfall_file <- file.path(rainfall_folder, "USGS-GCMRC rain-gauge data WY 2000_2021.xlsx")
+    rainfall_file <- file.path(rainfall_folder, "USGS-GCMRC rain-gauge data WY 2000_2021.xlsx") # Show be changed
   }
   # if(new){
   #   rainfall_file <- file.path(rainfall_file, "USGS_Rain_2023.xlsx")
@@ -208,9 +208,9 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("
 
   # Load in the rainfall file - excel sheet
   rain <- rainfall_file |>
-    excel_sheets() |>
-    set_names() |>
-    map(read_excel, path = rainfall_file)
+    readxl::excel_sheets() |>
+    purrr::set_names() |>
+    purrr::map(read_excel, path = rainfall_file)
 
   # Select the rainfall gauges in the list
   rainSelected <- rain[gauges]
@@ -232,7 +232,7 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("
     rainSelected[[x]] <- rainSelected[[x]] |>
       dplyr::mutate(date_time = `Date and time`, rain_in = `TOTAL Cumulative Rain (in)`) |>
       dplyr::select(date_time, rain_in) |> # reorganize the list for a particular gauge
-      stats::aggregate(rain_in ~ floor_date(date_time, unit = level), FUN = sum) |>
+      stats::aggregate(rain_in ~ lubridate::floor_date(date_time, unit = level), FUN = sum) |>
       dplyr::rename(date = "floor_date(date_time, unit = level)")
 
       #mutate(month = lubridate::month(date_time, label = T)) # Create monthly column
@@ -496,7 +496,7 @@ rasterizeRainfall <- function(voronoi_shape, rainfallRaster, rainAtGauges){
     # Order must be the same: WATERHOLES-1, WATERHOLES-2, WATERHOLES-G
     shape <- terra::vect(voronoi_shape)
     # Pull out the values and convert to a dataframe
-    df <- as.data.frame(values(shape))
+    df <- as.data.frame(terra::values(shape))
     # replace rain values in dataframe with recorded values
     # Note: Make sure the position is corresponding correctly
     replacement_values <- c(round(rainAtGauges, 3))
@@ -504,7 +504,7 @@ rasterizeRainfall <- function(voronoi_shape, rainfallRaster, rainAtGauges){
 
     df$rain <- replace(df$rain, df$rain %in% conditions, replacement_values)
     # Assign rainfall to a section the the table
-    values(shape) <- df
+    terra::values(shape) <- df
 
     # Use an input raster map onto
     newRainfall <- terra::rasterize(shape, rainfallRaster, "rain")
