@@ -26,7 +26,7 @@ flowOutSum <- function(x) { # Vector of values
   card_difference <- center - cardinal[cardinal > 0]
 
   # Take the difference between diagonal values and center cell
-  adjustment <- 1/sqrt(2)
+  adjustment <- 1 / sqrt(2)
   diag_difference <- (center - diagonal[diagonal > 0]) * adjustment
 
   # Add the values together if they are above 0 (e.i., they flow into the current cell).
@@ -109,15 +109,16 @@ flowMap <- function(dem, outFolder = NA, name = "stack_flow.tif"){
 createFlowMaps <- function(dem, dem_flow){
   xDim <- terra::res(dem)[1]
   yDim <- terra::res(dem)[2]
+  diagFlow <- 1 / sqrt(2)
   # The names of the different flow layers
   flowKey <- list("N" = list("north_flow",c(0, -1), 1),
                   "E" = list("east_flow",c(-1, 0), 1),
                   "S" = list("south_flow",c(0, 1), 1),
                   "W" = list("west_flow",c(1, 0), 1),
-                  "NW" = list("northwest_flow",c(1, -1), .7071),
-                  "NE" = list("northeast_flow",c(-1, -1), .7071),
-                  "SE" = list("southeast_flow",c(-1, 1), .7071),
-                  "SW" = list("southwest_flow", c(1, 1), .7071)
+                  "NW" = list("northwest_flow",c(1, -1), diagFlow),
+                  "NE" = list("northeast_flow",c(-1, -1), diagFlow),
+                  "SE" = list("southeast_flow",c(-1, 1), diagFlow),
+                  "SW" = list("southwest_flow", c(1, 1), diagFlow)
                   )
   mapCalculations <- function(x, dem, dem_flow, xDim, yDim, flowKey){
     # Apply the shift to the dimensions of the raster
@@ -142,15 +143,15 @@ createFlowMaps <- function(dem, dem_flow){
 }
 ## Flow Partitioning function- Percent flow
 outputFlow <- function(values, dir){
-
-  directions <- list("NW" = list(1, .7071),
+  diagFlow <- 1 / sqrt(2)
+  directions <- list("NW" = list(1, diagFlow),
                      "N" = list(2, 1),
-                     "NE" = list(3, .7071),
+                     "NE" = list(3, diagFlow),
                      "W" = list(4, 1),
                      "E" = list(6, 1),
-                     "SW" = list(7, .7071),
+                     "SW" = list(7, diagFlow),
                      "S" = list(8, 1),
-                     "SE" = list(9, .7071))
+                     "SE" = list(9, diagFlow))
   # Take input direction and perform the percent calculation -- needs direction list
   flowPosition <- directions[[dir]][[1]] # find the vector value within the direction dictionary (NW = 1)
   scalar <- directions[[dir]][[2]] # find the scaling factor (1 for orthogonal, .707 for diagonal)
@@ -268,17 +269,17 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
   # Set up a temporary storage raster
   storage_adjusted <- flowToRoute # create a storage map from flow storage map
   terra::values(storage_adjusted) <- 0 # create a map with no value
-
+  diagFlow <- 1 / sqrt(2)
   # The names of the different flow layers
   flowKey <- list("N" = list("north_flow",c(0, -1), 1),
                   "E" = list("east_flow",c(-1, 0), 1),
                   "S" = list("south_flow",c(0, 1), 1),
                   "W" = list("west_flow",c(1, 0), 1),
-                  "NW" = list("northwest_flow",c(1, -1), .7071),
-                  "NE" = list("northeast_flow",c(-1, -1), .7071),
-                  "SE" = list("southeast_flow",c(-1, 1), .7071),
-                  "SW" = list("southwest_flow", c(1, 1), .7071)
-  )
+                  "NW" = list("northwest_flow",c(1, -1), diagFlow),
+                  "NE" = list("northeast_flow",c(-1, -1), diagFlow),
+                  "SE" = list("southeast_flow",c(-1, 1), diagFlow),
+                  "SW" = list("southwest_flow", c(1, 1), diagFlow)
+                  )
 
   # Loop through cardinal directions and create shifted storage maps
   #for(x in cardinal_directions){
@@ -469,10 +470,10 @@ ManningsWideChannelVelocity <- function(n, depth, slope, length, flowDirectionMa
       if(depthTest >= 0){
         # Adjust depths
         depthNew <- depth - depthLoss + flowRouting(flowToRoute = depthLoss, flowDirectionMap = flowDirectionMap)
+        sumCheck <- sum(terra::values(flowRouting(flowToRoute = depthLoss, flowDirectionMap = flowDirectionMap) - depthLoss))
       }
+      depthChange <- depth - depthNew
     }
-    # Redistribute water
-    depth_n_1 <- depth
   }
   v0 <- velocity
   dt <- floor(terra::minmax(velocity)[2] / length) + 1
