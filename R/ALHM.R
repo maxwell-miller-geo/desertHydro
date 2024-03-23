@@ -32,6 +32,10 @@
 #'  Note: If files within Model Folder are edited, it may not work.
 #' @param landCoverFile Optional: Default NA: Expects string format of land cover tif file e.g. "landcover.tif" that is present within the WatershedElements fold.
 #' Note: If changed, the key parameter needs to be changed to match the category column name. See vignette for expected structure.
+#' @param LandCoverCharacteristics Optional: Default "LandCoverCharacteristics.xlsx": Excel spreadsheet that contains
+#' hydrological characteristics, most importantly Manning's n values for different land cover types found
+#' within landCoverFile. Note: If input, the 'key' parameter must match attributes within land cover file, .tif or .shp, to a
+#' column header within the excel spreadsheet.
 #' @param key Optional: Default: "NLCD_Key" string for name of land cover types in excel table and the land cover map ".tif".
 #' This will convert excel table hydrological characteristics into a stacked raster map with each layer corresponding to a hydrological characteristic and spatially distributed them.
 #' See vignette for expected structure.
@@ -264,9 +268,10 @@ if(store & discharge){
 
 # Necessary elements for the model
 
-# flowStack_file <- file.path(WatershedElements, "stack_flow.tif")
+
 # landCover_file <- file.path(WatershedElements, "landcover.tif")
 # slope_file <- file.path(WatershedElements, "model_slope.tif")
+flowStack_file <- file.path(ModelFolder, "stack_flow.tif")
 SoilStack_file <- file.path(ModelFolder, "model_soil_stack.tif")
 rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
 #rain_file <- file.path(ModelFolder, "Model-Rainfall.csv") #Uncheck for troubleshooting
@@ -306,8 +311,6 @@ gc()
 # source("utils.R")
 flowModel(SoilStack_file = SoilStack_file,
           flowStack_file = flowStack_file,
-          landCover_file = landCover_file,
-          slope_file = slope_file,
           rain_file = rain_file,
           ModelFolder = ModelFolder,
           time_step = time_step,

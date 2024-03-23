@@ -45,6 +45,11 @@ will prevent successful model simulations.}
 \item{landCoverFile}{Optional: Default NA: Expects string format of land cover tif file e.g. "landcover.tif" that is present within the WatershedElements fold.
 Note: If changed, the key parameter needs to be changed to match the category column name. See vignette for expected structure.}
 
+\item{LandCoverCharacteristics}{Optional: Default "LandCoverCharacteristics.xlsx": Excel spreadsheet that contains
+hydrological characteristics, most importantly Manning's n values for different land cover types found
+within landCoverFile. Note: If input, the 'key' parameter must match attributes within land cover file, .tif or .shp, to a
+column header within the excel spreadsheet.}
+
 \item{key}{Optional: Default: "NLCD_Key" string for name of land cover types in excel table and the land cover map ".tif".
 This will convert excel table hydrological characteristics into a stacked raster map with each layer corresponding to a hydrological characteristic and spatially distributed them.
 See vignette for expected structure.}

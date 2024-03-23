@@ -36,8 +36,6 @@
 
 flowModel <- function(SoilStack_file,
                       flowStack_file,
-                      slope_file,
-                      landCover_file,
                       rain_file,
                       ModelFolder,
                       time_step = 1,
@@ -54,14 +52,8 @@ flowModel <- function(SoilStack_file,
   print(paste("Estimated run time:", round(simulation_length/ time_step * 25/60), " minutes."))
 
   start_time <- Sys.time()
-
-  #readr::read_file("simulation_time.txt")
+  # Load soil stack
   SoilStack <- terra::rast(SoilStack_file)
-  # Attach slope to rast
-  #SoilStack$slope <- terra::rast(slope_file)
-  flowStack <- terra::rast(flowStack_file)
-
-  land_cover_raster <- terra::rast(landCover_file)
   gridsize <- 10 # manually set grid-size, based on DEM
 
   # Check and determine the rainfall input
@@ -88,12 +80,12 @@ flowModel <- function(SoilStack_file,
     print(paste0("Starting off at ", lastSimulationTime))
     simulation_duration <- seq(lastSimulationTime, simulationDF$simlength, by = simulationDF$timestep) # minute duration of simulation
     timeCheck <- terra::rast(file.path(ModelFolder, "VelocityStorage.tif"))
-    lastTime <- as.numeric(tail(names(timeCheck), n = 1))
+    lastTime <- as.numeric(terra::tail(names(timeCheck), n = 1))
     # Reado previous step? What if there are partial saves - doesn't check for
     SoilStack <- terra::rast(tempStorage)
     subsurfacePath <- file.path(ModelFolder, "soilStorage.tif")
-    surfacePath <- file.path(ModelFolder, "SurfaceStorage.tif")
-    velocityPath <- file.path(ModelFolder, "VelocityStorage.tif")
+    surfacePath <- file.path(ModelFolder, "surfaceStorage.tif")
+    velocityPath <- file.path(ModelFolder, "velocityStorage.tif")
     distancePath <- file.path(ModelFolder, "distanceStorage.tif")
     runoffDepthPath <- file.path(ModelFolder, "runoffDepth.tif")
     flowMapPath <- file.path(ModelFolder, "flowMap.tif")
@@ -101,14 +93,11 @@ flowModel <- function(SoilStack_file,
     velocityMax_df <- as.data.frame(terra::vect(file.path(ModelFolder, "max-velocity.shp")))
     depthMaxDF <- as.data.frame(terra::vect(file.path(ModelFolder, "max-depth.shp")))
     timeVelocity <- data.table::data.table(data.table::fread(file.path(ModelFolder, "time-velocity.csv")))
-    # timeStorage <- data.table::fread(file.path(ModelFolder, "Time_steps_seconds.csv"))
-    # velocityFile <- data.table::fread(file.path(ModelFolder, "max_velocity_per_time.csv"))
-    # Other storage items
   }
   else{
     # Create initial rasters for outputs
     subsurfacePath <- initializeRaster(SoilStack$currentSoilStorage, "soilStorage", ModelFolder)
-    surfacePath <- initializeRaster(SoilStack$currentSoilStorage*0, "SurfaceStorage", ModelFolder)
+    surfacePath <- initializeRaster(SoilStack$currentSoilStorage*0, "surfaceStorage", ModelFolder)
     velocityPath <- initializeRaster(SoilStack$currentSoilStorage*0, "velocityStorage", ModelFolder)
 
     # Create distance storage
@@ -129,22 +118,22 @@ flowModel <- function(SoilStack_file,
     timeVelocity <- data.frame(time = 0, velocity = 0)
 
     # Stores shapefiles for velocities
-    velocityMax_df <- dfMax(terra::rast(file.path(ModelFolder, "VelocityStorage.tif")), rename = 0)
+    velocityMax_df <- dfMax(terra::rast(file.path(ModelFolder, "velocityStorage.tif")), rename = 0)
     # Stores points for maximum surface water depths
-    depthMaxDF <- dfMax(terra::rast(file.path(ModelFolder, "SurfaceStorage.tif")), rename = 0)
+    depthMaxDF <- dfMax(terra::rast(file.path(ModelFolder, "surfaceStorage.tif")), rename = 0)
   }
 
   saveRate <- time_step
   counter <- saveRate # counter to save rasters on certain intervals
 
   # Progress Bar
-  progressBar <- txtProgressBar(min = 0, max = length(simulation_duration), style = 3)
+  progressBar <- utils::txtProgressBar(min = 0, max = length(simulation_duration), style = 3)
   start <- Sys.time()
 
 
 for(t in 1:(length(simulation_duration)-1)){
 
-  setTxtProgressBar(progressBar, t)
+  utils::setTxtProgressBar(progressBar, t)
 
   beginning_time <- simulation_duration[t]
   end_time <- simulation_duration[t+1]
@@ -163,7 +152,7 @@ for(t in 1:(length(simulation_duration)-1)){
   in_to_cm <- 2.54
   total_rain_cm <- rainfall_for_timestep * in_to_cm
   # # Same amount of rain per time step
-  SoilStack$current_rainfall <- terra::ifel(is.finite(land_cover_raster), total_rain_cm, NA) # rainfall distribution map
+  SoilStack$current_rainfall <- terra::ifel(is.finite(SoilStack$model_dem), total_rain_cm, NA) # rainfall distribution map
 
   ## [2] Canopy
   # Evaluate canopy storage - (current-storage + rainfall)
@@ -202,8 +191,9 @@ for(t in 1:(length(simulation_duration)-1)){
 
   ## [4] Surface Runoff
   # Calculate the surface runoff for the water present at the surface.
-  velocity <- ManningsWideChannelVelocity(SoilStack$mannings_n, SoilStack$surfaceWater, slope = SoilStack$slope, length = gridsize) #m/second
-  maxVelocity <- minmax(velocity)[2] # max discharge for base time-step (m/s)
+  velocity <- ManningsWideChannelVelocity(SoilStack$mannings_n, SoilStack$surfaceWater, slope = SoilStack$slope, length = gridsize, time = time_step) #m/second
+  terra::plot(velocity)
+  maxVelocity <- terra::minmax(velocity)[2] # max discharge for base time-step (m/s)
 
   # Save maximum velocity
   velocityMax_df <- rbind(velocityMax_df, dfMax(velocity, rename = end_time))
@@ -254,8 +244,8 @@ for(t in 1:(length(simulation_duration)-1)){
     velocityName <- "velocity"
     rasterWrite(round(velocity,3), ModelFolder, end_time, layername = velocityName)
     # Shapefile saves
-    vectCreation(velocityMax_df, saveLoc = ModelFolder, name = "max-velocity.shp", coords = crs(SoilStack))
-    vectCreation(depthMaxDF, saveLoc = ModelFolder, name = "max-depth.shp", coords = crs(SoilStack))
+    vectCreation(velocityMax_df, saveLoc = ModelFolder, name = "max-velocity.shp", coords = terra::crs(SoilStack))
+    vectCreation(depthMaxDF, saveLoc = ModelFolder, name = "max-depth.shp", coords = terra::crs(SoilStack))
 
     # CSV saves
     # Adjust time storage file
@@ -290,7 +280,7 @@ if(store){
   # Additional save data
 
   model_complete <- "Model Complete"
-  write.table(model_complete, file = file.path(ModelFolder, "ModelComplete.txt"))
+  utils::write.table(model_complete, file = file.path(ModelFolder, "ModelComplete.txt"))
   #file.remove(tempStorage)
 }
 # Save simulation time as text

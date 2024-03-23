@@ -117,7 +117,7 @@ rasterWrite <- function(raster, ModelFolder, end_time, layername = "surface"){
 # raster2 <- rast(rasterPath2)
 ## -------------------------- Combine rasters
 # Function that takes a bunch of rasters and combined them by name
-rasterCompile <- function(ModelFolder, layername, remove = F){ # layername must be present in folder
+rasterCompile <- function(ModelFolder, layername, remove = T){ # layername must be present in folder
   # Find files with names and combined them by time
   tifFiles <- list.files(ModelFolder, pattern = "*.tif")
   layerFiles <- grep(paste0(layername,"-time-"), tifFiles, value = T)

@@ -70,14 +70,14 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
   }
   # Flow Calculations
   flow_filename <- "stack_flow.tif" # must be created with names of layers
-  flow_file <- file.path(WatershedElements, flow_filename)
+  flow_file <- file.path(ModelFolder, flow_filename)
   print('Locating flow partition map.')
   if(!file.exists(flow_file)){ # Can take a few minutes if not already created
     print("No flow partition map found.")
     print("Creating flow partition map.")
     #source("setup_FlowPartition.R", local = TRUE) # functions necessary
     #flowStack <- flow_Partition(clipped_adj_dem = model_dem, file_name_and_path = flow_file)
-    flowStack <- flowMap(dem = model_dem, outFolder = WatershedElements)
+    flowStack <- flowMap(dem = model_dem, outFolder = ModelFolder)
     print("Flow partition map created.")
   }else{
     print('Found flow partition map.')

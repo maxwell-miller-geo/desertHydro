@@ -34,8 +34,9 @@ library(desertHydro) # loads installed version not vignette version
 
 #WatershedElements <- "../inst/extdata/DemoElements" # Moves out a level to get to data folder
 # File names
-ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
-WatershedElements <- r"(C:\PackageDev\desertHydro\inst\extdata\DemoElements)"
+#ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
+ModelFolder <- r"(Z:\Desktop\ModelTestFolder)" 
+WatershedElements <- r"(Z:\Thesis\desertHydro\inst\extdata\DemoElements)"
 date <- NULL
 demFile <- "dem.tif" # Necessary
 boundary <- "boundary.shp" # Optional
@@ -47,25 +48,25 @@ dischargeFile <- "example_discharge.csv"
 rainfall_method <- "Synthetic"
 
 # # print("Check for vignette!")
-# a <- arid_model(ModelFolder,
-#                 WatershedElements,
-#                 date = NULL,
-#                 demFile = "dem.tif",
-#                 boundary = NA,
-#                 landCoverFile = "landcover_soil.tif",
-#                 LandCoverCharacteristics = "LandCoverCharacteristics_soils.xlsx",
-#                 key = "NLCD_Key",
-#                 impervious = F,
-#                 rainfall_method = "gauges",
-#                 store = T,
-#                 gif = T,
-#                 discharge = F,
-#                 time_step = 0.5,
-#                 simulation_length = NA,
-#                 overwrite = T,
-#                 write = T,
-#                 restartModel = F
-#                 )
+a <- arid_model(ModelFolder,
+                WatershedElements,
+                date = NULL,
+                demFile = demFile,
+                boundary = boundary,
+                landCoverFile = landCoverFile,
+                LandCoverCharacteristics = LandCoverCharacteristics,
+                key = key,
+                impervious = T,
+                rainfall_method = "gauges",
+                store = T,
+                gif = T,
+                discharge = F,
+                time_step = 0.5,
+                simulation_length = NA,
+                overwrite = T,
+                write = T,
+                restartModel = F
+                )
 # SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
 # terra::plot(SoilStack)
 # getwd()

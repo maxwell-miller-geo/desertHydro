@@ -240,7 +240,7 @@ flow_Partition <- function(clipped_adj_dem, file_name_and_path = ""){
 initializeRaster <- function(firstLayer, name, outFolder, zero = F){
   temp <- firstLayer
   names(temp) <- c(name)
-  names(temp) <- 0
+  #names(temp) <- 0
   outFile <- file.path(outFolder, paste0(name, ".tif"))
   terra::writeRaster(temp, outFile, overwrite = T) # writes the initial raster
   return(outFile)
@@ -250,14 +250,15 @@ initializeRaster <- function(firstLayer, name, outFolder, zero = F){
 # Function to route water through the subsurface from lateral flow values and flow direction stack
 
 flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
-  # Start time variable
-  #start <- Sys.time()
-  # Load in flow direction raster
-  flowDirectionMap <- terra::rast(flowDirectionMap)
   # Load in flow to route - not done
   if(is.character(flowToRoute)){
     flowToRoute <- terra::rast(flowToRoute)
   }
+  # Load in flow direction raster
+  if(is.character(flowDirectionMap)){
+    flowDirectionMap <- terra::rast(flowDirectionMap)
+  }
+
 
   # Get dimensions of flow map
   xDim <- res(flowToRoute)[1]
@@ -266,33 +267,8 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
   #storage_adjusted <- rast(0, ext(lateralflowMap), resolution=res(lateralflowMap), crs = crs(lateralflowMap))
   # Set up a temporary storage raster
   storage_adjusted <- flowToRoute # create a storage map from flow storage map
-  terra::values(storage_adjusted) <- 0 # create a map with no values
-  # Create mini function to multiple layers
+  terra::values(storage_adjusted) <- 0 # create a map with no value
 
-  # Shift dictionary/list - shift the map in the opposite direction of intended
-
-  # shiftValues <- list( # c(xshift, yshift)
-  #                     "N" = c(0, -1),
-  #                     "E" = c(-1, 0),
-  #                     "S" = c(0, 1),
-  #                     "W" = c(1, 0),
-  #                     "NW" = c(1, -1),
-  #                     "NE" = c(-1, -1),
-  #                     "SE" = c(-1, 1),
-  #                     "SW" = c(1, 1)
-  # )
-  # # The names of the different flow layers
-  # flowKey <- list("N" = "north_flow",
-  #                 "E" = "east_flow",
-  #                 "S" = "south_flow",
-  #                 "W" = "west_flow",
-  #                 "NW" = "northwest_flow",
-  #                 "NE" = "northeast_flow",
-  #                 "SE" = "southeast_flow",
-  #                 "SW" = "southwest_flow"
-  #                 )
-  #
-  # cardinal_directions <- c("N", "E", "S", "W", "NW", "NE", "SE", "SW")
   # The names of the different flow layers
   flowKey <- list("N" = list("north_flow",c(0, -1), 1),
                   "E" = list("east_flow",c(-1, 0), 1),
@@ -441,17 +417,17 @@ waterMovement <- function(surfaceStorage,
 }
 # Test
 
-velocity <- function(n, depth, slope, length = 10){
-  # assumes metric units (meters)
-  # Q = A * 1/n * Rh ^2/3 * S ^.5
-  # S = Slope = gradient (m/m)
-  # Depth = Depth of surface water (in cm)
-  Area <- depth * length
-  #print(Area)
-  Q <- (Area) * (1/n) * (Area / (2*depth/100 + Area))^(2/3) * slope
-  V <- (1/n) * (Area / (2*depth/100 + length))^(2/3) * slope ^.5
-  return(V)
-}
+# velocity <- function(n, depth, slope, length = 10){
+#   # assumes metric units (meters)
+#   # Q = A * 1/n * Rh ^2/3 * S ^.5
+#   # S = Slope = gradient (m/m)
+#   # Depth = Depth of surface water (in cm)
+#   Area <- depth * length
+#   #print(Area)
+#   Q <- (Area) * (1/n) * (Area / (2*depth/100 + Area))^(2/3) * slope
+#   V <- (1/n) * (Area / (2*depth/100 + length))^(2/3) * slope ^.5
+#   return(V)
+# }
 # Test - discharge
 # #light brush = 0.05
 # dischargeTest <- velocity(n = 0.05, depth = 0.5, slope = 50)
@@ -465,7 +441,7 @@ velocity <- function(n, depth, slope, length = 10){
 
 ## ---------------
 # Function mannings velocity of a channel
-ManningsWideChannelVelocity <- function(n, depth, slope, length, adjustVel = T, time = 1, dt = 10){
+ManningsWideChannelVelocity <- function(n, depth, slope, length, flowDirectionMap, adjustVel = T, time = 30, dt = 10){
   # If a channel is wide - 20x the flow depth R = y
   depth_adj <- depth / 100 # convert depth in cm to meters
 
@@ -476,11 +452,33 @@ ManningsWideChannelVelocity <- function(n, depth, slope, length, adjustVel = T, 
   slope_gradient <- tanpi(slope/180) # convert slope into a gradient (m/m)
   # LaTEX V(\frac{m}{s}) = \frac{1}{n}*R_{h}^{\frac{2}{3}} * S^{\frac{1}{2}}_{grad}
   velocity <- ((HydraulicRadius^ (2/3)) * (slope_gradient^.5)) / n # R^2/3 * S^1/2 / n * Area = V * A
-  dt <- floor(velocity / length) + 1
+  distance <- velocity * time
+  maxDistance <- terra::minmax(distance)[2]
+  if(maxDistance < length/3){
+    # Calculate discharge
+    Q <- depth_adj * length * velocity
+    VolumeLoss <- Q * dt # loss in volume
+    VolumePresent <- depth_adj * length^2
+    volumeLeft <- VolumePresent - VolumeLoss
+    # Move volume into next cells as depth
+    if(terra::minmax(volumeLeft)[1] >= 0){
+      # m^3/m^2 = m <- cm*100
+      depthLoss <- VolumeLoss / (length^2) * 100
+      # Check if the depth adjustment is equivalentg
+      depthTest <- terra::minmax(depth - depthLoss)[1] # minimum loss value
+      if(depthTest >= 0){
+        # Adjust depths
+        depthNew <- depth - depthLoss + flowRouting(flowToRoute = depthLoss, flowDirectionMap = flowDirectionMap)
+      }
+    }
+    # Redistribute water
+    depth_n_1 <- depth
+  }
+  v0 <- velocity
+  dt <- floor(terra::minmax(velocity)[2] / length) + 1
   if(adjustVel){ # Adjust velocity based on time step necessary
-    v0 <- velocity
     timeReduce <- time / dt
-    for(x in length(dt)){
+    for(x in 1:dt){
       depth_adj <- (1 - (v0 * timeReduce) / length) * depth_adj
       Area <- depth_adj * length # calculate cross sectional area
       HydraulicRadius <-  Area / (2* depth_adj + length) # calculate the hydraulic radius
