@@ -87,21 +87,46 @@
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Important steps</span></span>
 <span><span class="co"># Location or file path to save the </span></span>
-<span><span class="va">ModelFolder</span> <span class="op">&lt;-</span> <span class="st">r"(Z:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)"</span> </span>
+<span></span>
 <span><span class="co"># # # ModelFolder &lt;- r"(~TestFolderPackage)"</span></span>
-<span><span class="co">#WatershedElements &lt;- "./inst/extdata/DemoElements"</span></span>
-<span><span class="va">WatershedElements</span> <span class="op">&lt;-</span> <span class="st">"../inst/extdata/DemoElements"</span> <span class="co"># Moves out a level to get to data folder</span></span>
+<span></span>
+<span><span class="co">#WatershedElements &lt;- "../inst/extdata/DemoElements" # Moves out a level to get to data folder</span></span>
 <span><span class="co"># File names</span></span>
-<span></span>
-<span><span class="va">dem</span> <span class="op">&lt;-</span> <span class="st">"dem.tif"</span> <span class="co"># Necessary</span></span>
-<span><span class="va">boundary</span> <span class="op">&lt;-</span> <span class="cn">NA</span> <span class="co"># Optional</span></span>
-<span><span class="va">landCoverFile</span> <span class="op">&lt;-</span> <span class="st">"landcover1.tif"</span></span>
-<span></span>
+<span><span class="va">ModelFolder</span> <span class="op">&lt;-</span> <span class="st">r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)"</span> </span>
+<span><span class="va">WatershedElements</span> <span class="op">&lt;-</span> <span class="st">r"(C:\PackageDev\desertHydro\inst\extdata\DemoElements)"</span></span>
+<span><span class="va">date</span> <span class="op">&lt;-</span> <span class="cn">NULL</span></span>
+<span><span class="va">demFile</span> <span class="op">&lt;-</span> <span class="st">"dem.tif"</span> <span class="co"># Necessary</span></span>
+<span><span class="va">boundary</span> <span class="op">&lt;-</span> <span class="st">"boundary.shp"</span> <span class="co"># Optional</span></span>
+<span><span class="va">landCoverFile</span> <span class="op">&lt;-</span> <span class="st">"soils.shp"</span></span>
+<span><span class="va">LandCoverCharacteristics</span> <span class="op">&lt;-</span> <span class="st">"LandCoverCharacteristics_soils.xlsx"</span></span>
+<span><span class="va">key</span> <span class="op">&lt;-</span> <span class="st">"MUSYM"</span></span>
+<span><span class="va">rainFile</span> <span class="op">&lt;-</span> <span class="st">"USGS_Rain_2001_2021.xlsx"</span></span>
+<span><span class="va">dischargeFile</span> <span class="op">&lt;-</span> <span class="st">"example_discharge.csv"</span></span>
+<span><span class="va">rainfall_method</span> <span class="op">&lt;-</span> <span class="st">"Synthetic"</span></span>
 <span></span>
 <span><span class="co"># # print("Check for vignette!")</span></span>
-<span><span class="co"># a &lt;- arid_model(ModelFolder = ModelFolder, WatershedElements = WatershedElements, landCoverFile = landCoverFile)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">getwd</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "/home/runner/work/desertHydro/desertHydro/vignettes"</span></span></code></pre></div>
+<span><span class="co"># a &lt;- arid_model(ModelFolder,</span></span>
+<span><span class="co">#                 WatershedElements,</span></span>
+<span><span class="co">#                 date = NULL,</span></span>
+<span><span class="co">#                 demFile = "dem.tif",</span></span>
+<span><span class="co">#                 boundary = NA,</span></span>
+<span><span class="co">#                 landCoverFile = "landcover_soil.tif",</span></span>
+<span><span class="co">#                 LandCoverCharacteristics = "LandCoverCharacteristics_soils.xlsx",</span></span>
+<span><span class="co">#                 key = "NLCD_Key",</span></span>
+<span><span class="co">#                 impervious = F,</span></span>
+<span><span class="co">#                 rainfall_method = "gauges",</span></span>
+<span><span class="co">#                 store = T,</span></span>
+<span><span class="co">#                 gif = T,</span></span>
+<span><span class="co">#                 discharge = F,</span></span>
+<span><span class="co">#                 time_step = 0.5,</span></span>
+<span><span class="co">#                 simulation_length = NA,</span></span>
+<span><span class="co">#                 overwrite = T,</span></span>
+<span><span class="co">#                 write = T,</span></span>
+<span><span class="co">#                 restartModel = F</span></span>
+<span><span class="co">#                 )</span></span>
+<span><span class="co"># SoilStack &lt;- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))</span></span>
+<span><span class="co"># terra::plot(SoilStack)</span></span>
+<span><span class="co"># getwd()</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="use-vignettes--">Use vignettes -<a class="anchor" aria-label="anchor" href="#use-vignettes--"></a>
 </h2>
