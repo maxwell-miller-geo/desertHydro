@@ -24,13 +24,17 @@ meltStack <- function(rasterStack, resample = 1, timevalues = xvalues){ # assume
     resample <- 5
   }
   # Down sample the raster images
-  downsampledstack <- terra::aggregate(rasterStack, fact = resample, fun = "mean", na.rm = F) |>
-    subset(1:nlyr(rasterStack)) # removes first layer
+  if(resample > 1){
+    downsampledstack <- terra::aggregate(rasterStack, fact = resample, fun = "mean", na.rm = F)
+      #subset(1:nlyr(rasterStack)) # removes first layer
+  }else{
+    downsampledstack <- rasterStack
+  }
 
   # Create names for layers - create names for vector within the model function
   #names(downsampledstack) <- seq(1: nlyr(downsampledstack)) # number of layers
-  print(length(names(downsampledstack)))
-  print(length(timevalues))
+  # print(length(names(downsampledstack)))
+  # print(length(timevalues))
   names(downsampledstack) <- as.numeric(timevalues)
   # Create dataframe
   stackdf <- terra::as.data.frame(downsampledstack, xy = T)

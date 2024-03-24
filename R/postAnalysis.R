@@ -101,11 +101,11 @@ totalVolume <- function(time, discharge){
 #'
 #' @examples \dontrun{#See vignette}
 #'
-dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length, discharge = T, store = T){
+dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length, discharge = F, store = T){
   time <- Total_in <- NULL
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
   velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
-  subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
+  #subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
   x_sections_path <- file.path(WatershedElements, "gauges.shp")
   if(file.exists(x_sections_path) & discharge){
     print(paste("Creating discharge figures..."))
@@ -186,13 +186,24 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
 
 ## ----------------------------------- GIF Creation
 # Function to create gifs from stacked raster layers
-gifCreation <- function(ModelFolder, rain_file, rainfall_method = "", gif = T, discharge = T){
+gifCreation <- function(ModelFolder, rain_file, rainfall_method = "", date = NULL, gif = T, discharge = T){
+
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
   velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
   subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
-  rasterCompile(ModelFolder, "velocity", remove = T)
-  rasterCompile(ModelFolder, "soil", remove = T)
-  rasterCompile(ModelFolder, "surface", remove = T)
+
+  # Check if stacks have been created
+  if(terra::nlyr(surfaceStorage) == 1){
+    surfaceStorage <- rasterCompile(ModelFolder, "surface", remove = F)
+  }
+  if(terra::nlyr(velocityStorage) == 1){
+    velocityStorage <- rasterCompile(ModelFolder, "velocity", remove = F)
+  }
+
+  if(is.na(rain_file)){
+    rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method = rainfall_method)
+  }
+
   xvalues <-as.vector(na.omit(as.numeric(names(surfaceStorage))))
   if(discharge & rainfall_method != "goes"){ # gathers total rain and rain duration values
     print("Retrieving rainfall data from simulation: rain_discharge")
@@ -227,36 +238,27 @@ gifCreation <- function(ModelFolder, rain_file, rainfall_method = "", gif = T, d
     # Display the animation
     #gganimate::animate(surface_plot)
     # store the animated GIF
-    gganimate::anim_save(filename = paste0(date,"-surface-Depth.gif"), path = ModelFolder, animation = surface_plot, fps = 10, renderer = gifski_renderer())
+    gganimate::anim_save(filename = paste0(date,"-surface-Depth.gif"), path = ModelFolder, animation = surface_plot, fps = 10, renderer = gganimate::gifski_renderer())
     ##--------------------------------------
-    ## Post model Checks
-    # Does not currently account for spatial distribution
-    # precipitation_actual <- length(terra::cells(surfaceStorage)) * total_rain * 2.54 # ncells * in
-    # # Last surface layer calculated
-    # lastLayer <- nlyr(surfaceStorage)
-    # precipitation_last <- surfaceStorage[[lastLayer]]
-    # depth_sum <- sum(values(precipitation_last), na.rm = T)
-
-    # # Testing functions
-    # df_max <- dfMax(precipitation_last) # create data.frame
-    #
-    # vectCreation(df_max, saveLoc = ModelFolder, name = "depth-max.shp", coords = crs(SoilStack)) # create vector
-    ## ---------------------------------------
     # Subsurface depths
     #Load in surface moisture
     print(paste("Creating soil moisture animation..."))
-    #subsurfaceStorage <- rast(file.path(ModelFolder, "Soil_Moisture_percent.tif"))
-    meltedMoistureContent <- meltStack(subsurfaceStorage, timevalues = xvalues) # subsurface % fill through time
-    # Create an animated ggplot - Subsurface Storage
-    subsurface_plot <- animateStack(meltedMoistureContent,
-                                    title = "Moisture Content",
-                                    units = "% Full",
-                                    caption = paste0(total_rain," inches of rain over ",  round(total_rain_duration, 2)," minutes."))
+    if(terra::nlyr(subsurfaceStorage) > 1){
+      meltedMoistureContent <- meltStack(subsurfaceStorage, timevalues = xvalues) # subsurface % fill through time
+      # Create an animated ggplot - Subsurface Storage
+      subsurface_plot <- animateStack(meltedMoistureContent,
+                                      title = "Moisture Content",
+                                      units = "% Full",
+                                      caption = paste0(total_rain," inches of rain over ",
+                                                       round(total_rain_duration, 2)," minutes."))
 
-    # Display the animation
-    #gganimate::animate(subsurface_plot)
-    # store the animated GIF
-    gganimate::anim_save(filename = paste0(date, "-moisture-content.gif"), path = ModelFolder, animation = subsurface_plot, fps = 10, renderer = gifski_renderer())
+      # Display the animation
+      #gganimate::animate(subsurface_plot)
+      # store the animated GIF
+      gganimate::anim_save(filename = paste0(date, "-moisture-content.gif"), path = ModelFolder, animation = subsurface_plot, fps = 10, renderer = gganimate::gifski_renderer())
+    }
+
+
     ## ------------------------------
     # Load in the velocity storage
     print(paste("Creating surface velocity animation..."))
@@ -270,7 +272,7 @@ gifCreation <- function(ModelFolder, rain_file, rainfall_method = "", gif = T, d
     # Display the animation
     #gganimate::animate(velocity_plot)
     # store the animated GIF
-    gganimate::anim_save(filename = paste0(date,"-velocity.gif"), path = ModelFolder, animation = velocity_plot, fps = 10, renderer = gifski_renderer())
+    gganimate::anim_save(filename = paste0(date,"-velocity.gif"), path = ModelFolder, animation = velocity_plot, fps = 10, renderer = gganimate::gifski_renderer())
     ##
     return(rain)
   }

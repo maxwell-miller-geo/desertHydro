@@ -22,6 +22,7 @@ knitr::opts_chunk$set(
 <!-- $$ {\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}$$ -->
 ```{r setup}
 library(desertHydro) # loads installed version not vignette version
+library(terra)
 # Only use other packages that are already required
 
 ```
@@ -34,7 +35,7 @@ library(desertHydro) # loads installed version not vignette version
 
 #WatershedElements <- "../inst/extdata/DemoElements" # Moves out a level to get to data folder
 # File names
-ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
+ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Test1)" 
 #ModelFolder <- r"(C:\Desktop\ModelTestFolder)" 
 WatershedElements <- r"(C:\PackageDev\desertHydro\inst\extdata\DemoElements)"
 date <- NULL
@@ -46,34 +47,45 @@ key <- "MUSYM"
 rainFile <- "USGS_Rain_2001_2021.xlsx"
 dischargeFile <- "example_discharge.csv"
 rainfall_method <- "Synthetic"
-SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
-flowStack <- terra::rast(file.path(ModelFolder, "stack_flow.tif"))
-flowDirectionMap <- flowStack
-n <- SoilStack$mannings_n
-depth <- SoilStack$surfaceWater + .01 *2.54
-slope <- SoilStack$slope
 length <- 10
 
+# flowDirectionMap <- flowStack
+# n <- SoilStack$mannings_n
+# depth <- SoilStack$surfaceWater + .01 *2.54
+# slope <- SoilStack$slope
+
+
+
 # # # print("Check for vignette!")
-# a <- arid_model(ModelFolder,
-#                 WatershedElements,
-#                 date = NULL,
-#                 demFile = demFile,
-#                 boundary = boundary,
-#                 landCoverFile = landCoverFile,
-#                 LandCoverCharacteristics = LandCoverCharacteristics,
-#                 key = key,
-#                 impervious = T,
-#                 rainfall_method = rainfall_method,
-#                 store = T,
-#                 gif = T,
-#                 discharge = F,
-#                 time_step = 0.5,
-#                 simulation_length = NA,
-#                 overwrite = T,
-#                 write = T,
-#                 restartModel = F
-#                 )
+a <- arid_model(ModelFolder,
+                WatershedElements,
+                date = NULL,
+                demFile = demFile,
+                boundary = boundary,
+                landCoverFile = landCoverFile,
+                LandCoverCharacteristics = LandCoverCharacteristics,
+                key = key,
+                impervious = T,
+                rainfall_method = rainfall_method,
+                store = T,
+                gif = T,
+                discharge = F,
+                time_step = 0.25,
+                simulation_length = 1,
+                overwrite = T,
+                write = T,
+                restartModel = F
+                )
+
+SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
+tempStack <- terra::rast(file.path(ModelFolder, "tempStorage.tif"))
+flowStack_file <- terra::rast(file.path(ModelFolder, "stack_flow.tif"))
+flowStackPost <- terra::rast(file.path(ModelFolder, "AdjustedFlowStack.tif"))
+
+rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method)
+gifCreation(ModelFolder, rain_file = rain_file, discharge = F)
+# s <- terra::rast(rasterCompile(ModelFolder, "surface"))
+# v <- terra::rast(rasterCompile(ModelFolder, "velocity"))
 # SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
 # terra::plot(SoilStack)
 # getwd()

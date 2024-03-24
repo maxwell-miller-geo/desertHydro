@@ -54,6 +54,8 @@ flowModel <- function(SoilStack_file,
   start_time <- Sys.time()
   # Load soil stack
   SoilStack <- terra::rast(SoilStack_file)
+  flowStack <- terra::rast(flowStack_file)
+
   gridsize <- 10 # manually set grid-size, based on DEM
 
   # Check and determine the rainfall input
@@ -183,7 +185,7 @@ for(t in 1:(length(simulation_duration)-1)){
     SoilStack$currentSoilStorage <- subsurfaceFlow(SoilStack, simulationTimeSecs, flowStack_file)
 
   } else{
-    SoilStack$surfaceWater <- SoilStack$surfaceWater + SoilStack$throughfall # water not infiltrated
+    #SoilStack$surfaceWater <- SoilStack$surfaceWater + SoilStack$throughfall # water not infiltrated
   }
 
   # Calculates the current storage of the throughfall and current soil storage - adjust for rate of infiltration?
@@ -191,12 +193,18 @@ for(t in 1:(length(simulation_duration)-1)){
 
   ## [4] Surface Runoff
   # Calculate the surface runoff for the water present at the surface.
-  SoilStack$surfaceWater <- ManningsWideChannelVelocity(SoilStack$mannings_n,
-                                          SoilStack$surfaceWater,
-                                          slope = SoilStack$slope,
-                                          flowDirectionMap = flowStackfile,
-                                          length = gridsize,
-                                          time_step = time_step) #m/second
+
+  runoffList <- routeWater(SoilStack,
+                           flowDirectionMap = flowStack_file,
+                           time_step = simulationTimeSecs,
+                           length = gridsize)
+
+  SoilStack$surfaceWater <- runoffList[[1]]
+  velocity <- SoilStack$velocity <- runoffList[[2]]
+  #print(terra::minmax(velocity)[2])
+  #terra::plot(velocity)
+  SoilStack$slope <- runoffList[[3]]
+  flowStack <- runoffList[[4]]
   #terra::plot(velocity)
   # maxVelocity <- terra::minmax(velocity)[2] # max discharge for base time-step (m/s)
   #
@@ -234,7 +242,7 @@ for(t in 1:(length(simulation_duration)-1)){
   # }
   ##---------------- Save step-------------
   #if(counter %% saveRate == 0){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
-  if(gif | counter %% saveRate == 0 | t == length(simulation_duration) | store){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
+  if(gif | counter %% saveRate == 0 | t == length(simulation_duration)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
 
     # writeLayers to disk space
     # writeLayer(subsurfacePath, round(SoilStack$currentSoilStorage, 3), layername = end_time)
@@ -242,12 +250,16 @@ for(t in 1:(length(simulation_duration)-1)){
     # writeLayer(velocityPath, round(velocity, 3), layername = end_time)
 
     # Write single rasters for important features
-    soil <- "soil"
-    rasterWrite(round(SoilStack$currentSoilStorage,3), ModelFolder,end_time, layername = soil)
+    if(!impervious){
+      soil <- "soil"
+      rasterWrite(round(SoilStack$currentSoilStorage,3), ModelFolder,end_time, layername = soil)
+    }
+
     surface <- "surface"
     rasterWrite(round(SoilStack$surfaceWater,3), ModelFolder,end_time, layername = surface)
     velocityName <- "velocity"
     rasterWrite(round(velocity,3), ModelFolder, end_time, layername = velocityName)
+
     # Shapefile saves
     vectCreation(velocityMax_df, saveLoc = ModelFolder, name = "max-velocity.shp", coords = terra::crs(SoilStack))
     vectCreation(depthMaxDF, saveLoc = ModelFolder, name = "max-depth.shp", coords = terra::crs(SoilStack))
@@ -259,8 +271,10 @@ for(t in 1:(length(simulation_duration)-1)){
     #data.table::fwrite(data.table::data.table(tempvelocityFile), file = file.path(ModelFolder, "max_velocity_per_time.csv"))
     data.table::fwrite(data.table::data.table(timeVelocity), file = file.path(ModelFolder, "time-velocity.csv"))
     # Save a temporary version of the soil stack
-    temporary <- terra::deepcopy(SoilStack) # create temporary Soil Stack
+    temporary <- SoilStack + 0 # create temporary Soil Stack
+
     terra::writeRaster(temporary, filename = tempStorage, overwrite = T)
+    terra::writeRaster(flowStack, file.path(ModelFolder, "AdjustedFlowMaps.tif"), overwrite = T)
 
   }
  ##------------------------------------##
@@ -268,7 +282,9 @@ for(t in 1:(length(simulation_duration)-1)){
   #print(counter)
   counter <- counter + 1
   if(t == (length(simulation_duration) - 1)){
-    rasterCompile(ModelFolder, soil)
+    if(!impervious){
+      rasterCompile(ModelFolder, soil)
+    }
     rasterCompile(ModelFolder, surface)
     rasterCompile(ModelFolder, velocityName)
   }

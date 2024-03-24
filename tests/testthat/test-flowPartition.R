@@ -16,3 +16,4 @@ test_that("Flow maps are equivalent", {
   expect_equal(sum(terra::values(flowNew)), sum(terra::values(flow)))
 
 })
+

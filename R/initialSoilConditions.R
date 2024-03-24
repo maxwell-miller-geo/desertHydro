@@ -107,6 +107,12 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
 
   SoilStack$surfaceWater <- SoilStack$slope * 0
   names(SoilStack$surfaceWater) <- "surfaceWater"
+
+  SoilStack$velocity <- SoilStack$slope * 0
+  names(SoilStack$velocity) <- "velocity"
+
+  SoilStack$throughfall <- SoilStack$slope * 0
+  names(SoilStack$throughfall) <- "throughfall"
   # From - to classification
   reclassTable <- c(0, 10, 1,
                     10, 20, .98,
@@ -157,7 +163,8 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   readr::write_csv(LCC, file.path(ModelOutputs, "Starting_Soil_Characteristics.csv"))
   # # startingSoil <- write.csv(LCC, file.path(DataStorage, "Starting_LandCover.csv"), overwrite = TRUE)
 
-  terra::writeRaster(SoilStack, soilstack_file, overwrite = overwrite)
+  terra::writeRaster(SoilStack
+                     , soilstack_file, overwrite = overwrite)
   print("Model soil stack created...")
 }
 

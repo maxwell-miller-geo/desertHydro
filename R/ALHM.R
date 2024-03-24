@@ -330,7 +330,7 @@ flowModel(SoilStack_file = SoilStack_file,
 print(paste0("Creating graphics in ", ModelFolder))
 # Path to stacked rasters
 if(store){
-  dischargeAnalysis(ModelFolder, WatershedElements, discharge = discharge, store = store)
+  dischargeAnalysis(ModelFolder, WatershedElements, discharge = discharge, store = store, time_step = time_step, simulation_length = simulation_length)
 }
 
 #velocityStorage <- terra::rast(file.path(ModelFolder, "Velocities.tif"))
@@ -365,8 +365,9 @@ if(store){
 # library(viridis)
 
 print("Retrieving rainfall data for simulation")
+rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method)
 if(gif){
-  gifCreation(ModelFolder, rain_file, rainfall_method = rainfall_method, gif = gif, discharge = discharge)
+  gifCreation(ModelFolder, rain_file, rainfall_method = rainfall_method, gif = gif, discharge = discharge, date = date)
 }
 
 

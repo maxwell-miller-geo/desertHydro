@@ -137,7 +137,7 @@ rasterCompile <- function(ModelFolder, layername, remove = T){ # layername must 
   if(remove){
     lapply(fullPaths, file.remove)
   }
-  return(layerStack)
+  return(outStack)
 }
 # Test
 # testRaster <- rasterCompile(ModelFolder, "surface")
@@ -175,4 +175,21 @@ filePresent <- function(filename, Folder){
   }else{
     return(combined_path)
   }
+}
+
+### -------------------------------- Rainfall method
+# Function to check for the rainfall file using rainfall method
+rainfallMethodCheck <- function(ModelFolder, rainfall_method = "", rainfall_string = NA){
+  if(!is.na(rainfall_string)){
+    if(file.exists(rainfall_string)){
+      rainfall <- rainfall_string
+    }
+  }else if(rainfall_method == "gauges" | rainfall_method == "Synthetic"){
+    rainfall <- filePresent("Model-Rainfall.csv", ModelFolder)
+  }else if(rainfall_method == "spatial"){
+    rainfall <- filePresent("Model-Spatial-Rainfall.csv", ModelFolder)
+  }else if(rainfall_method == "goes"){
+    rainfall <- filePresent("Goes-Summary.csv", ModelFolder)
+  }
+  return(rainfall)
 }
