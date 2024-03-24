@@ -34,9 +34,9 @@ library(desertHydro) # loads installed version not vignette version
 
 #WatershedElements <- "../inst/extdata/DemoElements" # Moves out a level to get to data folder
 # File names
-#ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
-ModelFolder <- r"(Z:\Desktop\ModelTestFolder)" 
-WatershedElements <- r"(Z:\Thesis\desertHydro\inst\extdata\DemoElements)"
+ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)" 
+#ModelFolder <- r"(C:\Desktop\ModelTestFolder)" 
+WatershedElements <- r"(C:\PackageDev\desertHydro\inst\extdata\DemoElements)"
 date <- NULL
 demFile <- "dem.tif" # Necessary
 boundary <- "boundary.shp" # Optional
@@ -46,27 +46,34 @@ key <- "MUSYM"
 rainFile <- "USGS_Rain_2001_2021.xlsx"
 dischargeFile <- "example_discharge.csv"
 rainfall_method <- "Synthetic"
+SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
+flowStack <- terra::rast(file.path(ModelFolder, "stack_flow.tif"))
+flowDirectionMap <- flowStack
+n <- SoilStack$mannings_n
+depth <- SoilStack$surfaceWater + .01 *2.54
+slope <- SoilStack$slope
+length <- 10
 
-# # print("Check for vignette!")
-a <- arid_model(ModelFolder,
-                WatershedElements,
-                date = NULL,
-                demFile = demFile,
-                boundary = boundary,
-                landCoverFile = landCoverFile,
-                LandCoverCharacteristics = LandCoverCharacteristics,
-                key = key,
-                impervious = T,
-                rainfall_method = "gauges",
-                store = T,
-                gif = T,
-                discharge = F,
-                time_step = 0.5,
-                simulation_length = NA,
-                overwrite = T,
-                write = T,
-                restartModel = F
-                )
+# # # print("Check for vignette!")
+# a <- arid_model(ModelFolder,
+#                 WatershedElements,
+#                 date = NULL,
+#                 demFile = demFile,
+#                 boundary = boundary,
+#                 landCoverFile = landCoverFile,
+#                 LandCoverCharacteristics = LandCoverCharacteristics,
+#                 key = key,
+#                 impervious = T,
+#                 rainfall_method = rainfall_method,
+#                 store = T,
+#                 gif = T,
+#                 discharge = F,
+#                 time_step = 0.5,
+#                 simulation_length = NA,
+#                 overwrite = T,
+#                 write = T,
+#                 restartModel = F
+#                 )
 # SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
 # terra::plot(SoilStack)
 # getwd()

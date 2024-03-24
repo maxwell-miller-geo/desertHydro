@@ -119,7 +119,7 @@ createFlowMaps <- function(dem, dem_flow){
                   "NE" = list("northeast_flow",c(1, 1), diagFlow),
                   "SE" = list("southeast_flow",c(1, -1), diagFlow),
                   "SW" = list("southwest_flow", c(-1, -1), diagFlow)
-  )
+                  )
   mapCalculations <- function(x, dem, dem_flow, xDim, yDim, flowKey){
     # Apply the shift to the dimensions of the raster
     xshift <- flowKey[[x]][[2]][[1]]*xDim
@@ -280,11 +280,11 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
                   "NE" = list("northeast_flow",c(-1, -1), diagFlow),
                   "SE" = list("southeast_flow",c(-1, 1), diagFlow),
                   "SW" = list("southwest_flow", c(1, 1), diagFlow)
-  )
+                  )
 
   # Loop through cardinal directions and create shifted storage maps
   #for(x in cardinal_directions){
-  #print(paste0("Flow ", x, ": time delta: ", round(as.numeric(Sys.time() - start),2)))
+    #print(paste0("Flow ", x, ": time delta: ", round(as.numeric(Sys.time() - start),2)))
   routeFlow <- function(x, flowToRoute, flowDirectionMap, xDim, yDim, flowKey){
     # Find the appropriate shift direction
     #shiftDir <- shiftValues[x]
@@ -370,14 +370,14 @@ waterMovement <- function(surfaceStorage,
                           flowMapPath = file.path(outFolder, "flowMap.tif"),
                           runoffDepthPath = file.path(outFolder, "runoffDepth.tif"),
                           drainMapPath = file.path(outFolder, "drainMap.tif")
-){
+                          ){
   # Let's change the function to read in instead hopefully saving on memory
   tempFlowMap <- terra::rast(flowMapPath)
   tempDrainMap <- terra::rast(drainMapPath)
 
   #print(paste0("Maximum distance moved ", round(minmax(percentLengthMoved)[2],3)))
   tempDistanceStorage <- terra::rast(distanceStoragePath) + percentLengthMoved # once distance gets above 100% if moves
-  #plot(tempDistanceStorage)
+#plot(tempDistanceStorage)
   # If cells are moving the percentage of movement is based upon the length that has flowed into the next cell
   tempFlowMap <- terra::ifel(tempDistanceStorage >= 1, 1, tempFlowMap) # creates a map with values where move
   terra::writeRaster(tempFlowMap, flowMapPath, overwrite = T)

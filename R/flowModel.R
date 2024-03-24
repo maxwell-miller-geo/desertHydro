@@ -191,42 +191,47 @@ for(t in 1:(length(simulation_duration)-1)){
 
   ## [4] Surface Runoff
   # Calculate the surface runoff for the water present at the surface.
-  velocity <- ManningsWideChannelVelocity(SoilStack$mannings_n, SoilStack$surfaceWater, slope = SoilStack$slope, length = gridsize, time = time_step) #m/second
-  terra::plot(velocity)
-  maxVelocity <- terra::minmax(velocity)[2] # max discharge for base time-step (m/s)
-
-  # Save maximum velocity
-  velocityMax_df <- rbind(velocityMax_df, dfMax(velocity, rename = end_time))
-  depthMaxDF <- rbind(depthMaxDF, dfMax(SoilStack$surfaceWater, rename = end_time))
-
-  maxDistanceFlowed <- maxVelocity * simulationTimeSecs # farthest flow length - meters
-
-  if(maxDistanceFlowed > gridsize){ # time step is to large - moves farther than 1 cell
-    adjustmentRatio <- ceiling(maxDistanceFlowed / gridsize) # how much to change the time step by
-    # Add to a list how much it adjusted by how much did it slow down.
-    shortTime <- (simulationTimeSecs/ adjustmentRatio) / 60
-    for(dt in 1:adjustmentRatio){
-      #print("Decreased Timestep")
-      timeVelocity <- rbind(timeVelocity, list((beginning_time + dt*shortTime), maxVelocity))
-      #timeStorage <- append(timeStorage, simulationTimeSecs/adjustmentRatio + tail(timeStorage, 1))
-      percentLengthMoved <- percentLength(velocity, simulationTimeSecs, adjustmentRatio = adjustmentRatio) # calculate percent water moved
-      # Add the distance storage
-      waterMovement(SoilStack$surfaceWater, percentLengthMoved, ModelFolder)
-      #runoffDepth <- movementList[[1]]
-      runoffDepth <- terra::rast(runoffDepthPath)
-      #adjustments <- flowRouting(runoffDepthPath, flowStack_file) - terra::rast(runoffDepthPath)
-      SoilStack$surfaceWater <- SoilStack$surfaceWater - terra::rast(runoffDepthPath) + flowRouting(runoffDepthPath, flowStack_file)
-
-    }
-  }else{
-    timeVelocity <- rbind(timeVelocity, list(end_time, maxVelocity)) # Add time velocity
-    percentLengthMoved <- percentLength(velocity, simulationTimeSecs) # returns percentage of cell distance
-    # Add the distance storage
-    waterMovement(SoilStack$surfaceWater, percentLengthMoved, ModelFolder)
-    runoffDepth <- terra::rast(runoffDepthPath)
-    # Adjusted surface water = previous surface water - amount of runoff + runoff added to cell
-    SoilStack$surfaceWater <- SoilStack$surfaceWater - terra::rast(runoffDepthPath) + flowRouting(runoffDepthPath, flowStack_file)
-  }
+  SoilStack$surfaceWater <- ManningsWideChannelVelocity(SoilStack$mannings_n,
+                                          SoilStack$surfaceWater,
+                                          slope = SoilStack$slope,
+                                          flowDirectionMap = flowStackfile,
+                                          length = gridsize,
+                                          time_step = time_step) #m/second
+  #terra::plot(velocity)
+  # maxVelocity <- terra::minmax(velocity)[2] # max discharge for base time-step (m/s)
+  #
+  # # Save maximum velocity
+  # velocityMax_df <- rbind(velocityMax_df, dfMax(velocity, rename = end_time))
+  # depthMaxDF <- rbind(depthMaxDF, dfMax(SoilStack$surfaceWater, rename = end_time))
+  #
+  # maxDistanceFlowed <- maxVelocity * simulationTimeSecs # farthest flow length - meters
+  #
+  # if(maxDistanceFlowed > gridsize){ # time step is to large - moves farther than 1 cell
+  #   adjustmentRatio <- ceiling(maxDistanceFlowed / gridsize) # how much to change the time step by
+  #   # Add to a list how much it adjusted by how much did it slow down.
+  #   shortTime <- (simulationTimeSecs/ adjustmentRatio) / 60
+  #   for(dt in 1:adjustmentRatio){
+  #     #print("Decreased Timestep")
+  #     timeVelocity <- rbind(timeVelocity, list((beginning_time + dt*shortTime), maxVelocity))
+  #     #timeStorage <- append(timeStorage, simulationTimeSecs/adjustmentRatio + tail(timeStorage, 1))
+  #     percentLengthMoved <- percentLength(velocity, simulationTimeSecs, adjustmentRatio = adjustmentRatio) # calculate percent water moved
+  #     # Add the distance storage
+  #     waterMovement(SoilStack$surfaceWater, percentLengthMoved, ModelFolder)
+  #     #runoffDepth <- movementList[[1]]
+  #     runoffDepth <- terra::rast(runoffDepthPath)
+  #     #adjustments <- flowRouting(runoffDepthPath, flowStack_file) - terra::rast(runoffDepthPath)
+  #     SoilStack$surfaceWater <- SoilStack$surfaceWater - terra::rast(runoffDepthPath) + flowRouting(runoffDepthPath, flowStack_file)
+  #
+  #   }
+  # }else{
+  #   timeVelocity <- rbind(timeVelocity, list(end_time, maxVelocity)) # Add time velocity
+  #   percentLengthMoved <- percentLength(velocity, simulationTimeSecs) # returns percentage of cell distance
+  #   # Add the distance storage
+  #   waterMovement(SoilStack$surfaceWater, percentLengthMoved, ModelFolder)
+  #   runoffDepth <- terra::rast(runoffDepthPath)
+  #   # Adjusted surface water = previous surface water - amount of runoff + runoff added to cell
+  #   SoilStack$surfaceWater <- SoilStack$surfaceWater - terra::rast(runoffDepthPath) + flowRouting(runoffDepthPath, flowStack_file)
+  # }
   ##---------------- Save step-------------
   #if(counter %% saveRate == 0){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
   if(gif | counter %% saveRate == 0 | t == length(simulation_duration) | store){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
