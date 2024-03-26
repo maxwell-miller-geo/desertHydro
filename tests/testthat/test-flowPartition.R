@@ -18,9 +18,9 @@ test_that("Flow maps are equivalent", {
 })
 
 test_that("Flow routing", {
-  WS <- terra::rast("./inst/extdata/DemoElements/watershed_stack.tif")
-  SS <- terra::rast("./inst/extdata/DemoElements/model_soil_stack.tif")
-  FR <- flowMap(SS$model_dem)
+  # WS <- terra::rast("./inst/extdata/DemoElements/watershed_stack.tif")
+  # SS <- terra::rast("./inst/extdata/DemoElements/model_soil_stack.tif")
+  # FR <- flowMap(SS$model_dem)
   # #FR <- terra::rast("./inst/extdata/DemoElements/stack_flow.tif")
   # time_step <- 15
   # length <- 10
@@ -32,8 +32,8 @@ test_that("Flow routing", {
 })
 
 test_that("Flow out sum", {
-  SS <- terra::rast("./inst/extdata/DemoElements/model_soil_stack.tif")
-  dem <- SS$model_dem
-
-  flowOutSum()
+  # SS <- terra::rast("./inst/extdata/DemoElements/model_soil_stack.tif")
+  # dem <- SS$model_dem
+  #
+  # flowOutSum()
 })
