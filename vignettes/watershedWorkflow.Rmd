@@ -68,10 +68,10 @@ a <- arid_model(ModelFolder,
                 impervious = T,
                 rainfall_method = rainfall_method,
                 store = T,
-                gif = T,
+                gif = F,
                 discharge = F,
                 time_step = 0.25,
-                simulation_length = 1,
+                simulation_length = 2,
                 overwrite = T,
                 write = T,
                 restartModel = F
@@ -79,11 +79,11 @@ a <- arid_model(ModelFolder,
 
 SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
 tempStack <- terra::rast(file.path(ModelFolder, "tempStorage.tif"))
-flowStack_file <- terra::rast(file.path(ModelFolder, "stack_flow.tif"))
+flowStack <- terra::rast(file.path(ModelFolder, "stack_flow.tif"))
 flowStackPost <- terra::rast(file.path(ModelFolder, "AdjustedFlowStack.tif"))
 
-rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method)
-gifCreation(ModelFolder, rain_file = rain_file, discharge = F)
+rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method)
+desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, discharge = F)
 # s <- terra::rast(rasterCompile(ModelFolder, "surface"))
 # v <- terra::rast(rasterCompile(ModelFolder, "velocity"))
 # SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))

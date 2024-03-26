@@ -11,11 +11,9 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
   # DEM adjustments
   # Adjust the input DEM with the watershed shapefile.
   # Creates the following maps using the Whitebox package <- https://github.com/cran/whitebox
-  #breached_dem <- file.path(WatershedElements, "breached.tif") # adjust string name to output of flow-accumulation
-  #smoothed_dem <- file.path(WatershedElements, "smoothed_dem.tif")
   model_dem <- file.path(WatershedElements, "model_dem.tif")
   print('Locating adjusted digital elevation model.')
-  if(!file.exists(model_dem)){
+  if(!file.exists(model_dem) | overwrite){
     print('Creating adjusted digital elevation model.')
     #library(whitebox)
     #source("demProcessing.R", local = TRUE) # Custom function with whitebox scripts
@@ -30,7 +28,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
   # Slope creation
   slope <- file.path(WatershedElements, "model_slope.tif") # default name of slope file
   print('Locating slope file')
-  if(!file.exists(slope)){
+  if(!file.exists(slope) | overwrite){
     # Expects one of the outputs from previous function to produce "cropped_dem.tif"
     #cropped_dem <- file.path(WatershedElements, "cropped_dem.tif")
     slope_temp <- terra::terrain(terra::rast(model_dem), v = "slope", neighbors = 8, unit = "degrees")
@@ -72,7 +70,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
   flow_filename <- "stack_flow.tif" # must be created with names of layers
   flow_file <- file.path(ModelFolder, flow_filename)
   print('Locating flow partition map.')
-  if(!file.exists(flow_file)){ # Can take a few minutes if not already created
+  if(!file.exists(flow_file) | overwrite){ # Can take a few minutes if not already created
     print("No flow partition map found.")
     print("Creating flow partition map.")
     #source("setup_FlowPartition.R", local = TRUE) # functions necessary
@@ -97,7 +95,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
                       terra::rast(flow_file),
                       terra::rast(model_landcover))
 
-  terra::writeRaster(WatershedStack, file.path(WatershedElements, "watershed_stack.tif"), overwrite = T)
+  terra::writeRaster(WatershedStack, file.path(WatershedElements, "watershed_stack.tif"), overwrite = overwrite)
   print(paste0("Finished creating/checking files. Watershed elements files located in: ", WatershedElements))
   # Check files were written into folder
   #return(WatershedStack)

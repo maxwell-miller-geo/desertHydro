@@ -9,7 +9,7 @@ dischargeAnalysis(
   WatershedElements,
   time_step,
   simulation_length,
-  discharge = T,
+  discharge = F,
   store = T
 )
 }

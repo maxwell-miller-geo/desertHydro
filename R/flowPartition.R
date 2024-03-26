@@ -31,57 +31,16 @@ flowOutSum <- function(x) { # Vector of values
 
   # Add the values together if they are above 0 (e.i., they flow into the current cell).
   # If the center is higher than a direction, it is not gaining flow from that particular direction
-  flow_total <- sum(card_difference[card_difference > 0], na.rm = TRUE) +
-    sum(diag_difference[diag_difference > 0], na.rm = TRUE)
+  flowOutElevDifference <- sum(card_difference[card_difference > 0], na.rm = TRUE) +
+                sum(diag_difference[diag_difference > 0], na.rm = TRUE)
 
-  return(flow_total)
+  return(flowOutElevDifference)
 }
 # # Test flow out sum
 # testV <- c(1,1,1,1,2,1,1,1,1)
 # inFlow <- flowOutSum(testV)
 # outFlow <- flowOutSum(testV)
 ## Define a custom function to calculate the difference from the center - essentially flow accumulation within a neighborhood
-# flowOutPercent <- function(x) { # Vector of values
-#
-#   center <- x[5]
-#   if(center < 0  | is.na(center)){ # ignore values that are 0 or NA
-#     return(0)
-#   }
-#   # Represent the N,E,W, and S values
-#   cardinal <- x[c(2,4,6,8)]
-#   #print(cardinal)
-#   # Represent the NW, NE, SW, and SE values
-#   diagonal <- x[c(1,3,7,9)]
-#
-#   # Direction key
-#   direction <- list("NW" = 1,
-#                   "N" = 2,
-#                   "NE" = 3,
-#                   "W" = 4,
-#                   "E" = 6,
-#                   "SW" = 7,
-#                   "S" = 8,
-#                   "SE" = 9)
-#
-#
-#   # Take the difference between cardinal values and center cell - vector of elevation differences
-#   card_difference <- center - cardinal[cardinal > 0]
-#
-#   # Take the difference between diagonal values and center cell
-#   adjustment <- 1/sqrt(2)
-#   diag_difference <- (center - diagonal[diagonal > 0]) * adjustment
-#
-#   # Keep the values above a certain threshold
-#   # Add the values together if they are above 0 (e.i., they flow into the current cell).
-#   # If the center is higher than a direction, it is not gaining flow from that particular direction
-#   flow_out_total <- sum(card_difference[card_difference > 0], na.rm = TRUE) +
-#     sum(diag_difference[diag_difference > 0], na.rm = TRUE)
-#
-#   # Normalize the flow out percentage
-#   flow_percentage <-
-#   return(flow_total)
-# }
-# flowOutPercent(testV)
 
 ## ----------------------------- Flow Map
 # New better way to make flow function map!
@@ -131,9 +90,11 @@ createFlowMaps <- function(dem, dem_flow){
     # Crop the raster
     mapShift <- terra::crop(shiftMap, dem, snap = "near", extend = TRUE)
     # Adjust maps
-    directionNorth <- (mapShift[[1]] - dem) / mapShift[[2]] * flowKey[[x]][[3]]
+    directionFlow <- (mapShift[[1]] - dem) / mapShift[[2]] * flowKey[[x]][[3]]
     # Adjust
-    filtered <- terra::ifel(directionNorth > 0, directionNorth, 0)
+    #filtered <- terra::ifel(directionNorth > 0, directionNorth, 0)
+    filtered <- terra::subst(directionFlow, NA, 0)
+    filtered <- terra::ifel(filtered < 0, 0, filtered)
     names(filtered) <- flowKey[[x]][[1]] # direction of flow
     return(filtered)
   }
@@ -272,14 +233,14 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
   #terra::values(storage_adjusted) <- 0 # create a map with no value
   diagFlow <- 1 / sqrt(2)
   # The names of the different flow layers
-  flowKey <- list("N" = list("north_flow",c(0, -1), 1),
-                  "E" = list("east_flow",c(-1, 0), 1),
-                  "S" = list("south_flow",c(0, 1), 1),
-                  "W" = list("west_flow",c(1, 0), 1),
-                  "NW" = list("northwest_flow",c(1, -1), diagFlow),
-                  "NE" = list("northeast_flow",c(-1, -1), diagFlow),
-                  "SE" = list("southeast_flow",c(-1, 1), diagFlow),
-                  "SW" = list("southwest_flow", c(1, 1), diagFlow)
+  flowKey <- list("N" = list("north_flow",c(0, 1), 1),
+                  "E" = list("east_flow",c(1, 0), 1),
+                  "S" = list("south_flow",c(0, -1), 1),
+                  "W" = list("west_flow",c(-1, 0), 1),
+                  "NW" = list("northwest_flow",c(-1, 1), diagFlow),
+                  "NE" = list("northeast_flow",c(1, 1), diagFlow),
+                  "SE" = list("southeast_flow",c(1, -1), diagFlow),
+                  "SW" = list("southwest_flow", c(-1, -1), diagFlow)
                   )
 
   # Loop through cardinal directions and create shifted storage maps
@@ -300,10 +261,10 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
     # Select the appropriate layer
     flowDirection <- terra::subset(flowDirectionMap, subset = c(directionofFlow)) # issues with subsetting should be fixed
     # Determine the amount of water removed
-    flowInPercentage <- flowDirection * flowShifted
-    flowInPercentage <- terra::ifel(is.nan(flowInPercentage), 0, flowInPercentage)
+    flowInAmount <- flowDirection * flowShifted
+    flowInAmount <- terra::ifel(is.nan(flowInAmount), 0, flowInAmount)
 
-    shiftBackStep <- terra::shift(flowInPercentage, dx = -xshift, dy = -yshift)
+    shiftBackStep <- terra::shift(flowInAmount, dx = -xshift, dy = -yshift)
     flowShiftedBack <- terra::crop(shiftBackStep, flowDirectionMap, snap = "near", extend = TRUE)
     flowOutPercentage <- terra::ifel(is.nan(flowShiftedBack), 0, flowShiftedBack)
 
@@ -315,7 +276,7 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
     #print(paste0("Adding flow to temp variable ", x, ": time delta: ", round(as.numeric(Sys.time() - start),2)))
     #storage_adjusted <- storage_adjusted + flowAccumDirection
     #storage_adjusted <- c(storage_adjusted, flowAccumDirection)
-    return(flowAccumDirection)
+    return(flowInAmount)
   }
   storage <- lapply(names(flowKey), FUN = routeFlow, flowToRoute, flowDirectionMap, xDim, yDim, flowKey)
   storageRaster <- terra::rast(storage)
@@ -543,7 +504,7 @@ manningsVelocity <- function(n, depth, slope, length){
 # Function that determines the velocity necessary for a given timeframe
 # The function takes velocity variables and surface depth and throughfall
 # determines when the differences between velocities are small
-routeWater <- function(SoilStack, flowDirectionMap, time_step = 10, length = 10){
+routeWater <- function(SoilStack, flowDirectionMap, time_step = 10, length = 10,...){
   if(is.character(flowDirectionMap)){
     flowDirectionMap <- terra::rast(flowDirectionMap)
   }
@@ -553,14 +514,15 @@ routeWater <- function(SoilStack, flowDirectionMap, time_step = 10, length = 10)
   throughfall <- SoilStack$throughfall
   rainSurface <- surface + throughfall # cm
   slope <- SoilStack$slope
-  dem <- SoilStack$model_dem #m
+  dem <- SoilStack$model_dem # m
   # Initial velocity
   velocityInitial <- manningsVelocity(n, surface, slope, length = length)
   velocityFinal <- manningsVelocity(n, rainSurface, slope, length = length)
   velocityAverage <- (velocityInitial + velocityFinal) * .5
   velocityStorage <- velocityAverage
   # Time step check - returns max distance traveled and adjusted depth
-  distanceDepth <- distanceCheck(velocityAverage, rainSurface, time_step, flowDirectionMap,dem,n)
+  distanceDepth <- distanceCheck(velocityAverage, rainSurface, time_step, flowDirectionMap, dem, n)
+  #print(distanceDepth)
   if(distanceDepth[[1]] > maxTravel){
     print("Reducing timestep")
     # Reduce time step
@@ -639,12 +601,16 @@ routeWater <- function(SoilStack, flowDirectionMap, time_step = 10, length = 10)
 
 depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 10){
   depth_m <- depth / 100
-  distance <- velocity * time_step
+  #distance <- velocity * time_step
   Q <- depth_m  * velocity * length
   volumeLoss <- Q * time_step # loss in volume - needs to be smaller than total volume
+  volumeTotal <- depth_m * (length^2)
+  volumeDiff <- volumeTotal - volumeLoss
   depthLoss <- volumeLoss / (length^2) * 100 # depth loss (cm)
+  depthNormalized <- terra::ifel(depthLoss > depth, depth, depthLoss)
   # Move the water - no volume changed
-  depthFinal <- depth - depthLoss + flowRouting(depthLoss, flowDirectionMap)
+  depthChanges <- depthNormalized - flowRouting(depthNormalized, flowDirectionMap)
+  depthFinal <- depth - depthNormalized + flowRouting(depthNormalized, flowDirectionMap)
   return(depthFinal)
 }
 
@@ -656,14 +622,40 @@ slopeCalculate <- function(dem){
 
 distanceCheck <- function(velocity, depth, time_step, flowDirectionMap, dem, n, length = 10){
   depth_change <- depthChange(velocity, depth, time_step, flowDirectionMap, length = length)
+  #print(depth_change)
   slope_change <- slopeCalculate(depth_change/100 + dem)
-  velocityNew <- manningsVelocity(n, depth_change, slope_change, length = 10)
+  #print(slope_change)
+  velocityNew <- manningsVelocity(n, depth_change, slope_change, length = length)
+  #print(velocityNew)
   distanceTraveled <- terra::minmax(velocityNew)[2]* time_step
   return(list(distanceTraveled, depth_change))
   # flow_map_change <- flowMap(depth_change/100 + dem)
   # depth_change_Final <- depthChange(velocityNew, depth_change, time_step, flowDirectionMap, length = length)
   # velocityFinal <- manningsVelocity(n, depth_change_Final, slope_change, length = 10)
 }
+
+## ---------------------------- Carve channel function
+# Using a DEM and a flow accumulation map, reduce the elevation of the channel by
+# a linear amount
+carveDem <- function(dem, flow_accum, depth = 1){
+  if(is.character(dem)){
+    dem <- terra::rast(dem)
+  }
+  if(is.character(flow_accum)){
+    flow_accum <- terra::rast(flow_accum)
+  }
+  # Extents don't match
+  if(terra::ext(dem) != terra::ext(flow_accum)){
+    flow_accum_adj <- terra::crop(flow_accum, dem)
+  }else{
+    flow_accum_adj <- flow_accum
+  }
+  maxAccumulation <- terra::minmax(flow_accum_adj)[2] # Maximum flow accumulation
+  stepCarve <- depth/maxAccumulation # fraction to carve
+  demCarve <- dem - stepCarve*flow_accum_adj # adjust dem
+  return(demCarve)
+}
+
 # ## Volume change based on velocity - time step
 # timestep <- 10 # time step in seconds
 # depth <- 100 # cm

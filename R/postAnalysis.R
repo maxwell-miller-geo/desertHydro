@@ -101,7 +101,7 @@ totalVolume <- function(time, discharge){
 #'
 #' @examples \dontrun{#See vignette}
 #'
-dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length, discharge = F, store = T){
+dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length, discharge = F, store = T, date = NULL){
   time <- Total_in <- NULL
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
   velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
@@ -158,11 +158,13 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
     cross_section <- terra::vect(x_sections_path) # bring vector into R
     # # Extract the height from the surface stack
     surface_Height <- terra::extract(surfaceStorage, cross_section) # surface height in cm
+    surface_Height[is.na(surface_Height)] <- 0
     surface_velocity <- terra::extract(velocityStorage, cross_section) # velocity at given time (m/s)
+    surface_velocity[is.na(surface_velocity)] <- 0
     cm_to_m2 <- .01 * 10 # conversion factor - Conversion to m time grid size
     m3_to_ft3 <- 35.3147
     for(x in 1:nrow(surface_Height)){
-      estimated <- as.numeric(surface_Height[x,3:ncol(surface_Height)] * cm_to_m2 * surface_velocity[x,3:ncol(surface_velocity)] * m3_to_ft3) # m^3/s
+      estimated <- as.numeric(surface_Height[x,2:ncol(surface_Height)] * cm_to_m2 * surface_velocity[x,2:ncol(surface_velocity)] * m3_to_ft3) # m^3/s
       xvalues <- seq(time_step, simulation_length, by = time_step)
       dischargePlot <- ggplot2::ggplot() +
         #geom_line(aes(x = compareDis$time, y = compareDis$recDis, color = "Recorded")) +
