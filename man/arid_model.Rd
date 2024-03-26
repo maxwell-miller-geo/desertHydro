@@ -18,7 +18,7 @@ arid_model(
   store = T,
   gif = T,
   discharge = F,
-  time_step = 0.5,
+  time_step = 0.25,
   simulation_length = NA,
   overwrite = T,
   write = T,

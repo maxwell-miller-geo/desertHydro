@@ -63,7 +63,7 @@ arid_model <- function(ModelFolder,
                        store = T,
                        gif = T,
                        discharge = F,
-                       time_step = 0.5,
+                       time_step = 0.25,
                        simulation_length = NA,
                        overwrite = T,
                        write = T,
@@ -330,7 +330,7 @@ flowModel(SoilStack_file = SoilStack_file,
 print(paste0("Creating graphics in ", ModelFolder))
 # Path to stacked rasters
 if(store){
-  dischargeAnalysis(ModelFolder, WatershedElements, discharge = discharge, store = store, time_step = time_step, simulation_length = simulation_length)
+  dischargeAnalysis(ModelFolder, WatershedElements, discharge = discharge, store = store, time_step = time_step, simulation_length = simulation_length, date = date)
 }
 
 #velocityStorage <- terra::rast(file.path(ModelFolder, "Velocities.tif"))

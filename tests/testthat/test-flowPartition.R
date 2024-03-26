@@ -17,3 +17,23 @@ test_that("Flow maps are equivalent", {
 
 })
 
+test_that("Flow routing", {
+  # WS <- terra::rast("./inst/extdata/DemoElements/watershed_stack.tif")
+  # SS <- terra::rast("./inst/extdata/DemoElements/model_soil_stack.tif")
+  # FR <- flowMap(SS$model_dem)
+  # #FR <- terra::rast("./inst/extdata/DemoElements/stack_flow.tif")
+  # time_step <- 15
+  # length <- 10
+  # cm_flow <- WS[[1]]/ WS[[1]]
+  # velocity <- manningsVelocity(SS$mannings_n, cm_flow, SS$slope, length = length)
+  # DC <- depthChange(velocity, cm_flow, time_step = time_step, flowDirectionMap = FR,length = length)
+  # routeWater(SS, flowDirectionMap = FR, time_step = time_step, length = length)
+
+})
+
+test_that("Flow out sum", {
+  # SS <- terra::rast("./inst/extdata/DemoElements/model_soil_stack.tif")
+  # dem <- SS$model_dem
+  #
+  # flowOutSum()
+})

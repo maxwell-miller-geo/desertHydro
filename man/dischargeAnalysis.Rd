@@ -9,8 +9,9 @@ dischargeAnalysis(
   WatershedElements,
   time_step,
   simulation_length,
-  discharge = T,
-  store = T
+  discharge = F,
+  store = T,
+  date = NULL
 )
 }
 \arguments{

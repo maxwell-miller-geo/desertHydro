@@ -57,15 +57,15 @@ meltStack <- function(rasterStack, resample = 1, timevalues = xvalues){ # assume
 animateStack <- function(meltedDF, title = "", units = "", caption = ""){
   requireNamespace("ggplot2")
   x <- y <- value <- Time <- NULL # binding local variables
-  animated <- ggplot2::ggplot(meltedDF, ggplot2::aes(x = x, y = y, fill = value, frame = Time)) +
+  gg <- ggplot2::ggplot(meltedDF, ggplot2::aes(x = x, y = y, fill = value, frame = Time)) +
               ggplot2::geom_raster() +
               ggplot2::scale_fill_viridis_c(direction = -1, option = "viridis") +
-              ggplot2::ggtitle("{title} - Time {round(frame_time)} (minutes)") +
+              ggplot2::ggtitle("{title} - Time {round(frame_time,2)} (minutes)") +
               ggplot2::xlab("Longitude") +
               ggplot2::ylab("Latitude") +
               ggplot2::labs(fill = units, caption = caption) +
               ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
               ggplot2::theme_dark() +
               gganimate::transition_time(Time)
-  return(animated)
+  return(gg)
 }

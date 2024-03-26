@@ -128,7 +128,18 @@ rasterCompile <- function(ModelFolder, layername, remove = T){ # layername must 
   for(x in 2:length(orderedDF)){
     terra::add(layerStack) <- terra::rast(file.path(ModelFolder, names(orderedDF)[x]))
   }
+
   outStack <- file.path(ModelFolder, paste0(layername, "Storage.tif"))
+  # Check if previously created stack
+  if(file.exists(outStack)){
+    if(terra::nlyr(terra::rast(outStack)) > 2){
+      # Append the layer stack
+      combined <- c(layerStack, terra::rast(outStack)+0)
+      terra::writeRaster(combined, filename = outStack, overwrite = T)
+    }
+  }else{
+    terra::writeRaster(layerStack, filename = outStack, overwrite = T)
+  }
   terra::writeRaster(layerStack, filename = outStack, overwrite = T)
   print(paste0("Created ", layername, "Storage.tif"))
   # Remove temporary files

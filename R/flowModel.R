@@ -80,7 +80,11 @@ flowModel <- function(SoilStack_file,
     simulationDF <- data.table::fread(simulationProgress)
     lastSimulationTime <- simulationDF$simtime
     print(paste0("Starting off at ", lastSimulationTime))
-    simulation_duration <- seq(lastSimulationTime, simulationDF$simlength, by = simulationDF$timestep) # minute duration of simulation
+    if(lastSimulationTime == simulation_length){
+      stop(paste0("The last time of the simulation '", lastSimulationTime, "' equals the simulation length '", simulation_length,"' please
+                  adjust the 'simulation_length' or restart the model from scratch by setting restartModel = TRUE." ))
+    }
+    simulation_duration <- seq(lastSimulationTime, simulation_length, by = simulationDF$timestep)
     timeCheck <- terra::rast(file.path(ModelFolder, "VelocityStorage.tif"))
     lastTime <- as.numeric(terra::tail(names(timeCheck), n = 1))
     # Reado previous step? What if there are partial saves - doesn't check for
@@ -89,9 +93,9 @@ flowModel <- function(SoilStack_file,
     surfacePath <- file.path(ModelFolder, "surfaceStorage.tif")
     velocityPath <- file.path(ModelFolder, "velocityStorage.tif")
     distancePath <- file.path(ModelFolder, "distanceStorage.tif")
-    runoffDepthPath <- file.path(ModelFolder, "runoffDepth.tif")
+    # runoffDepthPath <- file.path(ModelFolder, "runoffDepth.tif")
     flowMapPath <- file.path(ModelFolder, "flowMap.tif")
-    drainMapPath <- file.path(ModelFolder, "drainMap.tif")
+    # drainMapPath <- file.path(ModelFolder, "drainMap.tif")
     velocityMax_df <- as.data.frame(terra::vect(file.path(ModelFolder, "max-velocity.shp")))
     depthMaxDF <- as.data.frame(terra::vect(file.path(ModelFolder, "max-depth.shp")))
     timeVelocity <- data.table::data.table(data.table::fread(file.path(ModelFolder, "time-velocity.csv")))
@@ -141,7 +145,6 @@ for(t in 1:(length(simulation_duration)-1)){
   end_time <- simulation_duration[t+1]
   timeElapsed <- end_time - beginning_time # time elapsed in minutes
   simulationTimeSecs <- timeElapsed * 60 # time elapse in minutes * seconds
-
   ## [1] Rainfall
   ## - Calculates the amount of rainfall in a given time step
   if(simulation_duration[t] < total_rain_duration){ # could cut off rainfall if not careful
@@ -193,11 +196,11 @@ for(t in 1:(length(simulation_duration)-1)){
 
   ## [4] Surface Runoff
   # Calculate the surface runoff for the water present at the surface.
-
   runoffList <- routeWater(SoilStack,
                            flowDirectionMap = flowStack_file,
                            time_step = simulationTimeSecs,
-                           length = gridsize)
+                           length = gridsize,
+                           timeVelocity = timeVelocity)
 
   SoilStack$surfaceWater <- runoffList[[1]]
   velocity <- SoilStack$velocity <- runoffList[[2]]
