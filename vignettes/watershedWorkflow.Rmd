@@ -23,11 +23,12 @@ knitr::opts_chunk$set(
 ```{r setup}
 library(desertHydro) # loads installed version not vignette version
 library(terra)
+library(ggplot2)
 # Only use other packages that are already required
 
 ```
 
-```{r}
+```{r, echo = F, results='hide'}
 # Important steps
 # Location or file path to save the 
 
@@ -35,9 +36,9 @@ library(terra)
 
 #WatershedElements <- "../inst/extdata/DemoElements" # Moves out a level to get to data folder
 # File names
-ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Test1)" 
+ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Test2)" 
 #ModelFolder <- r"(C:\Desktop\ModelTestFolder)" 
-WatershedElements <- r"(C:\PackageDev\desertHydro\inst\extdata\DemoElements)"
+WatershedElements <- r"(..\inst\extdata\DemoElements)"
 date <- NULL
 demFile <- "dem.tif" # Necessary
 boundary <- "boundary.shp" # Optional
@@ -54,8 +55,6 @@ length <- 10
 # depth <- SoilStack$surfaceWater + .01 *2.54
 # slope <- SoilStack$slope
 
-
-
 # # # print("Check for vignette!")
 a <- arid_model(ModelFolder,
                 WatershedElements,
@@ -71,19 +70,18 @@ a <- arid_model(ModelFolder,
                 gif = F,
                 discharge = F,
                 time_step = 0.25,
-                simulation_length = 2,
+                simulation_length = 3,
                 overwrite = T,
                 write = T,
                 restartModel = F
                 )
 
-SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
-tempStack <- terra::rast(file.path(ModelFolder, "tempStorage.tif"))
-flowStack <- terra::rast(file.path(ModelFolder, "stack_flow.tif"))
-flowStackPost <- terra::rast(file.path(ModelFolder, "AdjustedFlowStack.tif"))
+# SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
+# tempStack <- terra::rast(file.path(ModelFolder, "tempStorage.tif"))
+# flowStack <- terra::rast(file.path(ModelFolder, "stack_flow.tif"))
+# flowStackPost <- terra::rast(file.path(ModelFolder, "AdjustedFlowStack.tif"))
 
-rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method)
-desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, discharge = F)
+
 # s <- terra::rast(rasterCompile(ModelFolder, "surface"))
 # v <- terra::rast(rasterCompile(ModelFolder, "velocity"))
 # SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
@@ -91,5 +89,17 @@ desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, discharge = F)
 # getwd()
 ```
 
-# Use vignettes -
-# build_rmd("vignettes/watershedWorkflow.Rmd")
+# Load in the Gif files
+```{r, animation.hook='gifski'}
+
+# Rain file to grab the necessary rainfall method
+rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method)
+gifs <- desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, discharge = F, saveGraph = T)
+
+gifs[[1]] # surface gif
+gifs[[2]] # velocity gif
+
+
+
+```
+

@@ -196,11 +196,11 @@ for(t in 1:(length(simulation_duration)-1)){
 
   ## [4] Surface Runoff
   # Calculate the surface runoff for the water present at the surface.
-
   runoffList <- routeWater(SoilStack,
                            flowDirectionMap = flowStack_file,
                            time_step = simulationTimeSecs,
-                           length = gridsize)
+                           length = gridsize,
+                           timeVelocity = timeVelocity)
 
   SoilStack$surfaceWater <- runoffList[[1]]
   velocity <- SoilStack$velocity <- runoffList[[2]]

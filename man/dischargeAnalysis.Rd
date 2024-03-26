@@ -10,7 +10,8 @@ dischargeAnalysis(
   time_step,
   simulation_length,
   discharge = F,
-  store = T
+  store = T,
+  date = NULL
 )
 }
 \arguments{
