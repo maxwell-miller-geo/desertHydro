@@ -57,7 +57,7 @@ flowModel <- function(SoilStack_file,
   flowStack <- terra::rast(flowStack_file)
 
   gridsize <- 10 # manually set grid-size, based on DEM
-
+  drainCells <- data.table::fread(file.path(ModelFolder, "drainCells.csv"))
   # Check and determine the rainfall input
   rainList <- loadRain(rain_file, rainfall_method = rainfall_method)
   rain <- rainList[[1]]
@@ -208,6 +208,7 @@ for(t in 1:(length(simulation_duration)-1)){
   #terra::plot(velocity)
   SoilStack$slope <- runoffList[[3]]
   flowStack <- runoffList[[4]]
+
   #terra::plot(velocity)
   # maxVelocity <- terra::minmax(velocity)[2] # max discharge for base time-step (m/s)
   #
@@ -272,7 +273,7 @@ for(t in 1:(length(simulation_duration)-1)){
     simulationDF$simtime <- end_time
     data.table::fwrite(simulationDF, simulationProgress) # write current simulation time
     #data.table::fwrite(data.table::data.table(tempvelocityFile), file = file.path(ModelFolder, "max_velocity_per_time.csv"))
-    data.table::fwrite(data.table::data.table(timeVelocity), file = file.path(ModelFolder, "time-velocity.csv"))
+    data.table::fwrite(timeVelocity, file = file.path(ModelFolder, "time-velocity.csv"))
     # Save a temporary version of the soil stack
     temporary <- SoilStack + 0 # create temporary Soil Stack
 
@@ -292,7 +293,7 @@ for(t in 1:(length(simulation_duration)-1)){
     rasterCompile(ModelFolder, velocityName)
   }
 }
-print(paste("The model took: ", paste0(difftime(start_time, Sys.time()))))
+print(paste("The model took: ", paste0(difftime(Sys.time(), start_time))))
 
 close(progressBar)
 

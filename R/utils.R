@@ -60,6 +60,29 @@ dfMax <- function(raster, rename = NA){
 # Test
 # raster <- surfaceStorage[[5]]
 # dfMax(raster)
+
+# ---------------------------- Function to find 1st and 2nd values
+# and output table
+firstSecond <- function(raster, dem, Outfolder = NA, name = ""){
+  if(is.character(raster)){
+    raster <- terra::rast(raster)
+  }
+  if(is.character(dem)){
+    dem <- terra::rast(dem)
+  }
+  maxCell <- dfMax(raster, rename = "max")
+  secondValue <- terra::sort(values(flowRaster), decreasing = T)[2]
+  secondCell <- terra::xyFromCell(flowRaster, secondValue)
+  second <- c("second", secondCell[1], secondCell[2], secondValue)
+  combinedObject <- rbind(maxAccum, second)
+
+  # Get digital elevation values
+  maxElevation <- terra::cellFromXY(dem, as.numeric(combinedObject[1,2:3]))
+  if(!is.na(Outfolder)){
+    data.table::fwrite(combinedObject, file = file.path(Outpath, paste0(name,".csv")))
+  }
+  return(combinedObject)
+  }
 # ---------------------------------
 # Function that creates vector file from data.frame
 vectCreation <- function(df, saveLoc, name, coords){ # df must contain xy
