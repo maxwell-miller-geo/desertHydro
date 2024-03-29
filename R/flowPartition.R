@@ -615,7 +615,8 @@ depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 1
   depthNormalized <- terra::ifel(depthLoss > depth, depth, depthLoss)
   # Move the water - no volume changed
   depthChanges <- depthNormalized - flowRouting(depthNormalized, flowDirectionMap)
-  # XY
+  # Obtain value from outlet locations and adjust outflow to edge
+  depthChanges <- keyCells[[2]]
   secondCell <- drainCells[1,2:3]
   demValues <- values(dem)[secondCell]
   value <- cellFromXY(dem, secondCell)
@@ -642,6 +643,7 @@ distanceCheck <- function(velocity, depth, time_step, flowDirectionMap, dem, n, 
   maxVelocity <- terra::global(velocityNew, fun = quantile, probs = c(0.95), na.rm = T)[[1]] # 95% velocities
   # Super max velocity
   distanceTraveled <- maxVelocity * time_step
+
   timeVelocity <- rbind(timeVelocity,
                         list(tail(timeVelocity, 1)[[1]] + time_step/60,
                         maxVelocity))

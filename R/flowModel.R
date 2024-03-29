@@ -38,7 +38,7 @@ flowModel <- function(SoilStack_file,
                       flowStack_file,
                       rain_file,
                       ModelFolder,
-                      time_step = 1,
+                      time_step = 0.5,
                       simulation_length = 120,
                       store = TRUE,
                       rainfall_method = "gauges",
@@ -58,6 +58,10 @@ flowModel <- function(SoilStack_file,
 
   gridsize <- 10 # manually set grid-size, based on DEM
   drainCells <- data.table::fread(file.path(ModelFolder, "drainCells.csv"))
+  keyCells <- getCellNumber(drainCells, SoilStack) # key cells list(empty, discharge)
+  # Determine the elevation differnce
+  SoilStack$model_dem[keyCells[[2]]]
+  SoilStack$model_dem[keyCells[[1]]]
   # Check and determine the rainfall input
   rainList <- loadRain(rain_file, rainfall_method = rainfall_method)
   rain <- rainList[[1]]

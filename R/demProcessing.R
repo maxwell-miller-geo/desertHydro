@@ -92,7 +92,7 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
   }
   #carve_dem <- terra::rast(model_dem) + 0
   # Determine outflow points of model to prevent back filling
-  flowAccum <- firstSecond(flow_accum, carve_dem, Outfolder = ModelFolder, name = "drainCells")
+  #flowAccum <- firstSecond(flow_accum, carve_dem, Outfolder = ModelFolder, name = "drainCells")
 
   # Clip files if necessary
   if(!is.na(watershed_shape_path)){
