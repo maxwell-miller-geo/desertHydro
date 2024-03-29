@@ -2,7 +2,7 @@ test_that("multiplication works", {
   expect_equal(2 * 2, 4)
 })
 
-test_that("Flow maps are equivalent", {
+test_that("Simple flow maps are equivalent", {
   t1 <- c(1,1,1,1,2,1,1,1,1)
   flow <- terra::rast(matrix(rep(1,9), nrow = 3, ncol = 3))
   t1rast <- terra::rast(matrix(t1, nrow = 3, ncol = 3))
@@ -17,7 +17,15 @@ test_that("Flow maps are equivalent", {
 
 })
 
-test_that("Flow routing", {
+test_that("Flow routing more complex", {
+  t2 <- c(1,1,1,2,3,2,1,1,1)
+  flow <- terra::rast(matrix(rep(1,9), nrow = 3, ncol = 3))
+  trast <- terra::rast(matrix(t2, nrow = 3, ncol = 3))
+  flowMap <- flowMap(trast)
+  flowNew <- flowRouting(flow, flowMap)
+  expect_equal(sum(terra::values(flowMap), na.rm = T), 3)
+  expect_equal(sum(terra::values(flowRouting(flow, flowMap))), 9)
+  expect_equal(sum(terra::values(flowNew)), sum(terra::values(flow)))
 # <<<<<<< Updated upstream
 #   # WS <- terra::rast("./inst/extdata/DemoElements/watershed_stack.tif")
 #   # SS <- terra::rast("./inst/extdata/DemoElements/model_soil_stack.tif")

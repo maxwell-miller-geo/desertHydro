@@ -264,19 +264,19 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
     flowInAmount <- flowDirection * flowShifted
     flowInAmount <- terra::ifel(is.nan(flowInAmount), 0, flowInAmount)
 #
-#     shiftBackStep <- terra::shift(flowInAmount, dx = -xshift, dy = -yshift)
-#     flowShiftedBack <- terra::crop(shiftBackStep, flowDirectionMap, snap = "near", extend = TRUE)
-#     flowOutPercentage <- terra::ifel(is.nan(flowShiftedBack), 0, flowShiftedBack)
-#
-#     #Cumulative percentage
-#     flowPercentage <- flowInPercentage - flowOutPercentage
-#     ## Calculate the flow amount in a cardinal direction
-#     # Multiply the percent of flow from a direction by the amount of lateral flow storage in given direction
-#     flowAccumDirection <- terra::ifel(is.nan(flowPercentage), 0, flowPercentage)
+    shiftBackStep <- terra::shift(flowInAmount, dx = -xshift, dy = -yshift)
+    flowShiftedBack <- terra::crop(shiftBackStep, flowDirectionMap, snap = "near", extend = TRUE)
+    flowShiftedBack <- terra::ifel(is.nan(flowShiftedBack), 0, flowShiftedBack)
+
+    #Cumulative percentage
+    flowFinal <- flowInAmount - flowShiftedBack
+    ## Calculate the flow amount in a cardinal direction
+    # Multiply the percent of flow from a direction by the amount of lateral flow storage in given direction
+    flowAccumDirection <- terra::ifel(is.nan(flowFinal), 0, flowFinal)
     #print(paste0("Adding flow to temp variable ", x, ": time delta: ", round(as.numeric(Sys.time() - start),2)))
     #storage_adjusted <- storage_adjusted + flowAccumDirection
     #storage_adjusted <- c(storage_adjusted, flowAccumDirection)
-    return(flowInAmount)
+    return(flowAccumDirection)
   }
   storage <- lapply(names(flowKey), FUN = routeFlow, flowToRoute, flowDirectionMap, xDim, yDim, flowKey)
   storageRaster <- terra::rast(storage)
