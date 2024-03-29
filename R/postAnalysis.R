@@ -159,16 +159,18 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
     # # Extract the height from the surface stack
     surface_Height <- terra::extract(surfaceStorage, cross_section) # surface height in cm
     surface_Height[is.na(surface_Height)] <- 0
+    surface_Height <- surface_Height[,2:ncol(surface_Height)]
     surface_velocity <- terra::extract(velocityStorage, cross_section) # velocity at given time (m/s)
     surface_velocity[is.na(surface_velocity)] <- 0
-    cm_to_m2 <- .01 * 10 # conversion factor - Conversion to m time grid size
-    m3_to_ft3 <- 35.3147
+    surface_velocity <- surface_velocity[,2:ncol(surface_velocity)]
+    xvalues <- as.numeric(colnames(surface_Height))
     for(x in 1:nrow(surface_Height)){
-      estimated <- as.numeric(surface_Height[x,2:ncol(surface_Height)] * cm_to_m2 * surface_velocity[x,2:ncol(surface_velocity)] * m3_to_ft3) # m^3/s
-      xvalues <- seq(time_step, simulation_length, by = time_step)
+      estimatedDischarge <- heightToDischarge(surface_Height[x,], time_step)
+      #estimated <- as.numeric(surface_Height[x,2:ncol(surface_Height)] * cm_to_m2 * surface_velocity[x,2:ncol(surface_velocity)] * m3_to_ft3) # m^3/s
+      #xvalues <- seq(time_step, simulation_length, by = time_step)
       dischargePlot <- ggplot2::ggplot() +
         #geom_line(aes(x = compareDis$time, y = compareDis$recDis, color = "Recorded")) +
-        ggplot2::geom_line(ggplot2::aes(x = xvalues, y = estimated, color = "Predicted")) +
+        ggplot2::geom_line(ggplot2::aes(x = xvalues, y = estimatedDischarge, color = "Predicted")) +
         ggplot2::labs(title = paste0("Predicted Discharge from Rainfall Event: ",  date),
              x = paste0("Time (minutes)"),
              y = paste0("Discharge (ft\u00b3/s)"),

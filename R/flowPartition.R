@@ -264,19 +264,19 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
     flowInAmount <- flowDirection * flowShifted
     flowInAmount <- terra::ifel(is.nan(flowInAmount), 0, flowInAmount)
 #
-#     shiftBackStep <- terra::shift(flowInAmount, dx = -xshift, dy = -yshift)
-#     flowShiftedBack <- terra::crop(shiftBackStep, flowDirectionMap, snap = "near", extend = TRUE)
-#     flowOutPercentage <- terra::ifel(is.nan(flowShiftedBack), 0, flowShiftedBack)
-#
-#     #Cumulative percentage
-#     flowPercentage <- flowInPercentage - flowOutPercentage
-#     ## Calculate the flow amount in a cardinal direction
-#     # Multiply the percent of flow from a direction by the amount of lateral flow storage in given direction
-#     flowAccumDirection <- terra::ifel(is.nan(flowPercentage), 0, flowPercentage)
+    shiftBackStep <- terra::shift(flowInAmount, dx = -xshift, dy = -yshift)
+    flowShiftedBack <- terra::crop(shiftBackStep, flowDirectionMap, snap = "near", extend = TRUE)
+    flowShiftedBack <- terra::ifel(is.nan(flowShiftedBack), 0, flowShiftedBack)
+
+    #Cumulative percentage
+    flowFinal <- flowInAmount - flowShiftedBack
+    ## Calculate the flow amount in a cardinal direction
+    # Multiply the percent of flow from a direction by the amount of lateral flow storage in given direction
+    flowAccumDirection <- terra::ifel(is.nan(flowFinal), 0, flowFinal)
     #print(paste0("Adding flow to temp variable ", x, ": time delta: ", round(as.numeric(Sys.time() - start),2)))
     #storage_adjusted <- storage_adjusted + flowAccumDirection
     #storage_adjusted <- c(storage_adjusted, flowAccumDirection)
-    return(flowInAmount)
+    return(flowAccumDirection)
   }
   storage <- lapply(names(flowKey), FUN = routeFlow, flowToRoute, flowDirectionMap, xDim, yDim, flowKey)
   storageRaster <- terra::rast(storage)
@@ -508,6 +508,7 @@ routeWater <- function(SoilStack, flowDirectionMap, time_step = 10, length = 10,
   if(is.character(flowDirectionMap)){
     flowDirectionMap <- terra::rast(flowDirectionMap)
   }
+  # Intial variables
   maxTravel <- length/3
   n <- SoilStack$mannings_n
   surface <- SoilStack$surfaceWater # cm
@@ -515,13 +516,15 @@ routeWater <- function(SoilStack, flowDirectionMap, time_step = 10, length = 10,
   rainSurface <- surface + throughfall # cm
   slope <- SoilStack$slope
   dem <- SoilStack$model_dem # m
+
   # Initial velocity
   velocityInitial <- manningsVelocity(n, surface, slope, length = length)
   velocityFinal <- manningsVelocity(n, rainSurface, slope, length = length)
   velocityAverage <- (velocityInitial + velocityFinal) * .5
   velocityStorage <- velocityAverage
+
   # Time step check - returns max distance traveled and adjusted depth
-  distanceDepth <- distanceCheck(velocityAverage, rainSurface, time_step, flowDirectionMap, dem, n)
+  distanceDepth <- distanceCheck(velocityAverage, rainSurface, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity)
   #print(distanceDepth)
   if(distanceDepth[[1]] > maxTravel){
     print("Reducing timestep")
@@ -531,10 +534,12 @@ routeWater <- function(SoilStack, flowDirectionMap, time_step = 10, length = 10,
     rain_adjust <- throughfall / timeAdjustment
     distanceDepth[[2]] <- surface + rain_adjust
     for(x in 1:timeAdjustment){
+      #
       velocityAfterRain <- manningsVelocity(n,
                                             distanceDepth[[2]],
                                             slope,
                                             length = length)
+
       terra::add(velocityStorage) <- velocityAfterRain # add velocity
       # print(class(velocityAfterRain))
       # print(class(velocityStorage))
@@ -599,7 +604,7 @@ routeWater <- function(SoilStack, flowDirectionMap, time_step = 10, length = 10,
 #   }
 # }
 
-depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 10){
+depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 10,...){
   depth_m <- depth / 100
   #distance <- velocity * time_step
   Q <- depth_m  * velocity * length
@@ -610,7 +615,13 @@ depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 1
   depthNormalized <- terra::ifel(depthLoss > depth, depth, depthLoss)
   # Move the water - no volume changed
   depthChanges <- depthNormalized - flowRouting(depthNormalized, flowDirectionMap)
-  depthFinal <- depth - depthNormalized + flowRouting(depthNormalized, flowDirectionMap)
+  # Obtain value from outlet locations and adjust outflow to edge
+  depthChanges <- keyCells[[2]]
+  secondCell <- drainCells[1,2:3]
+  demValues <- values(dem)[secondCell]
+  value <- cellFromXY(dem, secondCell)
+  drainCells[1,2:3]
+  depthFinal <- depth - depthChanges
   return(depthFinal)
 }
 
@@ -620,25 +631,30 @@ slopeCalculate <- function(dem){
   return(slopeAdj)
 }
 
-distanceCheck <- function(velocity, depth, time_step, flowDirectionMap, dem, n, length = 10,...){
+distanceCheck <- function(velocity, depth, time_step, flowDirectionMap, dem, n, length = 10,timeVelocity = data.frame(0,0), ...){
+  #
   depth_change <- depthChange(velocity, depth, time_step, flowDirectionMap, length = length)
   #print(depth_change)
   slope_change <- slopeCalculate(depth_change/100 + dem)
   #print(slope_change)
   velocityNew <- manningsVelocity(n, depth_change, slope_change, length = length)
   #print(velocityNew)
-  maxVelocity <- terra::minmax(velocityNew)[2]
+  #maxVelocity <- terra::minmax(velocityNew)[2]
+  maxVelocity <- terra::global(velocityNew, fun = quantile, probs = c(0.95), na.rm = T)[[1]] # 95% velocities
+  # Super max velocity
   distanceTraveled <- maxVelocity * time_step
-  if(exists("timeVelocity")){
-    timeVelocity <- rbind(timeVelocity,
-                          list(tail(timeVelocity, 1)[[1]] + time_step/60),
-                          terra::minmax(maxVelocity))
-  }
+
+  timeVelocity <- rbind(timeVelocity,
+                        list(tail(timeVelocity, 1)[[1]] + time_step/60,
+                        maxVelocity))
+
+  data.table::fwrite(data.table::data.table(timeVelocity), file = file.path(ModelFolder, "time-velocity.csv"))
   return(list(distanceTraveled, depth_change))
   # flow_map_change <- flowMap(depth_change/100 + dem)
   # depth_change_Final <- depthChange(velocityNew, depth_change, time_step, flowDirectionMap, length = length)
   # velocityFinal <- manningsVelocity(n, depth_change_Final, slope_change, length = 10)
-}
+
+  }
 
 ## ---------------------------- Carve channel function
 # Using a DEM and a flow accumulation map, reduce the elevation of the channel by

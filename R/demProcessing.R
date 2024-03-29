@@ -41,7 +41,7 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
   # Remove/delete old raster
   file.remove(raster_path)
   # Rewrite raster with new coordinate system
-  terra::writeRaster(temp_rast_loaded, raster_path)
+  terra::writeRaster(temp_rast_loaded, raster_path, overwrite = T)
   # Remove temporary raster
   file.remove(temp_rast)
   }
@@ -91,6 +91,15 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
 
   whitebox::wbt_extract_streams(flow_accum, extracted_streams, threshold = 100)
   crsAssign(extracted_streams, coordinateSystem = crs_dem)
+
+  # Carve dem
+  if(carve){
+    carve_dem <- carveDem(model_dem, flow_accum, depth = 1)
+    terra::writeRaster(carve_dem, model_dem, overwrite = T)
+  }
+  #carve_dem <- terra::rast(model_dem) + 0
+  # Determine outflow points of model to prevent back filling
+  #flowAccum <- firstSecond(flow_accum, carve_dem, Outfolder = ModelFolder, name = "drainCells")
 
   # Clip files if necessary
   if(!is.na(watershed_shape_path)){

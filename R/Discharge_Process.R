@@ -351,5 +351,17 @@ days_of_discharge <- function(discharge_csv){
 # # Location of maximum discharge data
 # # discharge_csv <- r"(C:\Thesis\Arid-Land-Hydrology\R\max-discharge-per-day.csv)"
 
-
+## ------------------------ Height -> discharge
+heightToDischarge <- function(height, time_step, units = "cm"){
+  height <- as.numeric(height)
+  heightDifference <- c(0, abs(diff(height)))
+  bindDifferences <- rbind(height, heightDifference)
+  averageHeight <- colMeans(bindDifferences) / 100
+  if(units == "cm"){
+    cm_to_m <- .01 # conversion factor - Conversion to m
+    m3_to_ft3 <- 35.3147
+    Q <- (averageHeight * cm_to_m * m3_to_ft3) / time_step
+  }
+  return(round(Q,3))
+}
 

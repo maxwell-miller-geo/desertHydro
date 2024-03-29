@@ -60,6 +60,43 @@ dfMax <- function(raster, rename = NA){
 # Test
 # raster <- surfaceStorage[[5]]
 # dfMax(raster)
+
+# ---------------------------- Function to find 1st and 2nd values
+# and output table
+firstSecond <- function(spatraster, dem, Outfolder = NA, name = ""){
+  if(is.character(spatraster)){
+    raster <- terra::rast(spatrasterterster)
+  }
+  if(is.character(dem)){
+    dem <- terra::rast(dem)
+  }
+  maxCell <- dfMax(spatraster, rename = "max")
+  secondValue <- sort(terra::values(spatraster), decreasing = T, na.last = T)[2]
+  secondCell <- terra::xyFromCell(spatraster, secondValue)
+  second <- c("second", secondCell[1], secondCell[2], secondValue)
+  combinedObject <- rbind(maxCell, second)
+
+  xy <- cbind(as.numeric(combinedObject[1,2:3]))
+  # Get digital elevation values
+  maxElevationCell <- terra::cellFromXY(dem, maxCell[1,2:3])
+  maxElevation <- dem[maxElevationCell]
+
+  secondElevationCell <- terra::cellFromXY(dem, secondCell)
+  secondElevation <- dem[secondElevationCell]
+  if(!is.na(Outfolder)){
+    data.table::fwrite(combinedObject, file = file.path(Outpath, paste0(name,".csv")))
+  }
+  return(combinedObject)
+}
+## ------------------------------ Retrive cell number
+# Function to retrieve cell number with a dataframe - rigid
+getCellNumber <- function(df, raster){
+  emptyXY <- df[1, 2:3]
+  emptyCell <- terra::cellFromXY(raster, emptyXY)
+  dischargeXY <- df[2, 2:3]
+  dischargeCell <- terra::cellFromXY(raster, dischargeXY)
+  return(list(emptyCell, dischargeCell))
+}
 # ---------------------------------
 # Function that creates vector file from data.frame
 vectCreation <- function(df, saveLoc, name, coords){ # df must contain xy
