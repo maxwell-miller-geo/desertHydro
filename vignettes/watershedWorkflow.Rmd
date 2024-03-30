@@ -24,6 +24,7 @@ knitr::opts_chunk$set(
 library(desertHydro) # loads installed version not vignette version
 library(terra)
 library(ggplot2)
+library(gganimate)
 # Only use other packages that are already required
 
 ```
@@ -58,8 +59,8 @@ rainfall_method <- "Synthetic"
 length <- 10
 discharge = F
 store = T
-time_step <- 0.1 # time step in minutes
-simulation_length <- 2
+time_step <- .15 # time step in minutes
+simulation_length <- 5
 
 ```
 
@@ -129,8 +130,8 @@ a <- arid_model(ModelFolder,
 rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method)
 gifs <- desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, discharge = F, saveGraph = T)
 
-knitr::hook_gifski(gifs[[1]]) # surface gif
-knitr::hook_gifski(gifs[[2]]) # velocity gif
+gganimate::animate(gifs[[1]]) # surface gif
+gganimte::animate(gifs[[2]]) # velocity gif
 
 
 
