@@ -58,10 +58,8 @@ flowModel <- function(SoilStack_file,
 
   gridsize <- 10 # manually set grid-size, based on DEM
   drainCells <- data.table::fread(file.path(ModelFolder, "drainCells.csv"))
-  keyCells <- getCellNumber(drainCells, SoilStack) # key cells list(empty, discharge)
-  # Determine the elevation differnce
-  SoilStack$model_dem[keyCells[[2]]]
-  SoilStack$model_dem[keyCells[[1]]]
+  #keyCells <- getCellNumber(drainCells, SoilStack) # key cells list(empty, discharge)
+
   # Check and determine the rainfall input
   rainList <- loadRain(rain_file, rainfall_method = rainfall_method)
   rain <- rainList[[1]]
@@ -204,7 +202,7 @@ for(t in 1:(length(simulation_duration)-1)){
                            flowDirectionMap = flowStack_file,
                            time_step = simulationTimeSecs,
                            length = gridsize,
-                           timeVelocity = timeVelocity)
+                           timeVelocity = timeVelocity, drainCells = drainCells)
 
   SoilStack$surfaceWater <- runoffList[[1]]
   velocity <- SoilStack$velocity <- runoffList[[2]]
@@ -264,7 +262,7 @@ for(t in 1:(length(simulation_duration)-1)){
     }
 
     surface <- "surface"
-    rasterWrite(round(SoilStack$surfaceWater,3), ModelFolder,end_time, layername = surface)
+    rasterWrite(round(SoilStack$surfaceWater,3), ModelFolder, end_time, layername = surface)
     velocityName <- "velocity"
     rasterWrite(round(velocity,3), ModelFolder, end_time, layername = velocityName)
 

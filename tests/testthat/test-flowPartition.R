@@ -26,6 +26,16 @@ test_that("Flow routing more complex", {
   expect_equal(sum(terra::values(flowMap), na.rm = T), 3)
   expect_equal(sum(terra::values(flowRouting(flow, flowMap))), 9)
   expect_equal(sum(terra::values(flowNew)), sum(terra::values(flow)))
+
+  # Half flow routing
+  flowHalf <- flow * .5
+  flowRemaining <- flow - flowHalf
+  flowNew <- flowRouting(flowHalf, flowMap)
+  expect_equal(sum(terra::values(flowNew)), 4.5)
+  flowFinal <- flowRemaining + flowNew
+  expect_equal(sum(terra::values(flowFinal)),9)
+  expect_equal(sum(terra::values(flowHalf - flowNew)), 0)
+  #plot(flowFinal)
 # <<<<<<< Updated upstream
 #   # WS <- terra::rast("./inst/extdata/DemoElements/watershed_stack.tif")
 #   # SS <- terra::rast("./inst/extdata/DemoElements/model_soil_stack.tif")
@@ -58,3 +68,4 @@ test_that("Flow out sum", {
 #   flowOutSum()
 # >>>>>>> Stashed changes
 })
+

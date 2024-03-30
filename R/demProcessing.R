@@ -82,12 +82,6 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
     file.remove(extracted_streams)
   }
 
-  # Carve dem
-  if(carve){
-    carve_dem <- carveDem(model_dem, flow_accum, depth = 1)
-    terra::writeRaster(carve_dem, model_dem, overwrite = T)
-  }
-  #carve_dem <- terra::rast(model_dem) + 0
 
   whitebox::wbt_extract_streams(flow_accum, extracted_streams, threshold = 100)
   crsAssign(extracted_streams, coordinateSystem = crs_dem)
@@ -95,11 +89,14 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
   # Carve dem
   if(carve){
     carve_dem <- carveDem(model_dem, flow_accum, depth = 1)
-    terra::writeRaster(carve_dem, model_dem, overwrite = T)
+    #carve_dem <- carveDem(dem, flow_accum, depth = 1)
+    terra::writeRaster(carve_dem[[1]], model_dem, overwrite = T)
+    flow_accum <- file.path(Outpath, "model_flow_accumlation.tif")
+    terra::writeRaster(carve_dem[[2]], flow_accum, overwrite = T)
   }
   #carve_dem <- terra::rast(model_dem) + 0
   # Determine outflow points of model to prevent back filling
-  #flowAccum <- firstSecond(flow_accum, carve_dem, Outfolder = ModelFolder, name = "drainCells")
+  flowAccum <- firstSecond(carve_dem[[2]], carve_dem[[1]], Outfolder = ModelFolder, name = "drainCells")
 
   # Clip files if necessary
   if(!is.na(watershed_shape_path)){

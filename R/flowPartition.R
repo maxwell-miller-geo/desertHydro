@@ -316,11 +316,11 @@ percentLength <- function(velocity, timestepSeconds, adjustmentRatio = 1, gridsi
 
 ##--------------------
 # Wrapper function to route water in a given timestep
-disperseWater <- function(surfaceStorage, runoffDepth, flowStack_file = file.path(WatershedElements, "stack_flow.tif")){
-  # Adjusted surface water = previous surface water - amount of runoff + runoff added to cell
-  newDepth <- surfaceStorage - runoffDepth + flowRouting(runoffDepth, flowDirectionMap = flowStack_file) # pass flow file location to avoid
-  return(newDepth)
-}
+# disperseWater <- function(surfaceStorage, runoffDepth, flowStack_file = file.path(WatershedElements, "stack_flow.tif")){
+#   # Adjusted surface water = previous surface water - amount of runoff + runoff added to cell
+#   newDepth <- surfaceStorage - runoffDepth + flowRouting(runoffDepth, flowDirectionMap = flowStack_file) # pass flow file location to avoid
+#   return(newDepth)
+# }
 ###---------------------------
 # Function that calculates movement aspects of runoff
 waterMovement <- function(surfaceStorage,
@@ -504,7 +504,7 @@ manningsVelocity <- function(n, depth, slope, length){
 # Function that determines the velocity necessary for a given timeframe
 # The function takes velocity variables and surface depth and throughfall
 # determines when the differences between velocities are small
-routeWater <- function(SoilStack, flowDirectionMap, time_step = 10, length = 10, timeVelocity = list(0,0), ...){
+routeWater <- function(SoilStack, flowDirectionMap, time_step = 10, length = 10, timeVelocity = list(0,0), drainCells = NA, ...){
   if(is.character(flowDirectionMap)){
     flowDirectionMap <- terra::rast(flowDirectionMap)
   }
@@ -524,7 +524,7 @@ routeWater <- function(SoilStack, flowDirectionMap, time_step = 10, length = 10,
   velocityStorage <- velocityAverage
 
   # Time step check - returns max distance traveled and adjusted depth
-  distanceDepth <- distanceCheck(velocityAverage, rainSurface, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity)
+  distanceDepth <- distanceCheck(velocityAverage, rainSurface, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity, drainCells = drainCells)
   #print(distanceDepth)
   if(distanceDepth[[1]] > maxTravel){
     print("Reducing timestep")
@@ -604,7 +604,7 @@ routeWater <- function(SoilStack, flowDirectionMap, time_step = 10, length = 10,
 #   }
 # }
 
-depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 10,...){
+depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 10, drainCells = NA, ...){
   depth_m <- depth / 100
   #distance <- velocity * time_step
   Q <- depth_m  * velocity * length
@@ -614,14 +614,24 @@ depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 1
   depthLoss <- volumeLoss / (length^2) * 100 # depth loss (cm)
   depthNormalized <- terra::ifel(depthLoss > depth, depth, depthLoss)
   # Move the water - no volume changed
-  depthChanges <- depthNormalized - flowRouting(depthNormalized, flowDirectionMap)
+  depthChanges <- flowRouting(depthNormalized, flowDirectionMap)
   # Obtain value from outlet locations and adjust outflow to edge
-  depthChanges <- keyCells[[2]]
-  secondCell <- drainCells[1,2:3]
-  demValues <- values(dem)[secondCell]
-  value <- cellFromXY(dem, secondCell)
-  drainCells[1,2:3]
-  depthFinal <- depth - depthChanges
+  #depthChanges <- keyCells[[2]]
+  # demValues <- values(dem)[secondCell]
+  # value <- cellFromXY(dem, secondCell)
+  # drainCells[1,2:3]
+  depthFinal <- depth - depthNormalized + depthChanges
+  #terra::plot(depthFinal)
+  if(!all(is.na(drainCells))){
+    elevationDifference <- as.numeric(drainCells[1,7] - drainCells[2,7]) # elevation difference
+    cellLocations <- getCellNumber(drainCells, depthFinal)
+    #print(elevationDifference)
+    elevationAdjustment <- depthFinal[cellLocations[[2]]] + elevationDifference
+    #print(elevationAdjustment)
+    #print(depthFinal[drainCells$cell[1]])
+    depthFinal[cellLocations[[1]]] <- ifelse(elevationAdjustment > 0, elevationAdjustment, 0)
+    #print(depthFinal)
+  }
   return(depthFinal)
 }
 
@@ -631,9 +641,9 @@ slopeCalculate <- function(dem){
   return(slopeAdj)
 }
 
-distanceCheck <- function(velocity, depth, time_step, flowDirectionMap, dem, n, length = 10,timeVelocity = data.frame(0,0), ...){
+distanceCheck <- function(velocity, depth, time_step, flowDirectionMap, dem, n, length = 10, timeVelocity = data.frame(0,0), drainCells = NA, ...){
   #
-  depth_change <- depthChange(velocity, depth, time_step, flowDirectionMap, length = length)
+  depth_change <- depthChange(velocity, depth, time_step, flowDirectionMap, length = length, drainCells = drainCells)
   #print(depth_change)
   slope_change <- slopeCalculate(depth_change/100 + dem)
   #print(slope_change)
@@ -668,14 +678,14 @@ carveDem <- function(dem, flow_accum, depth = 1){
   }
   # Extents don't match
   if(terra::ext(dem) != terra::ext(flow_accum)){
-    flow_accum_adj <- terra::crop(flow_accum, dem)
+    flow_accum_adj <- terra::crop(flow_accum, dem) + 0
   }else{
-    flow_accum_adj <- flow_accum
+    flow_accum_adj <- flow_accum + 0
   }
   maxAccumulation <- terra::minmax(flow_accum_adj)[2] # Maximum flow accumulation
   stepCarve <- depth/maxAccumulation # fraction to carve
   demCarve <- dem - stepCarve*flow_accum_adj # adjust dem
-  return(demCarve)
+  return(list(demCarve, flow_accum_adj))
 }
 
 # ## Volume change based on velocity - time step

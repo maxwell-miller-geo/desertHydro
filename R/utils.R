@@ -46,16 +46,24 @@ quadratic_lm <- function(X, Y, poly = T){
 
 # ---------------------------------
 # Function that finds maximum values in layer, creates dataframe
-dfMax <- function(raster, rename = NA){
-  idx <- terra::where.max(raster)[2] # gets max value cell number
-  pos <-  terra::xyFromCell(raster, idx) # gets xy
-  maxValue <- terra::minmax(raster)[2] # maximum value of cell
+dfMax <- function(raster, rename = NA, max = T, rank = 2){
+  if(max){
+    cellNumber <- terra::where.max(raster)[2] # gets max value cell number
+    pos <-  terra::xyFromCell(raster, cellNumber) # gets xy
+    maxValue <- terra::minmax(raster)[2] # maximum value of cell
+  }else{
+    cellValue <- sort(terra::values(raster), decreasing = T)[rank]
+    cellNumber <- terra::cells(raster, cellValue)[[1]]
+    pos <- terra::xyFromCell(raster, cellNumber)
+    maxValue <- cellValue
+  }
+
   if(is.na(rename)){
     name <- names(raster)
   }else{
     name <- rename
   }
-  return(data.frame(time = name, x = pos[1], y = pos[2], max = maxValue))
+  return(data.frame(time = name, x = pos[1], y = pos[2], value = maxValue, cell = cellNumber))
 }
 # Test
 # raster <- surfaceStorage[[5]]
@@ -63,30 +71,33 @@ dfMax <- function(raster, rename = NA){
 
 # ---------------------------- Function to find 1st and 2nd values
 # and output table
+
 firstSecond <- function(spatraster, dem, Outfolder = NA, name = ""){
   if(is.character(spatraster)){
-    raster <- terra::rast(spatrasterterster)
+    spatraster <- terra::rast(spatraster)
   }
   if(is.character(dem)){
     dem <- terra::rast(dem)
   }
   maxCell <- dfMax(spatraster, rename = "max")
-  secondValue <- sort(terra::values(spatraster), decreasing = T, na.last = T)[2]
-  secondCell <- terra::xyFromCell(spatraster, secondValue)
-  second <- c("second", secondCell[1], secondCell[2], secondValue)
-  combinedObject <- rbind(maxCell, second)
+  secondCell <- dfMax(spatraster, rename = "second", max = F, rank = 2)
+  combinedObject <- rbind(maxCell, secondCell)
 
-  xy <- cbind(as.numeric(combinedObject[1,2:3]))
+  # Get the maximum elevation for each cell
+  maxElevations <- terra::extract(dem, combinedObject[,2:3])
+  outputDF <- cbind(combinedObject, maxElevations)
+  # secondValue <- sort(terra::values(spatraster), decreasing = T, na.last = T)[2]
+  # secondCellLocation <- terra::cells(spatraster, secondValue)[[1]] # should only be one flow accumulation
+  # secondXYLocation <- terra::xyFromCell(spatraster, secondCellLocation)
+  # second <- c("second", secondXYLocation[1], secondXYLocation[2], secondValue)
+
+  #xy <- cbind(as.numeric(combinedObject[1,2:3]))
   # Get digital elevation values
-  maxElevationCell <- terra::cellFromXY(dem, maxCell[1,2:3])
-  maxElevation <- dem[maxElevationCell]
 
-  secondElevationCell <- terra::cellFromXY(dem, secondCell)
-  secondElevation <- dem[secondElevationCell]
   if(!is.na(Outfolder)){
-    data.table::fwrite(combinedObject, file = file.path(Outpath, paste0(name,".csv")))
+    data.table::fwrite(outputDF, file = file.path(Outfolder, paste0(name,".csv")))
   }
-  return(combinedObject)
+  return(outputDF)
 }
 ## ------------------------------ Retrive cell number
 # Function to retrieve cell number with a dataframe - rigid

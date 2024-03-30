@@ -1,0 +1,380 @@
+<PAMDataset>
+  <PAMRasterBand band="1">
+    <Description>MUSYM</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="2">
+    <Description>residualMoistureContent</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="3">
+    <Description>porosity</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="4">
+    <Description>effectivePorosity</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="5">
+    <Description>fieldCapacityMoistureContent</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="6">
+    <Description>rockPercent</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="7">
+    <Description>soilDepthIn</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="8">
+    <Description>soilDepthCM</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="9">
+    <Description>wiltingPointMoistureContent</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="10">
+    <Description>maxCanopyStorageAmount</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="11">
+    <Description>hydraulicConductivityCMHR</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="12">
+    <Description>saturatedMoistureContent</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="13">
+    <Description>saturatedHydraulicMatrix</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="14">
+    <Description>saturatedHydraulicConductivityMacropore</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="15">
+    <Description>hydraulicConductivityRestrictiveLayer</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="16">
+    <Description>verticalHydraulicConductivity</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="17">
+    <Description>channelMaxCanopyStorageAmount</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="18">
+    <Description>storageAmount</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="19">
+    <Description>mannings_n</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="20">
+    <Description>fieldCapacityAmount</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="21">
+    <Description>currentCanopyStorage</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="22">
+    <Description>conductivityAtFieldCapacity</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="23">
+    <Description>maxSoilStorageAmount</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="24">
+    <Description>currentSoilStorage</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="25">
+    <Description>wiltingPointAmount</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="26">
+    <Description>ET_Reduction</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="27">
+    <Description>model_dem</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="28">
+    <Description>slope</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="29">
+    <Description>north_flow</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="30">
+    <Description>east_flow</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="31">
+    <Description>south_flow</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="32">
+    <Description>west_flow</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="33">
+    <Description>northwest_flow</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="34">
+    <Description>northeast_flow</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="35">
+    <Description>southeast_flow</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="36">
+    <Description>southwest_flow</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="37">
+    <Description>MUSYM</Description>
+    <CategoryNames>
+      <Category>56</Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+      <Category></Category>
+    </CategoryNames>
+  </PAMRasterBand>
+  <PAMRasterBand band="38">
+    <Description>surfaceWater</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="39">
+    <Description>velocity</Description>
+  </PAMRasterBand>
+  <PAMRasterBand band="40">
+    <Description>throughfall</Description>
+  </PAMRasterBand>
+</PAMDataset>

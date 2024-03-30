@@ -36,26 +36,53 @@ library(ggplot2)
 
 #WatershedElements <- "../inst/extdata/DemoElements" # Moves out a level to get to data folder
 # File names
-ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\All\Mini\test)"
-
+#ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\All\Mini\test)"
+ModelFolder <- "../ModelElementsTest/" # path to folder where model is saved
+ModelFolder <- r"(C:\PackageDev\desertHydro\ModelElementsTest)"
 #ModelFolder <- r"(C:\Desktop\ModelTestFolder)" 
-#WatershedElements <- r"(C:\PackageDev\desertHydro\inst\extdata\DemoElements)"
-WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\MiniWatershedElements)"
-date <- NULL
-demFile <- "cropped_dem.tif" # Necessary
-boundary <- "mini_ws.shp" # Optional
-landCoverFile <- "land_cover_soils.shp"
+WatershedElements <- "../inst/extdata/DemoElements/" # replace this with your watershed elements folder
+WatershedElements <- r"(C:\PackageDev/desertHydro/inst/extdata/DemoElements/)" # replace this with your watershed elements folder
+# E.G. WatershedElements <- "C:/File/WatershedElements"
+# Another example WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\MiniWatershedElements)"
+
+date <- NULL # Optional
+demFile <- "dem.tif" # DEM file to simulate over
+boundary <- "boundary.shp" # Optional
+landCoverFile <- "soils.shp"
 LandCoverCharacteristics <- "LandCoverCharacteristics_soils.xlsx"
 key <- "MUSYM"
 rainFile <- "USGS_Rain_2001_2021.xlsx"
 dischargeFile <- "example_discharge.csv"
+
 rainfall_method <- "Synthetic"
 length <- 10
 discharge = F
 store = T
-time_step <- 0.25
-simulation_length <- 10
+time_step <- 0.1 # time step in minutes
+simulation_length <- 2
 
+```
+
+```{r}
+# Check if the necessary folders are present
+foldersToCheck <- c(ModelFolder, WatershedElements)
+folders <- sapply(foldersToCheck, FUN = file.exists)
+if(!all(folders)){
+  print(paste0("All folders are not found. Here is a list of folders not found."))
+  print(folders)
+}
+# Check if the necessary files are present
+filesToCheck <- c(demFile, boundary, landCoverFile, LandCoverCharacteristics, rainFile, dischargeFile)
+filesCheck <- sapply(file.path(WatershedElements, filesToCheck), FUN = file.exists)
+if(!all(filesCheck)){
+  print("All files are not found. Here is a list of the files present.")
+  print(filesCheck)
+}else{
+  print("All files found.")
+}
+```
+
+```{r, echo = F, results='hide'}
 # flowDirectionMap <- flowStack
 # n <- SoilStack$mannings_n
 # depth <- SoilStack$surfaceWater + .01 *2.54
@@ -64,7 +91,7 @@ simulation_length <- 10
 # # # print("Check for vignette!")
 a <- arid_model(ModelFolder,
                 WatershedElements,
-                date = NULL,
+                date = date,
                 demFile = demFile,
                 boundary = boundary,
                 landCoverFile = landCoverFile,
@@ -81,9 +108,9 @@ a <- arid_model(ModelFolder,
                 write = T,
                 restartModel = F
                 )
-
-# SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
-# tempStack <- terra::rast(file.path(ModelFolder, "tempStorage.tif"))
+# 
+# SoilStack <- terra::rast(file.path(ModelFolder, "tempStorage.tif"))
+# # tempStack <- terra::rast(file.path(ModelFolder, "tempStorage.tif"))
 # flowStack <- terra::rast(file.path(ModelFolder, "stack_flow.tif"))
 # flowStackPost <- terra::rast(file.path(ModelFolder, "AdjustedFlowStack.tif"))
 
@@ -102,8 +129,8 @@ a <- arid_model(ModelFolder,
 rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method)
 gifs <- desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, discharge = F, saveGraph = T)
 
-gifs[[1]] # surface gif
-gifs[[2]] # velocity gif
+knitr::hook_gifski(gifs[[1]]) # surface gif
+knitr::hook_gifski(gifs[[2]]) # velocity gif
 
 
 
