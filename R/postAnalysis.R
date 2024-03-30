@@ -198,10 +198,10 @@ gifCreation <- function(ModelFolder, rain_file, rainfall_method = "", date = NUL
 
   # Check if stacks have been created
   if(terra::nlyr(surfaceStorage) == 1){
-    surfaceStorage <- rasterCompile(ModelFolder, "surface", remove = F)
+    surfaceStorage <- rasterCompile(ModelFolder, "surface", remove = T)
   }
   if(terra::nlyr(velocityStorage) == 1){
-    velocityStorage <- rasterCompile(ModelFolder, "velocity", remove = F)
+    velocityStorage <- rasterCompile(ModelFolder, "velocity", remove = T)
   }
 
   if(is.na(rain_file)){

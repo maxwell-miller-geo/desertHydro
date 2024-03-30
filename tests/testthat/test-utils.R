@@ -6,3 +6,7 @@ test_that("Locate cell values", {
   cellLocation <- terra::cells(test_raster, sortedValues)[[1]]
   expect_equal(sortedValues, test_raster[cellLocation][[1]])
 })
+
+test_that("Convert string", {
+
+})

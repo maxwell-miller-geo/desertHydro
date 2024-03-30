@@ -165,14 +165,18 @@ rasterWrite <- function(raster, ModelFolder, end_time, layername = "surface"){
 # raster2 <- rast(rasterPath2)
 ## -------------------------- Combine rasters
 # Function that takes a bunch of rasters and combined them by name
-rasterCompile <- function(ModelFolder, layername, remove = T){ # layername must be present in folder
+rasterCompile <- function(ModelFolder, layername, remove = F){ # layername must be present in folder
   # Find files with names and combined them by time
   tifFiles <- list.files(ModelFolder, pattern = "*.tif")
+  # Layer files present
   layerFiles <- grep(paste0(layername,"-time-"), tifFiles, value = T)
   # Converts strings into ordered dataframe
   orderedDF <- convert_string(layerFiles)
+  #
+  print(orderedDF)
   # combine layers and save as combined stack
   layerStack <- terra::rast(file.path(ModelFolder, names(orderedDF)[1]))
+
   for(x in 2:length(orderedDF)){
     terra::add(layerStack) <- terra::rast(file.path(ModelFolder, names(orderedDF)[x]))
   }
