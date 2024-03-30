@@ -145,7 +145,6 @@ writeLayer <- function(rasterStackPath, layer, layername){
 # Take a single layer - save with time variable in name
 # Chunks the writing process of outputs - recompiles with another function
 rasterWrite <- function(raster, ModelFolder, end_time, layername = "surface"){
-
   # raster layer
   time <- gsub("[.]", "-", c(end_time))
   name <- paste0(layername,"-time-",time,".tif")

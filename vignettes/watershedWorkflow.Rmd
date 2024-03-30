@@ -20,51 +20,87 @@ knitr::opts_chunk$set(
 <!-- $$(K_{macro} -  K_{FieldCond}) {\frac{W_{surf}-Field_{cap}}{d_{soil}}} ({\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}})^{-1}$$ -->
 <!-- $${\frac{W_{surf}-Field_{cap}}{d_{soil}}}$$ -->
 <!-- $$ {\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}$$ -->
-```{r setup}
-library(desertHydro) # loads installed version not vignette version
+## Load in the necessary libraries
+```{r, setup, message=FALSE, warning=FALSE}
+library(desertHydro)
 library(terra)
-library(ggplot2)
-library(gganimate)
-# Only use other packages that are already required
+library(ggplot2) # For plotting
+library(gganimate) # For animations
 
 ```
 
-```{r, echo = F, results='hide'}
+## Model Set-up
+The desertHydro package is split into three levels.
+
+### 1 Pre-process: Create and gather necessary files
+Model Folder -> where to save the outputs from the model
+WatershedElements Folder -> folder containing the necessary inputs for the model run.
+
+
+```{r, important folders, results='hide'}
 # Important steps
-# Location or file path to save the 
 
-# # # ModelFolder <- r"(~TestFolderPackage)"
+ModelFolder <- "../ModelElementsTest/" # replace path to folder where model is saved
+#ModelFolder <- r"(C:\PackageDev\desertHydro\ModelElementsTest)"
 
-#WatershedElements <- "../inst/extdata/DemoElements" # Moves out a level to get to data folder
-# File names
-#ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\All\Mini\test)"
-ModelFolder <- "../ModelElementsTest/" # path to folder where model is saved
-ModelFolder <- r"(C:\PackageDev\desertHydro\ModelElementsTest)"
-#ModelFolder <- r"(C:\Desktop\ModelTestFolder)" 
 WatershedElements <- "../inst/extdata/DemoElements/" # replace this with your watershed elements folder
-WatershedElements <- r"(C:\PackageDev/desertHydro/inst/extdata/DemoElements/)" # replace this with your watershed elements folder
-# E.G. WatershedElements <- "C:/File/WatershedElements"
-# Another example WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\MiniWatershedElements)"
+# WatershedElements <- r"(C:\PackageDev/desertHydro/inst/extdata/DemoElements/)" # replace this with your watershed elements folder
 
-date <- NULL # Optional
+```
+
+The priority of the model is to utilize the intersection of land cover types, 
+soil profiles from soil databases, and adjustable tables (excel files) to model
+a particular rainfall event. 
+
+Necessary Inputs:
+1) DEM or digital elevation file
+2) Manning's n or surface roughness map (.tif or .shp) embedded within land cover file
+With these two elements, the model can run on impervious mode (impervious = T)
+
+```{r, important files, results='hide'}
+
 demFile <- "dem.tif" # DEM file to simulate over
 boundary <- "boundary.shp" # Optional
 landCoverFile <- "soils.shp"
 LandCoverCharacteristics <- "LandCoverCharacteristics_soils.xlsx"
-key <- "MUSYM"
-rainFile <- "USGS_Rain_2001_2021.xlsx"
-dischargeFile <- "example_discharge.csv"
-
-rainfall_method <- "Synthetic"
-length <- 10
-discharge = F
-store = T
-time_step <- .15 # time step in minutes
-simulation_length <- 5
-
+key <- "MUSYM" # key is present in both the landcoverfile and the land cover characteristics
 ```
 
-```{r}
+## Note: One of the key aspects of the map is to ensure that the soil charactertistics
+can be cross referenced to an input data table.
+The three things that need to be present when adding soil characteristics.
+1) Land cover spatial file: .shp or .tif
+2) Land cover characteristics: excel file containing soil depth characteristics
+3) Key: a character string that is present in both the attribute table of the spatial file
+and the excel file.
+
+### Rainfall event elements
+```{r, event files, results='hide'}
+date <- NULL # Optional - if dates present must be in YYYY-MM-DD format
+rainFile <- "USGS_Rain_2001_2021.xlsx"
+dischargeFile <- "example_discharge.csv"
+discharge = F # If TRUE, expects discharge present in file
+
+# If rainfall method is synthetic - uses 1/2 inch - 15 minute storm
+rainfall_method <- "Synthetic" 
+```
+
+### Model elements
+```{r, model checklist, results='hide'}
+
+length <- 10 # grid cell length - assumes uniform grid
+store = T
+time_step <- .1 # time step in minutes
+simulation_length <-  15 # time length in minutes
+impervious <-  # no infiltration
+overwrite <- T # overwrite previous inputs in both watershed elements and model folder
+write <- T # create graphs and write outputs to model folder
+restartModel <- F # If model is paused mid-run, can be restarted with same inputs
+gif <- F # If TRUE, gif's will be created automatically. Can be created at the end
+```
+
+### Check if necessary files are present
+```{r, check files}
 # Check if the necessary folders are present
 foldersToCheck <- c(ModelFolder, WatershedElements)
 folders <- sapply(foldersToCheck, FUN = file.exists)
@@ -83,13 +119,9 @@ if(!all(filesCheck)){
 }
 ```
 
-```{r, echo = F, results='hide'}
-# flowDirectionMap <- flowStack
-# n <- SoilStack$mannings_n
-# depth <- SoilStack$surfaceWater + .01 *2.54
-# slope <- SoilStack$slope
+## 2 Model Run - off and running
+```{r, model run, echo = F, results='hide', cache = T}
 
-# # # print("Check for vignette!")
 a <- arid_model(ModelFolder,
                 WatershedElements,
                 date = date,
@@ -98,42 +130,45 @@ a <- arid_model(ModelFolder,
                 landCoverFile = landCoverFile,
                 LandCoverCharacteristics = LandCoverCharacteristics,
                 key = key,
-                impervious = T,
+                impervious = impervious,
                 rainfall_method = rainfall_method,
-                store = T,
-                gif = F,
+                store = store,
+                gif = gif,
                 discharge = discharge,
                 time_step = time_step,
                 simulation_length = simulation_length,
-                overwrite = T,
-                write = T,
-                restartModel = F
+                overwrite = overwrite,
+                write = write,
+                restartModel = restartModel
                 )
-# 
-# SoilStack <- terra::rast(file.path(ModelFolder, "tempStorage.tif"))
-# # tempStack <- terra::rast(file.path(ModelFolder, "tempStorage.tif"))
-# flowStack <- terra::rast(file.path(ModelFolder, "stack_flow.tif"))
-# flowStackPost <- terra::rast(file.path(ModelFolder, "AdjustedFlowStack.tif"))
 
-
-# s <- terra::rast(rasterCompile(ModelFolder, "surface"))
-# v <- terra::rast(rasterCompile(ModelFolder, "velocity"))
-# SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
-# terra::plot(SoilStack)
-# getwd()
 ```
+The model will create files within the Model Folder was it runs. The length of simulation
+is based on the size of the grid, the initial timestep, and the duration. It is always encouraged
+to run a small scale version in both space and time to determine if things are working properly.
 
-# Load in the Gif files
-```{r, animation.hook='gifski'}
+## 3 Post processing 
 
+After the model has run, there are many files that are present within the Model Folder that
+can be viewed in-situ or loaded into R for viewing.
+
+```{r gif-creation, gganimate = list(nframes = 30, fps = 3)}
 # Rain file to grab the necessary rainfall method
 rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method)
 gifs <- desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, discharge = F, saveGraph = T)
+```
 
-gganimate::animate(gifs[[1]]) # surface gif
-gganimte::animate(gifs[[2]]) # velocity gif
-
-
+## Surface gif
+```{r, gganimate = list(nframes = 30, fps = 3), fig.dim=c(6,8)}
+gifs[[1]] # surface gif
 
 ```
+
+## Velocity gif
+```{r, gganimate = list(nframes = 30, fps = 3), fig.dim=c(6,8)}
+gifs[[2]] # velocity gif
+```
+
+
+
 

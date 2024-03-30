@@ -57,6 +57,7 @@ meltStack <- function(rasterStack, resample = 1, timevalues = xvalues){ # assume
 animateStack <- function(meltedDF, title = "", units = "", caption = ""){
   requireNamespace("ggplot2")
   x <- y <- value <- Time <- NULL # binding local variables
+  options(repr.plot.width = 9, repr.plot.height = 9)
   gg <- ggplot2::ggplot(meltedDF, ggplot2::aes(x = x, y = y, fill = value, frame = Time)) +
               ggplot2::geom_raster() +
               ggplot2::scale_fill_viridis_c(direction = -1, option = "viridis") +

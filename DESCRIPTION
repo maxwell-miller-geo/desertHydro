@@ -25,6 +25,7 @@ Imports:
     dplyr,
     gganimate,
     ggplot2,
+    gifski,
     gridExtra,
     hms,
     lubridate,

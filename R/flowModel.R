@@ -287,19 +287,13 @@ for(t in 1:(length(simulation_duration)-1)){
   ### give a name to the current storage based upon iteration
   #print(counter)
   counter <- counter + 1
-  if(t == (length(simulation_duration) - 1)){
-    if(!impervious){
-      rasterCompile(ModelFolder, soil)
-    }
-    rasterCompile(ModelFolder, surface)
-    rasterCompile(ModelFolder, velocityName)
-  }
+
+
 }
 print(paste("The model took: ", paste0(difftime(Sys.time(), start_time))))
 
 close(progressBar)
 
-if(store){
   # Saved rasters
   # terra::writeRaster(surfaceStorage, filename = file.path(ModelFolder, "Surface_Storage.tif"), overwrite = T)
   # terra::writeRaster(subsurfaceStorage, filename = file.path(ModelFolder, "Soil_Moisture_percent.tif"), overwrite = T)
@@ -309,7 +303,12 @@ if(store){
   model_complete <- "Model Complete"
   utils::write.table(model_complete, file = file.path(ModelFolder, "ModelComplete.txt"))
   #file.remove(tempStorage)
+
+if(!impervious){
+  rasterCompile(ModelFolder, "soil", remove = F)
 }
+rasterCompile(ModelFolder, "surface", remove = F)
+rasterCompile(ModelFolder, "velocity", remove = F)
 # Save simulation time as text
 end_time <- Sys.time()
 duration <- difftime(end_time, start_time)
