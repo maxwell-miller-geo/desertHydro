@@ -26,6 +26,8 @@ library(desertHydro)
 library(terra)
 library(ggplot2) # For plotting
 library(gganimate) # For animations
+require(whitebox)
+whitebox::wbt_init() # initiation whitebox
 
 ```
 
@@ -40,10 +42,10 @@ WatershedElements Folder -> folder containing the necessary inputs for the model
 ```{r, important folders, results='hide'}
 # Important steps
 
-ModelFolder <- "../ModelElementsTest/" # replace path to folder where model is saved
+ModelFolder <- "../ModelElementsTest" # replace path to folder where model is saved
 #ModelFolder <- r"(C:\PackageDev\desertHydro\ModelElementsTest)"
 
-WatershedElements <- "../inst/extdata/DemoElements/" # replace this with your watershed elements folder
+WatershedElements <- "../inst/extdata/DemoElements" # replace this with your watershed elements folder
 # WatershedElements <- r"(C:\PackageDev/desertHydro/inst/extdata/DemoElements/)" # replace this with your watershed elements folder
 
 ```

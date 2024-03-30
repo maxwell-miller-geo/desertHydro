@@ -1,1 +1,1 @@
-Simulation took 2.67 mins to run.
+Simulation took 3.19 mins to run.
