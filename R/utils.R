@@ -164,11 +164,16 @@ rasterWrite <- function(raster, ModelFolder, end_time, layername = "surface"){
 # raster2 <- rast(rasterPath2)
 ## -------------------------- Combine rasters
 # Function that takes a bunch of rasters and combined them by name
-rasterCompile <- function(ModelFolder, layername, remove = F){ # layername must be present in folder
+rasterCompile <- function(ModelFolder, layername, remove = F, time = T){ # layername must be present in folder
   # Find files with names and combined them by time
   tifFiles <- list.files(ModelFolder, pattern = "*.tif")
   # Layer files present
-  layerFiles <- grep(paste0(layername,"-time-"), tifFiles, value = T)
+  if(time){
+    layerFiles <- grep(paste0(layername,"-time-"), tifFiles, value = T)
+  }else{
+    layerFiles <- grep(paste0(layername,"-"), tifFiles, value = T)
+  }
+
   # Converts strings into ordered dataframe
   orderedDF <- convert_string(layerFiles)
   #

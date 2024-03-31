@@ -12,7 +12,7 @@
 
 ##-------------------- Discharge Creation
 # Function that checks and/or creates discharge for given date
-dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, discharge = F, store = T){
+dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, discharge = F, store = T, discharge_file = "example_discharge.csv"){
   # Load in the filtered rainfall file
   rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
   rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
@@ -213,7 +213,7 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
     dplyr::mutate(time = (as.numeric(rain_discharge$`Time_minute` - base::min(rain_discharge$`Time_minute`)
                              ) / 60) + 1)
 
-  return(rain_discharge)
+  #return(rain_discharge)
   # Perform linear approximation on discharge and height values
   rain_discharge$discharge <- round(zoo::na.approx(rain_discharge$discharge, na.rm = F), 4)
   rain_discharge$height <- round(zoo::na.approx(rain_discharge$height, na.rm = F), 2)
@@ -290,11 +290,17 @@ plot_rainfall_discharge <- function(rain_discharge_DF, date, store = T, outpath 
 dailyDischarge <- function(discharge_file_path, discharge_date, save_location, saveGraphs = T){
   discharge <- discharge_diff <- height <- NULL
   # Read data into R
-  stream_data <- readr::read_tsv(discharge_file_path, show_col_types = F)
+  stream_data <- data.table::fread(discharge_file_path)
+  # find colum with time
+  # time <- stringMatch(stream_data, "time")
+  # time_col <- stream_data[,..time][[1]]
+  # convertTime <- lubridate::ymd_hms(time_col)
+  # stream_data[, time_date := as.POSIXct(time_col, format = "%Y-%m-%d %H:%M:%S")]
+  # as.POSIXct(stream_data[,1], format ="%Y-%m-%d %H:%M:%S")
+  #
   # sFilter data with recorded discharge value
   discharge_per_day <- as.data.frame(stream_data) |>
     dplyr::mutate(date = lubridate::ymd_hms(stream_data$`time (MST)`, quiet = T), discharge = stream_data$`Discharge(cfs)-GCMRC-GCLT1`, height = stream_data$`Gage Height(ft)-GCMRC-GCLT1`) |>
-
     dplyr::filter(lubridate::date(date) == discharge_date) |> # filters out discharge for date "YYYY-MM-DD"
     dplyr::mutate(discharge_diff = round(c(diff(discharge),0),3)) |> # Calculates difference in discharge per time step
     dplyr::filter(discharge > 0 | discharge_diff > 0) # selects locations with measured discharge and point before discharge occur

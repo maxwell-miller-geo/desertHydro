@@ -222,7 +222,7 @@ for(t in 1:(length(simulation_duration)-1)){
                            timeVelocity = timeVelocity,
                            drainCells = drainCells,
                            end_time = end_time)
-
+  #print(runoffList)
   #print(paste0("runoff",runoffList))
   SoilStack$surfaceWater <- runoffList[[1]]
   #print(SoilStack$surfaceWater)
@@ -231,7 +231,9 @@ for(t in 1:(length(simulation_duration)-1)){
   #terra::plot(velocity)
   SoilStack$slope <- runoffList[[3]]
   flowStack <- runoffList[[4]]
-  volumeDrained <- sum(runoffList[[5]])
+  print(runoffList)
+  volumeDrained <- sum(unlist(runoffList[[5]]))
+  print(volumeDrained)
   dischargeCalc <- volumeDrained/simulationTimeSecs
   volumeOut <- rbind(volumeOut, list(end_time, volumeDrained, dischargeCalc))
   data.table::fwrite(volumeOut, file.path(ModelFolder, "volumeOut.csv"))

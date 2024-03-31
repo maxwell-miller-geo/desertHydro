@@ -23,7 +23,8 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
     flow_accumlation_wb(dem_file_path = DEM,
                         Outpath = WatershedElements,
                         watershed_shape_path = WatershedShape,
-                        ModelFolder = ModelFolder) # Does not overwrite - creates many rasters
+                        ModelFolder = ModelFolder,
+                        overwrite = overwrite) # Does not overwrite - creates many rasters
     print('Finished creating adjusted DEM.')
   } else{
     print("Located DEM")

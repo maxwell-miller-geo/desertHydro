@@ -52,40 +52,43 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
 ## Flow accumulation function - creates smoothed dem, breached map, and flow accumulation map
 # Note the projections must be the same! - Whitebox will forget the coordinate systems when it creates rasters - makes this less pretty
 
-flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = NA, ModelFolder = NA, smooth_tif = "smoothed_dem.tif", filled_dem = "filled_dem.tif", breached_tif = "breached.tif", out_accum = "flow_accumulation.tif", max_change = 25, carve = T){
+flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = NA, ModelFolder = NA, smooth_tif = "smoothed_dem.tif", filled_dem = "filled_dem.tif", breached_tif = "breached.tif", out_accum = "flow_accumulation.tif", max_change = 25, carve = T, overwrite = T){
   gc()
   # List of created rasters
   crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
   model_dem <- file.path(Outpath, "model_dem.tif")
   flow_accum <- file.path(Outpath, "flow_accumulation.tif")
-
+  extracted_streams <- file.path(Outpath, "stream_extracted.tif")
   # Remove model dem if present
-  if(file.exists(model_dem)){
+  if(file.exists(model_dem) & overwrite){
     print("Overwriting model dem")
     file.remove(model_dem)
   }
-
-  whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_change)
-  crsAssign(model_dem, coordinateSystem = crs_dem)
+  if(!file.exists(model_dem)){
+    whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_change)
+    crsAssign(model_dem, coordinateSystem = crs_dem)
+  }
 
   # Remove flow accumulation if exists
-  if(file.exists(flow_accum)){
+  if(file.exists(flow_accum) & overwrite){
     print("Overwriting flow accumulation")
     file.remove(flow_accum)
   }
-  whitebox::wbt_d8_flow_accumulation(input = model_dem, output = flow_accum)
-  crsAssign(flow_accum, coordinateSystem = crs_dem)
-
-  # Extract streams
-  extracted_streams <- file.path(Outpath, "stream_extracted.tif")
-  if(file.exists(extracted_streams)){
-    print("Overwriting extracted streams")
-    file.remove(extracted_streams)
+  if(!file.exists(flow_accum)){
+    whitebox::wbt_d8_flow_accumulation(input = model_dem, output = flow_accum)
+    crsAssign(flow_accum, coordinateSystem = crs_dem)
   }
 
 
-  whitebox::wbt_extract_streams(flow_accum, extracted_streams, threshold = 1000)
-  crsAssign(extracted_streams, coordinateSystem = crs_dem)
+  # Extract streams
+  if(file.exists(extracted_streams) & overwrite){
+    print("Overwriting extracted streams")
+    file.remove(extracted_streams)
+  }
+  if(!file.exists(extracted_streams)){
+    whitebox::wbt_extract_streams(flow_accum, extracted_streams, threshold = 1000)
+    crsAssign(extracted_streams, coordinateSystem = crs_dem)
+  }
 
   # Carve dem
   if(carve){

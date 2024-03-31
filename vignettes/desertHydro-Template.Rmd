@@ -24,7 +24,9 @@ whitebox::wbt_init() # initiation whitebox
 ```
 
 ```{r}
-type <- "Demo1"
+rainfall_method <- "gauges" 
+date <- "2022-08-27" # Optional - if dates present must be in YYYY-MM-DD format
+type <- paste0("test-", rainfall_method,"")
 # Important steps
 ModelFolder <- file.path(r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\SensitivityTests)", type) # replace path to folder where model is saved
 #WatershedElements <- paste0(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\)", type,"WatershedElements") # replace this with your folder
@@ -33,20 +35,22 @@ WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\WatershedElements)"
 # WatershedElements <- r"(C:\PackageDev/desertHydro/inst/extdata/DemoElements/)" # replace this with your watershed elements folder
 demFile <- "dem.tif" # DEM file to simulate over
 boundary <- "boundary.shp" # Optional
+#boundary <- "waterholes_shape.shp" # Optional
+#boundary <- "mini_ws.shp" # Optional
 landCoverFile <- "soils.shp"
 LandCoverCharacteristics <- "LandCoverCharacteristics_soils.xlsx"
 key <- "MUSYM" # key is present in both the landcoverfile and the land cover characteristics
-date <- "2022-08-27" # Optional - if dates present must be in YYYY-MM-DD format
+
 rainFile <- "USGS_Rain_2001_2021.xlsx"
 dischargeFile <- "example_discharge.csv"
-discharge = F # If TRUE, expects discharge present in file
+discharge <-  F # If TRUE, expects discharge present in file
 
 # If rainfall method is synthetic - uses 1/2 inch - 15 minute storm
-rainfall_method <- "gauges" 
+
 length <- 10 # grid cell length - assumes uniform grid
 store = T
 time_step <- 1/12 # time step in minutes
-simulation_length <- 1 # time length in minutes
+simulation_length <- NA # time length in minutes
 impervious <- T # no infiltration
 overwrite <- F # overwrite previous inputs in both watershed elements and model folder
 write <- T # create graphs and write outputs to model folder

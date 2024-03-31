@@ -654,11 +654,13 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
   rain_adjust <- throughfall / timeAdjustment
 
   #distanceDepth[[2]] <- surface + rain_adjust
-  volumeStorage <- c(0)
-  dischargeStorage <- c(0)
+  volumeStorage <- c()
+  dischargeStorage <- c()
 
   for(x in 1:timeAdjustment){
     if(timeAdjustment == 1){
+      volumeStorage <- c(volumeStorage, distanceDepth[[3]])
+      dischargeStorage <- c(dischargeStorage, distanceDepth[[4]])
       break
     }
     if(x ==1){
@@ -685,7 +687,8 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
   slopeNew <- slopeCalculate(dem + distanceDepth[[2]])
   flowNew <- flowMap(dem + distanceDepth[[2]])
   # surface depth cm, average velocity per time step, new slope, new flow direction map,volume, discharge
-  return(list(distanceDepth[[2]], velocityAverage, slopeNew, flowNew, volumeStorage, dischargeStorage)) # returns the adjusted depth, velocity, new slope, new flowmap
+  return(list(distanceDepth[[2]], velocityAverage, slopeNew, flowNew, volumeStorage, dischargeStorage))
+          # 1                       2               3         4       5                 6
 
 }
 depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 10, drainCells = NA, check = F, ...){
@@ -700,7 +703,7 @@ depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 1
 
   outflowDepth <- depthNormalized[getCellNumber(drainCells, depthNormalized)[[1]]] # outflow cell
   volumeOut <- (outflowDepth/100) * length^2 # volume leaving during timestep in cubic meters
-  dischargeOut <- volumeOut/ time_step
+  dischargeOut <- volumeOut/ time_step # timestep in seconds
   # Move the water - no volume changed
   depthChanges <- flowRouting(depthNormalized, flowDirectionMap)
   # Obtain value from outlet locations and adjust outflow to edge
@@ -791,7 +794,7 @@ carveDem <- function(dem, flow_accum, depth = 1, outline = NA){
 roughnessAdjust <- function(depth, roughness){
   # Given two rasters with predefined conditions for roughness
   adjustD <- terra::ifel(depth < 1, depth/1, 1) # 1 cm
-  adjustN <- (3 - 2*adjustD) * roughness
+  adjustN <- (2 - 1*adjustD) * roughness
   return(adjustN)
 }
 # ## Volume change based on velocity - time step
