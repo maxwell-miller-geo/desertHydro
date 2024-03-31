@@ -492,7 +492,7 @@ manningsVelocity <- function(n, depth, slope, length){
   depth_adj <- depth / 100 # convert depth in cm to meters
   Area <- depth_adj * length # calculate cross sectional area
   HydraulicRadius <-  Area / (2* depth_adj + length) # calculate the hydraulic radius
-  print(HydraulicRadius)
+  #print(HydraulicRadius)
   #HydraulicRadius <-  Area / (length) # calculate the hydraulic radius
   #latex Rh: R_{h} = \frac{(d_{water}*l_{grid})}{2*d_{water} + l_{grid}}
   slope_gradient <- tanpi(slope/180) # convert slope into a gradient (m/m)
@@ -639,17 +639,17 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
   velocityIntermediate <- manningsVelocity(n, initialDepth, slope, length = length)
   #velocityAverage <- (velocityInitial + velocityFinal) * .5
   velocityStorage <- velocityIntermediate
-  print(paste("velocity out", velocityIntermediate))
+  #print(paste("velocity out", velocityIntermediate))
   # Time step check - returns max distance traveled and adjusted depth
   distanceDepth <- distanceCheck(velocityIntermediate, rainSurface, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity, drainCells = drainCells, check = T)
-  print(distanceDepth)
+  #print(distanceDepth)
   # Calculate which cells are to fast
   fastCells <- distanceDepth[[2]] - maxTravel
   terra::writeRaster(fastCells, file.path(ModelFolder, paste0("fastest-",round(distanceDepth[[1]],2),".tif")), overwrite = T)
   #print(distanceDepth)
   timeAdjustment <- ceiling(distanceDepth[[1]])
   timeAdjustment <- ifelse(timeAdjustment == 0, 1, timeAdjustment)
-  print(distanceDepth[[1]])
+  #print(distanceDepth[[1]])
   time_step <- time_step / timeAdjustment
   rain_adjust <- throughfall / timeAdjustment
 

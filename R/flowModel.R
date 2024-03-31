@@ -177,7 +177,7 @@ for(t in 1:(length(simulation_duration)-1)){
   volumeIn <- rbind(volumeIn,
                     list(end_time, volumeM3))
   data.table::fwrite(volumeIn, file.path(ModelFolder, "volumeIn.csv"))
-  print(SoilStack$current_rainfall)
+  #print(SoilStack$current_rainfall)
   ## [2] Canopy
   # Evaluate canopy storage - (current-storage + rainfall)
   # SoilStack$current_canopy_storage <- SoilStack$maxCanopyStorageAmount
