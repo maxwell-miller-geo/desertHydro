@@ -25,7 +25,7 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, dis
       print("Creating discharge data")
       # Check if discharge present on day - returns the date or optional date
       date <- lubridate::date(discharge_present(WatershedElements, date))[1] # returns discharge date or next day (first     entry)
-      print(date)
+      #print(date)
       # Load in stream data from Waterholes - GCMRC
       dischargeDataPath <- file.path(WatershedElements, "example_discharge.csv") #- sloppy
       # Calculate the daily discharge for given date

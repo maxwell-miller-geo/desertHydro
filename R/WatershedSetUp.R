@@ -7,10 +7,13 @@
 # Some of the scripts are created in external functions
 
 watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, WatershedShape, LandCoverCharacteristics, landCoverFile, landcovername = "landcover_soil.tif", key = "MUSYM", overwrite = T){ # DEM should be unaltered
-  requireNamespace("terra")
+  #requireNamespace("terra")
   # DEM adjustments
   # Adjust the input DEM with the watershed shapefile.
   # Creates the following maps using the Whitebox package <- https://github.com/cran/whitebox
+  if(file.exists(file.path(ModelFolder, "model_soil_stack.tif"))){
+    return("Found model soil stack in model folder, using that file!")
+  }
   model_dem <- file.path(WatershedElements, "model_dem.tif")
   print('Locating adjusted digital elevation model.')
   if(!file.exists(model_dem) | overwrite){

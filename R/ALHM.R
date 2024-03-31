@@ -102,7 +102,7 @@ arid_model <- function(ModelFolder,
 # Adjust this folder of where to store the model run
 #ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Taylor_Model)" # folder to store modeled outputs
 #ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\Test_1)"
-
+gc()
 if(!file.exists(ModelFolder)){ # Create Model folder, if it doesn't exist
   dir.create(ModelFolder)
   print("Folder created...")
@@ -186,6 +186,7 @@ if(key %in% colnames(keyCheck)){
 #   stop(paste0("Could not locate computational boundary:", watershed_shape_path))
 # }
 # Function adjusts digital elevation model (smooths with preserved features)and land cover map is projected in same coordinate system and clipped to watershed.
+gc()
 WatershedStack <- watershedElementsCreate(WatershedElements = WatershedElements,
                                          DEM = dem_path,
                                          WatershedShape = watershed_shape_path,
@@ -236,7 +237,7 @@ initial_conditions(ModelOutputs = ModelFolder, model_dem = model_dem) # saves in
 #eventDate <- "2012-07-15"
 # source("Rainfall_Process.R")
 # Read in the rainfall data from a saved file, normalize it, and create a
-rain_file <- rainfallCreation(ModelFolder, WatershedElements, date = date, method = rainfall_method, overwrite = overwrite)
+rain_file <- suppressWarnings(rainfallCreation(ModelFolder, WatershedElements, date = date, method = rainfall_method, overwrite = overwrite))
 # Slight issue: will use saved rainfall data if present - does not check to see what type of data the rainfall is
 
 ## Discharge presence - obtain information for graphing

@@ -1,0 +1,102 @@
+---
+title: "desertHydro-Template"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{desertHydro-Template}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(desertHydro)
+library(terra)
+library(ggplot2) # For plotting
+library(gganimate) # For animations
+require(whitebox)
+whitebox::wbt_init() # initiation whitebox
+```
+
+```{r}
+type <- "Demo1"
+# Important steps
+ModelFolder <- file.path(r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\SensitivityTests)", type) # replace path to folder where model is saved
+#WatershedElements <- paste0(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\)", type,"WatershedElements") # replace this with your folder
+WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\WatershedElements)"
+
+# WatershedElements <- r"(C:\PackageDev/desertHydro/inst/extdata/DemoElements/)" # replace this with your watershed elements folder
+demFile <- "dem.tif" # DEM file to simulate over
+boundary <- "boundary.shp" # Optional
+landCoverFile <- "soils.shp"
+LandCoverCharacteristics <- "LandCoverCharacteristics_soils.xlsx"
+key <- "MUSYM" # key is present in both the landcoverfile and the land cover characteristics
+date <- "2022-08-27" # Optional - if dates present must be in YYYY-MM-DD format
+rainFile <- "USGS_Rain_2001_2021.xlsx"
+dischargeFile <- "example_discharge.csv"
+discharge = F # If TRUE, expects discharge present in file
+
+# If rainfall method is synthetic - uses 1/2 inch - 15 minute storm
+rainfall_method <- "gauges" 
+length <- 10 # grid cell length - assumes uniform grid
+store = T
+time_step <- 1/12 # time step in minutes
+simulation_length <- 1 # time length in minutes
+impervious <- T # no infiltration
+overwrite <- F # overwrite previous inputs in both watershed elements and model folder
+write <- T # create graphs and write outputs to model folder
+restartModel <- F # If model is paused mid-run, can be restarted with same inputs
+gif <- F # If TRUE, gif's will be created automatically. Can be created at the end
+```
+
+```{r, check files}
+# Check if the necessary folders are present
+foldersToCheck <- c(ModelFolder, WatershedElements)
+folders <- sapply(foldersToCheck, FUN = file.exists)
+if(!all(folders)){
+  print(paste0("All folders are not found. Here is a list of folders not found."))
+  print(folders)
+}
+# Check if the necessary files are present
+filesToCheck <- c(demFile, boundary, landCoverFile, LandCoverCharacteristics, rainFile, dischargeFile)
+filesCheck <- sapply(file.path(WatershedElements, filesToCheck), FUN = file.exists)
+if(!all(filesCheck)){
+  print("All files are not found. Here is a list of the files present.")
+  print(filesCheck)
+}else{
+  print("All files found.")
+}
+```
+
+```{r}
+a <- arid_model(ModelFolder,
+                WatershedElements,
+                date = date,
+                demFile = demFile,
+                boundary = boundary,
+                landCoverFile = landCoverFile,
+                LandCoverCharacteristics = LandCoverCharacteristics,
+                key = key,
+                impervious = impervious,
+                rainfall_method = rainfall_method,
+                store = store,
+                gif = gif,
+                discharge = discharge,
+                time_step = time_step,
+                simulation_length = simulation_length,
+                overwrite = overwrite,
+                write = write,
+                restartModel = restartModel
+                )
+```
+
+```{r gif-creation, gganimate = list(nframes = 30, fps = 3)}
+# Rain file to grab the necessary rainfall method
+rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method)
+gifs <- desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, discharge = F, saveGraph = T)
+```

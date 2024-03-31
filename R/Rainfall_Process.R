@@ -210,7 +210,7 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("
   rain <- rainfall_file |>
     readxl::excel_sheets() |>
     purrr::set_names() |>
-    purrr::map(read_excel, path = rainfall_file)
+    purrr::map(readxl::read_excel, path = rainfall_file)
 
   # Select the rainfall gauges in the list
   rainSelected <- rain[gauges]
@@ -233,7 +233,7 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("
       dplyr::mutate(date_time = `Date and time`, rain_in = `TOTAL Cumulative Rain (in)`) |>
       dplyr::select(date_time, rain_in) |> # reorganize the list for a particular gauge
       stats::aggregate(rain_in ~ lubridate::floor_date(date_time, unit = level), FUN = sum) |>
-      dplyr::rename(date = "floor_date(date_time, unit = level)")
+      dplyr::rename(date = "lubridate::floor_date(date_time, unit = level)")
 
       #mutate(month = lubridate::month(date_time, label = T)) # Create monthly column
   }
@@ -259,7 +259,7 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("
   outDF <- joinedDF
   outputName <- paste0("rain-data-", level, "-2022.csv")
   if(write){
-    utils::write.csv(outDF, file = outputName, row.names = F)
+    utils::write.csv(outDF, file = file.path(rainfall_folder, outputName), row.names = F)
   }
   return(outDF)
 }
@@ -279,8 +279,8 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", gauges = c("
 
 rainfallForEvent <- function(rainDF, eventDate, remove = T){
   filteredDF <- rainDF |> # filters recorded rainfall by given date "YYYY-MM-DD"
-    filter(lubridate::date(rainDF[,1]) == eventDate) |>
-    filter(row_number() <= n()-1)
+    dplyr::filter(lubridate::date(rainDF[,1]) == eventDate) |>
+    dplyr::filter(dplyr::row_number() <= dplyr::n()-1)
 
   if(nrow(filteredDF) == 0){
     return(NULL) # No dates found - exits script
@@ -312,7 +312,7 @@ rainfallFilter <- function(date, ModelFolder, WatershedElements, overwrite = F){
   }
   # Remove some pesky early data
   rainTemp <- rainFiltered |>
-    arrange(rainFiltered$Time_minute)
+    dplyr::arrange(rainFiltered$Time_minute)
 
   # Calculate time difference of first rainfall value
   timeDiff <- diff(rainTemp$Time_minute)[[1]]
@@ -410,7 +410,7 @@ rainfallDayDistribution <- function(rainfallEvent, units = "minute", write = T){
     mutate(rain_duration = as.numeric(Time_sec) / 60 + 1) |> # adjust to minutes (add 1 to make start 0)
     mutate(across(c("Total_in"), round, 5)) |> # round the total inches to 5 decimals
     select(rain_duration, Total_in)
-  rainDF <- rbind(c(0,0), sumRain)
+  rainDF <- rbind(list(0,0), sumRain)
   if(write){
     write_csv(rainDF, "Rainfall.csv")
   }

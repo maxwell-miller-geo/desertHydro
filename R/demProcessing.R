@@ -53,6 +53,7 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
 # Note the projections must be the same! - Whitebox will forget the coordinate systems when it creates rasters - makes this less pretty
 
 flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = NA, ModelFolder = NA, smooth_tif = "smoothed_dem.tif", filled_dem = "filled_dem.tif", breached_tif = "breached.tif", out_accum = "flow_accumulation.tif", max_change = 25, carve = T){
+  gc()
   # List of created rasters
   crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
   model_dem <- file.path(Outpath, "model_dem.tif")
@@ -83,12 +84,12 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
   }
 
 
-  whitebox::wbt_extract_streams(flow_accum, extracted_streams, threshold = 100)
+  whitebox::wbt_extract_streams(flow_accum, extracted_streams, threshold = 1000)
   crsAssign(extracted_streams, coordinateSystem = crs_dem)
 
   # Carve dem
   if(carve){
-    carve_dem <- carveDem(model_dem, flow_accum, depth = 1)
+    carve_dem <- carveDem(model_dem, flow_accum, outline = watershed_shape_path, depth = 1)
     #carve_dem <- carveDem(dem, flow_accum, depth = 1)
     terra::writeRaster(carve_dem[[1]], model_dem, overwrite = T)
     flow_accum <- file.path(Outpath, "model_flow_accumlation.tif")
@@ -96,8 +97,11 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
   }
   #carve_dem <- terra::rast(model_dem) + 0
   # Determine outflow points of model to prevent back filling
-  flowAccum <- firstSecond(carve_dem[[2]], carve_dem[[1]], Outfolder = ModelFolder, name = "drainCells")
+  drain <- firstSecond(carve_dem[[2]], carve_dem[[1]], Outfolder = ModelFolder, name = "drainCells")
 
+  xy <- data.frame(x = drain$x, y = drain$y)
+  v <- terra::vect(xy, geom = c("x","y"), crs = crs_dem)
+  terra::writeVector(v, file.path(ModelFolder, "drainPoints.shp"), overwrite = T)
   # Clip files if necessary
   if(!is.na(watershed_shape_path)){
     # Clip the dem, if a shapefile is present

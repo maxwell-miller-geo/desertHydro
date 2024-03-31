@@ -172,7 +172,7 @@ rasterCompile <- function(ModelFolder, layername, remove = F){ # layername must 
   # Converts strings into ordered dataframe
   orderedDF <- convert_string(layerFiles)
   #
-  print(orderedDF)
+  #print(orderedDF)
   # combine layers and save as combined stack
   layerStack <- terra::rast(file.path(ModelFolder, names(orderedDF)[1]))
 
@@ -255,3 +255,11 @@ rainfallMethodCheck <- function(ModelFolder, rainfall_method = "", rainfall_stri
   }
   return(rainfall)
 }
+
+## ------------------------Discharge of a cell
+# Function that gets the depth of a cell (cm) and time step returns the discharge
+# What about smaller time steps
+
+
+
+
