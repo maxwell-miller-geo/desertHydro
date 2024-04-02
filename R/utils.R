@@ -266,12 +266,30 @@ rainfallMethodCheck <- function(ModelFolder, rainfall_method = "", rainfall_stri
 # What about smaller time steps
 
 ## -------------------------------------- Check Watershed Elements Folder
-# Function to check and adjust the WatershedElements Folder
-folderCheck <- function(folder, example_file = "dem.tif"){
+#
+#' Function to check and adjust the WatershedElements Folder
+#' Wrapper function of system.file to check if the folder containing the model
+#' elements exists and returns the path to the folder. Will default to package
+#' elements if no file is found.
+#' @param folder Folder path to check
+#' @param example_file Default "dem.tif'. File name + extension to check for within folder.
+#' @param demo boolean. If TRUE, will use demo elements folder if input folder is not found
+#'
+#' @return Directory or folder path. Demo folder if demo = T.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' folderPath <- "./WatershedElements"
+#' WatershedElements <- folderCheck(folderPath, "dem.tif", demo = T)
+#' WatershedElements
+#' }
+#' # Returns demo folder
+folderCheck <- function(folder, example_file = "dem.tif", demo = T){
   firstFolder <- file.exists(file.path(folder, example_file))
   if(firstFolder){
     return(folder)
-  }else if(file.exists(system.file("extdata", example_file, package = "desertHydro"))){
+  }else if(file.exists(system.file("extdata", example_file, package = "desertHydro")) & demo){
     print(paste0("Could not find file in folder: ", folder))
     print("Using /extdata folder in desertHydro for WatershedElements.")
       exampleDir <- system.file("extdata", example_file, package = "desertHydro")
