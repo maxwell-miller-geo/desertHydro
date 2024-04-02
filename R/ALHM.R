@@ -203,7 +203,7 @@ WatershedStack <- watershedElementsCreate(WatershedElements = WatershedElements,
 # Assign the models - DEM
 # Smoothed DEM - can use the unaltered DEM or a filled/ breached model.
 # It is not recommended to use the original DEM
-model_dem <- file.path(WatershedElements, "model_dem.tif") # can adjust the input dem
+model_dem <- file.path(ModelFolder, "model_dem.tif") # can adjust the input dem
 #"C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements\"
 #smooth_dem <- terra::rast(model_dem)
 

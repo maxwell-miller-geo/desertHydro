@@ -627,7 +627,7 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
   rainSurface <- surface + throughfall # cm
   # Adjust manning's n based upon the depth of rainfall after
   n <- roughnessAdjust(rainSurface, n)
-  print(n)
+  #print(n)
   slope <- SoilStack$slope
   dem <- SoilStack$model_dem # m
   # Manning's n adjustment - dynamically adjust manning's n, if the depth is very low
@@ -649,7 +649,7 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
   #terra::writeRaster(fastCells, file.path(ModelFolder, paste0("fastest-",round(distanceDepth[[1]],2),".tif")), overwrite = T)
   #print(distanceDepth)
   timeAdjustment <- ceiling(distanceDepth[[1]])
-  print(distanceDepth[[1]])
+  #print(distanceDepth[[1]])
   timeAdjustment <- ifelse(timeAdjustment == 0, 1, timeAdjustment)
   #print(distanceDepth[[1]])
   time_step <- time_step / timeAdjustment
@@ -658,7 +658,7 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
   #distanceDepth[[2]] <- surface + rain_adjust
   volumeStorage <- c()
   dischargeStorage <- c()
-  print(timeAdjustment)
+  #print(timeAdjustment)
   for(x in 1:timeAdjustment){
     if(timeAdjustment == 1){
       volumeStorage <- c(volumeStorage, distanceDepth[[3]])
@@ -703,10 +703,10 @@ depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 1
   volumeDiff <- volumeTotal - volumeLoss
   depthLoss <- volumeLoss / (length^2) * 100 # depth loss (cm)
   depthNormalized <- terra::ifel(depthLoss > depth, depth, depthLoss)
-  print(paste("depth normalized", depthNormalized))
+  #print(paste("depth normalized", depthNormalized))
   outflowDepth <- depthNormalized[getCellNumber(drainCells, depthNormalized)[[1]]] # outflow cell
   volumeOut <- (outflowDepth/100) * length^2 # volume leaving during timestep in cubic meters
-  print(paste("time step in seconds: ", time_step))
+  #print(paste("time step in seconds: ", time_step))
   dischargeOut <- volumeOut/ time_step # timestep in seconds
   # Move the water - no volume changed
   depthChanges <- flowRouting(depthNormalized, flowDirectionMap)

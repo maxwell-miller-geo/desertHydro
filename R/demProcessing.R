@@ -56,6 +56,7 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
   gc()
   # List of created rasters
   crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
+  crs_dem <- paste0("epsg:",terra::crs(terra::rast(file.path(WatershedElements, "dem.tif")), describe = T)[[3]])
   model_dem <- file.path(ModelFolder, "model_dem.tif")
   flow_accum <- file.path(ModelFolder, "flow_accumulation.tif")
   extracted_streams <- file.path(ModelFolder, "stream_extracted.tif")
@@ -66,6 +67,7 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
   }
   if(!file.exists(model_dem)){
     whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_change)
+    whitebox::wbt_breach_depressions_least_cost(dem = file.path(WatershedElements, "dem.tif"), output = model_dem, dist = 1000, fill = TRUE)
     crsAssign(model_dem, coordinateSystem = crs_dem)
   }
 

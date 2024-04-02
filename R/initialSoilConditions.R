@@ -37,22 +37,19 @@ createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
   }else{
     ClassMap <- ClassMapFile
   }
-  print(ClassMapFile)
-  print(soilTable)
   # Categories <- terra::catalyze(ClassMap)
   # Categories <- terra::as.factor(ClassMap)
   if(key != "GEOFNT24K"){
     # Convert the levels of the categorical map to match the key
     selectColumn <- terra::levels(ClassMap)[[1]][key]
-    print(selectColumn)
     selectColumn[,1] <- as.numeric(selectColumn[,1])
     # print(selectColumn)
     # getLevels <- data.frame(key = sapply(terra::levels(ClassMap)[[1]][key], as.double)) # not pretty
     #print(getLevels)
     joinDF <- dplyr::left_join(selectColumn, soilTable, by = key)
+    ClassMap <- terra::catalyze(ClassMap)
   }else{
     getLevels <- terra::levels(ClassMap)[[1]]
-    print(soilTable)
     joinDF <- dplyr::left_join(getLevels, soilTable, by = key) # join by matching key
   }
   outStack <- c() # creates empty vector
@@ -129,10 +126,11 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   LCC$ET_Reduction <- LCC$fieldCapacityAmount * 0.8 / LCC$soilDepthCM
 
   # Convert excel sheet to a raster format
-  print(ClassificationMap)
-  print(LCC)
-  print(key)
+  # print(ClassificationMap)
+  # print(LCC)
+  # print(key)
   SoilStack <- createSoilRasters(ClassMapFile = ClassificationMap, soilTable = LCC, key = key)
+  # Don't combine flow stacks
   SoilStack <- c(SoilStack, WatershedStack) # combine watershed and flow stacks
 
   # Adjust slope based on elevation differences
@@ -160,20 +158,24 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
 
   reclassMatrix <- matrix(reclassTable, ncol = 3, byrow = T)
   depthModifier <- terra::classify(SoilStack$slope, reclassMatrix, include.lowest = T)
-  print("original mannigns n")
+  #print("original mannigns n")
   print(SoilStack$mannings_n)
   if(depthAdj){
+    #print("Soil stack depth before")
+    print(SoilStack$soilDepthCM)
     SoilStack$soilDepthCM <- SoilStack$soilDepthCM *depthModifier
+    print(SoilStack$soilDepthCM)
     # Geo map adjustment
     geologic_map <- file.path(WatershedElements, "geo_soils.shp")
     if(file.exists(geologic_map)){
       print("Found geologic map: Adjusting hydraulic parameters")
       adjustmentMaps <- geologyProcess(geologic_map, SoilStack)
-      print(adjustmentMaps)
+     #int('original n')
+      #print(SoilStack$mannings_n)
+      ##print(adjustmentMaps$mannings_n)
       # Adjust the manning's N coefficients
       SoilStack$mannings_n <- SoilStack$mannings_n * adjustmentMaps$mannings_n
-      print("adjusted mannings n")
-      print(SoilStack$mannings_n)
+     #rint(SoilStack$mannings_n)
       # Adjust the soil depths simulation
       SoilStack$soilDepthCM <- SoilStack$soilDepthCM * adjustmentMaps$SoilDepthAdj
       # Adjust the hydraulic conductivity
@@ -213,7 +215,8 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
       stream_extracted <- terra::crop(stream_extracted, SoilStack$slope)
     }
     extracted <- terra::ifel(is.nan(stream_extracted), 0, stream_extracted)
-    SoilStack$mannings_n <- abs(SoilStack$mannings_n - extracted*.0025)
+    print(extracted)
+    SoilStack$mannings_n <- abs(SoilStack$mannings_n - .0025*extracted)
   }
 
   # Save the starting soil characteristic layers

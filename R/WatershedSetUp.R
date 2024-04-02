@@ -191,8 +191,8 @@ geologyProcess <- function(landCoverShape, SoilStack, key = "GEOFNT24K"){
   landCoverRast <- terra::rasterize(reproject, SoilStack, geokey)
   # Geology excel adjustments
   geo_excel <- readxl::read_xlsx(r"(C:\Thesis\Arid-Land-Hydrology\R\WatershedElements\geo_adjustments.xlsx)")
-
   adjustmentMaps <- createSoilRasters(landCoverRast, geo_excel, geokey)
+  terra::writeRaster(adjustmentMaps, file.path(ModelFolder, "geomaps.tif"), overwrite = T)
   return(adjustmentMaps)
   #uni <- terra::intersect(soils, reproject)
   #terra::writeVector(uni, file.path(WatershedElements, "geo_soils.shp"))
