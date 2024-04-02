@@ -70,7 +70,7 @@ WatershedElements <- folderCheck(WatershedElements, demFile)
 
 boundary <- "test-boundary.shp" # Name of shapefile for outline
 landCoverFile <- "soils.shp" # name of soils data
-LandCoverCharacteristics <- "LandCoverCharacteristics_soils.xlsx"
+LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
 key <- "MUSYM" # key is present in both the landcoverfile and the land cover characteristics
 ```
 
