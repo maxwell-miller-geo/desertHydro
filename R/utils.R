@@ -265,6 +265,19 @@ rainfallMethodCheck <- function(ModelFolder, rainfall_method = "", rainfall_stri
 # Function that gets the depth of a cell (cm) and time step returns the discharge
 # What about smaller time steps
 
-
-
-
+## -------------------------------------- Check Watershed Elements Folder
+# Function to check and adjust the WatershedElements Folder
+folderCheck <- function(folder, example_file = "dem.tif"){
+  firstFolder <- file.exists(file.path(folder, example_file))
+  if(firstFolder){
+    return(folder)
+  }else if(file.exists(system.file("extdata", example_file, package = "desertHydro"))){
+    print(paste0("Could not find file in folder: ", folder))
+    print("Using /extdata folder in desertHydro for WatershedElements.")
+      exampleDir <- system.file("extdata", example_file, package = "desertHydro")
+        folder <- dirname(exampleDir)
+        return(folder)
+  }else{
+      stop(paste0("Could not find the '", example_file ,"' in the: '", folder,"' path"))
+    }
+}

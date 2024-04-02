@@ -25,7 +25,6 @@ Imports:
     dplyr,
     gganimate,
     ggplot2,
-    gifski,
     gridExtra,
     hms,
     lubridate,
@@ -36,9 +35,11 @@ Imports:
     stats,
     stringr,
     terra,
+    tools,
     whitebox,
     zoo
 Suggests: 
+    gifski,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)

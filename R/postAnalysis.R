@@ -95,6 +95,8 @@ totalVolume <- function(time, discharge){
 #' hydrographs
 #' @param store T/F: Default TRUE: If TRUE, will store created plots in
 #' ModelFolder
+#' @param date string. Optional plotting setting to add date to title and output
+#' file.
 #'
 #' @return Returns discharge excel table and plots from model simulation
 #' @export
@@ -129,7 +131,7 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
       if(x == 1){
         discharge_save <- data.table::data.table(time = compareDis[,1], observed = compareDis[,2], xsection_1 = compareDis[,3])
       }else{ # save the observed discharges to be saved to a excel sheet
-        discharge_save[, xsection_next:= compareDis[,3]]
+        discharge_save[, xsection_next := compareDis[,3]]
         lastname <- length(names(discharge_save))
         names(discharge_save)[lastname] <- paste0("xsection_", x)
       }

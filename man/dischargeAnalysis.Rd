@@ -28,6 +28,9 @@ hydrographs}
 
 \item{store}{T/F: Default TRUE: If TRUE, will store created plots in
 ModelFolder}
+
+\item{date}{string. Optional plotting setting to add date to title and output
+file.}
 }
 \value{
 Returns discharge excel table and plots from model simulation

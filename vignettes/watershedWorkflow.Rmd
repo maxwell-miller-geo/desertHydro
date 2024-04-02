@@ -42,10 +42,12 @@ WatershedElements Folder -> folder containing the necessary inputs for the model
 ```{r, important folders, results='hide'}
 # Important steps
 
-ModelFolder <- "../ModelElementsTest" # replace path to folder where model is saved
-#ModelFolder <- r"(C:\PackageDev\desertHydro\ModelElementsTest)"
+ModelFolder <- "" # replace path to folder where model is saved
+#ModelFolder <- r"(C:\PackageDev\desertHydro\ModelElementsTest)" # <- Example
 
-WatershedElements <- "../inst/extdata/DemoElements" # replace this with your watershed elements folder
+#WatershedElements <- "./inst/extdata/DemoElements" # replace this with your watershed
+WatershedElements <- dirname(system.file("extdata", "dem.tif", package = "desertHydro")) # replace this with your watershedelements folder
+# Checking model folder
 # WatershedElements <- r"(C:\PackageDev/desertHydro/inst/extdata/DemoElements/)" # replace this with your watershed elements folder
 
 ```
@@ -61,7 +63,11 @@ With these two elements, the model can run on impervious mode (impervious = T)
 
 ```{r, important files, results='hide'}
 
-demFile <- "dem.tif" # DEM file to simulate over
+demFile <- "dem.tif" # DEM file to simulate over - should be named dem.tif
+
+# Check if watershed elements folder exists
+WatershedElements <- folderCheck(WatershedElements, demFile)
+
 boundary <- "boundary.shp" # Optional
 landCoverFile <- "soils.shp"
 LandCoverCharacteristics <- "LandCoverCharacteristics_soils.xlsx"
@@ -93,7 +99,7 @@ rainfall_method <- "Synthetic"
 length <- 10 # grid cell length - assumes uniform grid
 store = T
 time_step <- .1 # time step in minutes
-simulation_length <-  15 # time length in minutes
+simulation_length <-  1 # time length in minutes
 impervious <-  # no infiltration
 overwrite <- T # overwrite previous inputs in both watershed elements and model folder
 write <- T # create graphs and write outputs to model folder
@@ -121,55 +127,55 @@ if(!all(filesCheck)){
 }
 ```
 
-## 2 Model Run - off and running
-```{r, model run, echo = F, results='hide', cache = T}
+<!-- ## 2 Model Run - off and running -->
+<!-- ```{r, model run, echo = F, results='hide', cache = T} -->
 
-a <- arid_model(ModelFolder,
-                WatershedElements,
-                date = date,
-                demFile = demFile,
-                boundary = boundary,
-                landCoverFile = landCoverFile,
-                LandCoverCharacteristics = LandCoverCharacteristics,
-                key = key,
-                impervious = impervious,
-                rainfall_method = rainfall_method,
-                store = store,
-                gif = gif,
-                discharge = discharge,
-                time_step = time_step,
-                simulation_length = simulation_length,
-                overwrite = overwrite,
-                write = write,
-                restartModel = restartModel
-                )
+<!-- a <- arid_model(ModelFolder, -->
+<!--                 WatershedElements, -->
+<!--                 date = date, -->
+<!--                 demFile = demFile, -->
+<!--                 boundary = boundary, -->
+<!--                 landCoverFile = landCoverFile, -->
+<!--                 LandCoverCharacteristics = LandCoverCharacteristics, -->
+<!--                 key = key, -->
+<!--                 impervious = impervious, -->
+<!--                 rainfall_method = rainfall_method, -->
+<!--                 store = store, -->
+<!--                 gif = gif, -->
+<!--                 discharge = discharge, -->
+<!--                 time_step = time_step, -->
+<!--                 simulation_length = simulation_length, -->
+<!--                 overwrite = overwrite, -->
+<!--                 write = write, -->
+<!--                 restartModel = restartModel -->
+<!--                 ) -->
 
-```
-The model will create files within the Model Folder was it runs. The length of simulation
-is based on the size of the grid, the initial timestep, and the duration. It is always encouraged
-to run a small scale version in both space and time to determine if things are working properly.
+<!-- ``` -->
+<!-- The model will create files within the Model Folder was it runs. The length of simulation -->
+<!-- is based on the size of the grid, the initial timestep, and the duration. It is always encouraged -->
+<!-- to run a small scale version in both space and time to determine if things are working properly. -->
 
-## 3 Post processing 
+<!-- ## 3 Post processing  -->
 
-After the model has run, there are many files that are present within the Model Folder that
-can be viewed in-situ or loaded into R for viewing.
+<!-- After the model has run, there are many files that are present within the Model Folder that -->
+<!-- can be viewed in-situ or loaded into R for viewing. -->
 
-```{r gif-creation, gganimate = list(nframes = 30, fps = 3)}
-# Rain file to grab the necessary rainfall method
-rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method)
-gifs <- desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, discharge = F, saveGraph = T)
-```
+<!-- ```{r gif-creation, gganimate = list(nframes = 30, fps = 3)} -->
+<!-- # Rain file to grab the necessary rainfall method -->
+<!-- rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method) -->
+<!-- gifs <- desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, discharge = F, saveGraph = T) -->
+<!-- ``` -->
 
-## Surface gif
-```{r, gganimate = list(nframes = 30, fps = 3), fig.dim=c(6,8)}
-gifs[[1]] # surface gif
+<!-- ## Surface gif -->
+<!-- ```{r, gganimate = list(nframes = 30, fps = 3), fig.dim=c(6,8)} -->
+<!-- gifs[[1]] # surface gif -->
 
-```
+<!-- ``` -->
 
-## Velocity gif
-```{r, gganimate = list(nframes = 30, fps = 3), fig.dim=c(6,8)}
-gifs[[2]] # velocity gif
-```
+<!-- ## Velocity gif -->
+<!-- ```{r, gganimate = list(nframes = 30, fps = 3), fig.dim=c(6,8)} -->
+<!-- gifs[[2]] # velocity gif -->
+<!-- ``` -->
 
 
 
