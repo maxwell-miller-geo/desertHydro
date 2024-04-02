@@ -192,7 +192,7 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
 
 ## ----------------------------------- GIF Creation
 # Function to create gifs from stacked raster layers
-gifCreation <- function(ModelFolder, rain_file, rainfall_method = "", date = NULL, gif = T, discharge = F, saveGraph = T){
+gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, gif = T, discharge = F, saveGraph = T){
 
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
   velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))

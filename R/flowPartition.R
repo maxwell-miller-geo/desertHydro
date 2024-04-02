@@ -751,7 +751,7 @@ distanceCheck <- function(velocity, depth, time_step, flowDirectionMap, dem, n, 
   #maxVelocity <- terra::global(velocityNew, fun = quantile, probs = c(0.98), na.rm = T)[[1]] # 95% velocities
   # Super max velocity
   distanceTraveled <- maxVelocity * time_step
-  print(paste(distanceTraveled, ": maximum travel distance per time step"))
+  #print(paste(distanceTraveled, ": maximum travel distance per time step"))
   # Calculate and return the time and velocity at a given timestep
   timeVelocity <- rbind(timeVelocity,
                         list(tail(timeVelocity, 1)[[1]] + time_step/60,
