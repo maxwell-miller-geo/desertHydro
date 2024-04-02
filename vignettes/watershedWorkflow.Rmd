@@ -10,6 +10,7 @@ vignette: >
 ```{r, include = FALSE}
 
 knitr::opts_chunk$set(
+  eval = whitebox::check_whitebox_binary(),
   collapse = TRUE,
   comment = "#>",
   progress = FALSE
@@ -26,8 +27,11 @@ library(desertHydro)
 library(terra)
 library(ggplot2) # For plotting
 library(gganimate) # For animations
-require(whitebox)
-whitebox::wbt_init() # initiation whitebox
+#require(whitebox)
+whitebox::wbt_init(
+  exe_path = whitebox::wbt_exe_path(shell_quote = FALSE),
+  check_version = TRUE
+)
 
 ```
 
@@ -100,7 +104,7 @@ rainfall_method <- "synthetic"
 length <- 10 # grid cell length - assumes uniform grid
 store = T
 time_step <- .1 # time step in minutes
-simulation_length <-  3 # time length in minutes
+simulation_length <-  1 # time length in minutes
 impervious <-  # no infiltration
 overwrite <- T # overwrite previous inputs in both watershed elements and model folder
 write <- T # create graphs and write outputs to model folder
