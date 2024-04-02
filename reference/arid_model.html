@@ -32,6 +32,9 @@
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu"><li>
+      <a href="../articles/desertHydro-Template.html">desertHydro-Template</a>
+    </li>
+    <li>
       <a href="../articles/watershedWorkflow.html">watershedWorkflow</a>
     </li>
   </ul></li>
@@ -68,7 +71,7 @@
 <span>  store <span class="op">=</span> <span class="cn">T</span>,</span>
 <span>  gif <span class="op">=</span> <span class="cn">T</span>,</span>
 <span>  discharge <span class="op">=</span> <span class="cn">F</span>,</span>
-<span>  time_step <span class="op">=</span> <span class="fl">0.5</span>,</span>
+<span>  time_step <span class="op">=</span> <span class="fl">0.25</span>,</span>
 <span>  simulation_length <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">T</span>,</span>
 <span>  write <span class="op">=</span> <span class="cn">T</span>,</span>
@@ -107,6 +110,13 @@ will prevent successful model simulations.</p></dd>
 <dt>landCoverFile</dt>
 <dd><p>Optional: Default NA: Expects string format of land cover tif file e.g. "landcover.tif" that is present within the WatershedElements fold.
 Note: If changed, the key parameter needs to be changed to match the category column name. See vignette for expected structure.</p></dd>
+
+
+<dt>LandCoverCharacteristics</dt>
+<dd><p>Optional: Default "LandCoverCharacteristics.xlsx": Excel spreadsheet that contains
+hydrological characteristics, most importantly Manning's n values for different land cover types found
+within landCoverFile. Note: If input, the 'key' parameter must match attributes within land cover file, .tif or .shp, to a
+column header within the excel spreadsheet.</p></dd>
 
 
 <dt>key</dt>

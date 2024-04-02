@@ -10,6 +10,9 @@
     <loc>/LICENSE.html</loc>
   </url>
   <url>
+    <loc>/articles/desertHydro-Template.html</loc>
+  </url>
+  <url>
     <loc>/articles/index.html</loc>
   </url>
   <url>
@@ -26,6 +29,9 @@
   </url>
   <url>
     <loc>/reference/dischargeAnalysis.html</loc>
+  </url>
+  <url>
+    <loc>/reference/folderCheck.html</loc>
   </url>
   <url>
     <loc>/reference/index.html</loc>

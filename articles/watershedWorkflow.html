@@ -50,6 +50,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
+      <a href="../articles/desertHydro-Template.html">desertHydro-Template</a>
+    </li>
+    <li>
       <a href="../articles/watershedWorkflow.html">watershedWorkflow</a>
     </li>
   </ul>
@@ -81,59 +84,174 @@
 <!-- $$(K_{macro} -  K_{FieldCond}) {\frac{W_{surf}-Field_{cap}}{d_{soil}}} ({\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}})^{-1}$$ -->
 <!-- $${\frac{W_{surf}-Field_{cap}}{d_{soil}}}$$ -->
 <!-- $$ {\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}$$ -->
+<div class="section level2">
+<h2 id="load-in-the-necessary-libraries">Load in the necessary libraries<a class="anchor" aria-label="anchor" href="#load-in-the-necessary-libraries"></a>
+</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">desertHydro</span><span class="op">)</span> <span class="co"># loads installed version not vignette version</span></span>
-<span><span class="co"># Only use other packages that are already required</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">desertHydro</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rspatial.org/" class="external-link">terra</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span> <span class="co"># For plotting</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://gganimate.com" class="external-link">gganimate</a></span><span class="op">)</span> <span class="co"># For animations</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="va"><a href="https://github.com/opengeos/whiteboxR" class="external-link">whitebox</a></span><span class="op">)</span></span>
+<span><span class="fu">whitebox</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/whitebox/man/wbt_init.html" class="external-link">wbt_init</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># initiation whitebox</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="model-set-up">Model Set-up<a class="anchor" aria-label="anchor" href="#model-set-up"></a>
+</h2>
+<p>The desertHydro package is split into three levels.</p>
+<div class="section level3">
+<h3 id="pre-process-create-and-gather-necessary-files">1 Pre-process: Create and gather necessary files<a class="anchor" aria-label="anchor" href="#pre-process-create-and-gather-necessary-files"></a>
+</h3>
+<p>Model Folder -&gt; where to save the outputs from the model
+WatershedElements Folder -&gt; folder containing the necessary inputs
+for the model run.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Important steps</span></span>
-<span><span class="co"># Location or file path to save the </span></span>
 <span></span>
-<span><span class="co"># # # ModelFolder &lt;- r"(~TestFolderPackage)"</span></span>
+<span><span class="va">ModelFolder</span> <span class="op">&lt;-</span> <span class="st">""</span> <span class="co"># replace path to folder where model is saved</span></span>
+<span><span class="co">#ModelFolder &lt;- r"(C:\PackageDev\desertHydro\ModelElementsTest)" # &lt;- Example</span></span>
 <span></span>
-<span><span class="co">#WatershedElements &lt;- "../inst/extdata/DemoElements" # Moves out a level to get to data folder</span></span>
-<span><span class="co"># File names</span></span>
-<span><span class="va">ModelFolder</span> <span class="op">&lt;-</span> <span class="st">r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\TestFolderPackage)"</span> </span>
-<span><span class="va">WatershedElements</span> <span class="op">&lt;-</span> <span class="st">r"(C:\PackageDev\desertHydro\inst\extdata\DemoElements)"</span></span>
-<span><span class="va">date</span> <span class="op">&lt;-</span> <span class="cn">NULL</span></span>
-<span><span class="va">demFile</span> <span class="op">&lt;-</span> <span class="st">"dem.tif"</span> <span class="co"># Necessary</span></span>
+<span><span class="co">#WatershedElements &lt;- "./inst/extdata/DemoElements" # replace this with your watershed</span></span>
+<span><span class="va">WatershedElements</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">dirname</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"dem.tif"</span>, package <span class="op">=</span> <span class="st">"desertHydro"</span><span class="op">)</span><span class="op">)</span> <span class="co"># replace this with your watershedelements folder</span></span>
+<span><span class="co"># Checking model folder</span></span>
+<span><span class="co"># WatershedElements &lt;- r"(C:\PackageDev/desertHydro/inst/extdata/DemoElements/)" # replace this with your watershed elements folder</span></span></code></pre></div>
+<p>The priority of the model is to utilize the intersection of land
+cover types, soil profiles from soil databases, and adjustable tables
+(excel files) to model a particular rainfall event.</p>
+<p>Necessary Inputs: 1) DEM or digital elevation file 2) Manning’s n or
+surface roughness map (.tif or .shp) embedded within land cover file
+With these two elements, the model can run on impervious mode
+(impervious = T)</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="va">demFile</span> <span class="op">&lt;-</span> <span class="st">"dem.tif"</span> <span class="co"># DEM file to simulate over - should be named dem.tif</span></span>
+<span></span>
+<span><span class="co"># Check if watershed elements folder exists</span></span>
+<span><span class="va">WatershedElements</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/folderCheck.html">folderCheck</a></span><span class="op">(</span><span class="va">WatershedElements</span>, <span class="va">demFile</span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">boundary</span> <span class="op">&lt;-</span> <span class="st">"boundary.shp"</span> <span class="co"># Optional</span></span>
 <span><span class="va">landCoverFile</span> <span class="op">&lt;-</span> <span class="st">"soils.shp"</span></span>
 <span><span class="va">LandCoverCharacteristics</span> <span class="op">&lt;-</span> <span class="st">"LandCoverCharacteristics_soils.xlsx"</span></span>
-<span><span class="va">key</span> <span class="op">&lt;-</span> <span class="st">"MUSYM"</span></span>
-<span><span class="va">rainFile</span> <span class="op">&lt;-</span> <span class="st">"USGS_Rain_2001_2021.xlsx"</span></span>
-<span><span class="va">dischargeFile</span> <span class="op">&lt;-</span> <span class="st">"example_discharge.csv"</span></span>
-<span><span class="va">rainfall_method</span> <span class="op">&lt;-</span> <span class="st">"Synthetic"</span></span>
-<span></span>
-<span><span class="co"># # print("Check for vignette!")</span></span>
-<span><span class="co"># a &lt;- arid_model(ModelFolder,</span></span>
-<span><span class="co">#                 WatershedElements,</span></span>
-<span><span class="co">#                 date = NULL,</span></span>
-<span><span class="co">#                 demFile = "dem.tif",</span></span>
-<span><span class="co">#                 boundary = NA,</span></span>
-<span><span class="co">#                 landCoverFile = "landcover_soil.tif",</span></span>
-<span><span class="co">#                 LandCoverCharacteristics = "LandCoverCharacteristics_soils.xlsx",</span></span>
-<span><span class="co">#                 key = "NLCD_Key",</span></span>
-<span><span class="co">#                 impervious = F,</span></span>
-<span><span class="co">#                 rainfall_method = "gauges",</span></span>
-<span><span class="co">#                 store = T,</span></span>
-<span><span class="co">#                 gif = T,</span></span>
-<span><span class="co">#                 discharge = F,</span></span>
-<span><span class="co">#                 time_step = 0.5,</span></span>
-<span><span class="co">#                 simulation_length = NA,</span></span>
-<span><span class="co">#                 overwrite = T,</span></span>
-<span><span class="co">#                 write = T,</span></span>
-<span><span class="co">#                 restartModel = F</span></span>
-<span><span class="co">#                 )</span></span>
-<span><span class="co"># SoilStack &lt;- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))</span></span>
-<span><span class="co"># terra::plot(SoilStack)</span></span>
-<span><span class="co"># getwd()</span></span></code></pre></div>
-<div class="section level2">
-<h2 id="use-vignettes--">Use vignettes -<a class="anchor" aria-label="anchor" href="#use-vignettes--"></a>
-</h2>
+<span><span class="va">key</span> <span class="op">&lt;-</span> <span class="st">"MUSYM"</span> <span class="co"># key is present in both the landcoverfile and the land cover characteristics</span></span></code></pre></div>
+</div>
 </div>
 <div class="section level2">
-<h2 id="build_rmdvignetteswatershedworkflow-rmd">build_rmd(“vignettes/watershedWorkflow.Rmd”)<a class="anchor" aria-label="anchor" href="#build_rmdvignetteswatershedworkflow-rmd"></a>
+<h2 id="note-one-of-the-key-aspects-of-the-map-is-to-ensure-that-the-soil-charactertistics">Note: One of the key aspects of the map is to ensure that the soil
+charactertistics<a class="anchor" aria-label="anchor" href="#note-one-of-the-key-aspects-of-the-map-is-to-ensure-that-the-soil-charactertistics"></a>
 </h2>
+<p>can be cross referenced to an input data table. The three things that
+need to be present when adding soil characteristics. 1) Land cover
+spatial file: .shp or .tif 2) Land cover characteristics: excel file
+containing soil depth characteristics 3) Key: a character string that is
+present in both the attribute table of the spatial file and the excel
+file.</p>
+<div class="section level3">
+<h3 id="rainfall-event-elements">Rainfall event elements<a class="anchor" aria-label="anchor" href="#rainfall-event-elements"></a>
+</h3>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">date</span> <span class="op">&lt;-</span> <span class="cn">NULL</span> <span class="co"># Optional - if dates present must be in YYYY-MM-DD format</span></span>
+<span><span class="va">rainFile</span> <span class="op">&lt;-</span> <span class="st">"USGS_Rain_2001_2021.xlsx"</span></span>
+<span><span class="va">dischargeFile</span> <span class="op">&lt;-</span> <span class="st">"example_discharge.csv"</span></span>
+<span><span class="va">discharge</span> <span class="op">=</span> <span class="cn">F</span> <span class="co"># If TRUE, expects discharge present in file</span></span>
+<span></span>
+<span><span class="co"># If rainfall method is synthetic - uses 1/2 inch - 15 minute storm</span></span>
+<span><span class="va">rainfall_method</span> <span class="op">&lt;-</span> <span class="st">"Synthetic"</span> </span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="model-elements">Model elements<a class="anchor" aria-label="anchor" href="#model-elements"></a>
+</h3>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="va">length</span> <span class="op">&lt;-</span> <span class="fl">10</span> <span class="co"># grid cell length - assumes uniform grid</span></span>
+<span><span class="va">store</span> <span class="op">=</span> <span class="cn">T</span></span>
+<span><span class="va">time_step</span> <span class="op">&lt;-</span> <span class="fl">.1</span> <span class="co"># time step in minutes</span></span>
+<span><span class="va">simulation_length</span> <span class="op">&lt;-</span>  <span class="fl">1</span> <span class="co"># time length in minutes</span></span>
+<span><span class="va">impervious</span> <span class="op">&lt;-</span>  <span class="co"># no infiltration</span></span>
+<span><span class="va">overwrite</span> <span class="op">&lt;-</span> <span class="cn">T</span> <span class="co"># overwrite previous inputs in both watershed elements and model folder</span></span>
+<span><span class="va">write</span> <span class="op">&lt;-</span> <span class="cn">T</span> <span class="co"># create graphs and write outputs to model folder</span></span>
+<span><span class="va">restartModel</span> <span class="op">&lt;-</span> <span class="cn">F</span> <span class="co"># If model is paused mid-run, can be restarted with same inputs</span></span>
+<span><span class="va">gif</span> <span class="op">&lt;-</span> <span class="cn">F</span> <span class="co"># If TRUE, gif's will be created automatically. Can be created at the end</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="check-if-necessary-files-are-present">Check if necessary files are present<a class="anchor" aria-label="anchor" href="#check-if-necessary-files-are-present"></a>
+</h3>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Check if the necessary folders are present</span></span>
+<span><span class="va">foldersToCheck</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">ModelFolder</span>, <span class="va">WatershedElements</span><span class="op">)</span></span>
+<span><span class="va">folders</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">foldersToCheck</span>, FUN <span class="op">=</span> <span class="va">file.exists</span><span class="op">)</span></span>
+<span><span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="va">folders</span><span class="op">)</span><span class="op">)</span><span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"All folders are not found. Here is a list of folders not found."</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">folders</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="co">#&gt; [1] "All folders are not found. Here is a list of folders not found."</span></span>
+<span><span class="co">#&gt;                                                     </span></span>
+<span><span class="co">#&gt;                                               FALSE </span></span>
+<span><span class="co">#&gt; /home/runner/work/_temp/Library/desertHydro/extdata </span></span>
+<span><span class="co">#&gt;                                                TRUE</span></span>
+<span><span class="co"># Check if the necessary files are present</span></span>
+<span><span class="va">filesToCheck</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">demFile</span>, <span class="va">boundary</span>, <span class="va">landCoverFile</span>, <span class="va">LandCoverCharacteristics</span>, <span class="va">rainFile</span>, <span class="va">dischargeFile</span><span class="op">)</span></span>
+<span><span class="va">filesCheck</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">WatershedElements</span>, <span class="va">filesToCheck</span><span class="op">)</span>, FUN <span class="op">=</span> <span class="va">file.exists</span><span class="op">)</span></span>
+<span><span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="va">filesCheck</span><span class="op">)</span><span class="op">)</span><span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="st">"All files are not found. Here is a list of the files present."</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">filesCheck</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="kw">else</span><span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="st">"All files found."</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="co">#&gt; [1] "All files are not found. Here is a list of the files present."</span></span>
+<span><span class="co">#&gt;                             /home/runner/work/_temp/Library/desertHydro/extdata/dem.tif </span></span>
+<span><span class="co">#&gt;                                                                                    TRUE </span></span>
+<span><span class="co">#&gt;                        /home/runner/work/_temp/Library/desertHydro/extdata/boundary.shp </span></span>
+<span><span class="co">#&gt;                                                                                    TRUE </span></span>
+<span><span class="co">#&gt;                           /home/runner/work/_temp/Library/desertHydro/extdata/soils.shp </span></span>
+<span><span class="co">#&gt;                                                                                   FALSE </span></span>
+<span><span class="co">#&gt; /home/runner/work/_temp/Library/desertHydro/extdata/LandCoverCharacteristics_soils.xlsx </span></span>
+<span><span class="co">#&gt;                                                                                   FALSE </span></span>
+<span><span class="co">#&gt;            /home/runner/work/_temp/Library/desertHydro/extdata/USGS_Rain_2001_2021.xlsx </span></span>
+<span><span class="co">#&gt;                                                                                   FALSE </span></span>
+<span><span class="co">#&gt;               /home/runner/work/_temp/Library/desertHydro/extdata/example_discharge.csv </span></span>
+<span><span class="co">#&gt;                                                                                    TRUE</span></span></code></pre></div>
+<!-- ## 2 Model Run - off and running -->
+<!-- ```{r, model run, echo = F, results='hide', cache = T} -->
+<!-- a <- arid_model(ModelFolder, -->
+<!--                 WatershedElements, -->
+<!--                 date = date, -->
+<!--                 demFile = demFile, -->
+<!--                 boundary = boundary, -->
+<!--                 landCoverFile = landCoverFile, -->
+<!--                 LandCoverCharacteristics = LandCoverCharacteristics, -->
+<!--                 key = key, -->
+<!--                 impervious = impervious, -->
+<!--                 rainfall_method = rainfall_method, -->
+<!--                 store = store, -->
+<!--                 gif = gif, -->
+<!--                 discharge = discharge, -->
+<!--                 time_step = time_step, -->
+<!--                 simulation_length = simulation_length, -->
+<!--                 overwrite = overwrite, -->
+<!--                 write = write, -->
+<!--                 restartModel = restartModel -->
+<!--                 ) -->
+<!-- ``` -->
+<!-- The model will create files within the Model Folder was it runs. The length of simulation -->
+<!-- is based on the size of the grid, the initial timestep, and the duration. It is always encouraged -->
+<!-- to run a small scale version in both space and time to determine if things are working properly. -->
+<!-- ## 3 Post processing  -->
+<!-- After the model has run, there are many files that are present within the Model Folder that -->
+<!-- can be viewed in-situ or loaded into R for viewing. -->
+<!-- ```{r gif-creation, gganimate = list(nframes = 30, fps = 3)} -->
+<!-- # Rain file to grab the necessary rainfall method -->
+<!-- rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method) -->
+<!-- gifs <- desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, discharge = F, saveGraph = T) -->
+<!-- ``` -->
+<!-- ## Surface gif -->
+<!-- ```{r, gganimate = list(nframes = 30, fps = 3), fig.dim=c(6,8)} -->
+<!-- gifs[[1]] # surface gif -->
+<!-- ``` -->
+<!-- ## Velocity gif -->
+<!-- ```{r, gganimate = list(nframes = 30, fps = 3), fig.dim=c(6,8)} -->
+<!-- gifs[[2]] # velocity gif -->
+<!-- ``` -->
+</div>
 </div>
   </div>
 

@@ -32,6 +32,9 @@
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu"><li>
+      <a href="../articles/desertHydro-Template.html">desertHydro-Template</a>
+    </li>
+    <li>
       <a href="../articles/watershedWorkflow.html">watershedWorkflow</a>
     </li>
   </ul></li>
@@ -59,8 +62,9 @@
 <span>  <span class="va">WatershedElements</span>,</span>
 <span>  <span class="va">time_step</span>,</span>
 <span>  <span class="va">simulation_length</span>,</span>
-<span>  discharge <span class="op">=</span> <span class="cn">T</span>,</span>
-<span>  store <span class="op">=</span> <span class="cn">T</span></span>
+<span>  discharge <span class="op">=</span> <span class="cn">F</span>,</span>
+<span>  store <span class="op">=</span> <span class="cn">T</span>,</span>
+<span>  date <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -90,6 +94,11 @@ hydrographs</p></dd>
 <dt>store</dt>
 <dd><p>T/F: Default TRUE: If TRUE, will store created plots in
 ModelFolder</p></dd>
+
+
+<dt>date</dt>
+<dd><p>string. Optional plotting setting to add date to title and output
+file.</p></dd>
 
 </dl></div>
     <div id="value">
