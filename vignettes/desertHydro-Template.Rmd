@@ -24,9 +24,9 @@ whitebox::wbt_init() # initiation whitebox
 ```
 
 ```{r}
-rainfall_method <- "gauges" 
-date <- "2022-08-27" # Optional - if dates present must be in YYYY-MM-DD format
-type <- paste0("test-", rainfall_method,"")
+rainfall_method <- "synthetic" 
+date <- NULL #"2022-08-27" # Optional - if dates present must be in YYYY-MM-DD format
+type <- paste0("test-", rainfall_method,"-demo")
 # Important steps
 ModelFolder <- file.path(r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\SensitivityTests)", type) # replace path to folder where model is saved
 #WatershedElements <- paste0(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\)", type,"WatershedElements") # replace this with your folder
@@ -50,7 +50,7 @@ discharge <-  F # If TRUE, expects discharge present in file
 length <- 10 # grid cell length - assumes uniform grid
 store = T
 time_step <- 1/12 # time step in minutes
-simulation_length <- NA # time length in minutes
+simulation_length <- 1 # time length in minutes
 impervious <- T # no infiltration
 overwrite <- F # overwrite previous inputs in both watershed elements and model folder
 write <- T # create graphs and write outputs to model folder
@@ -97,10 +97,22 @@ a <- arid_model(ModelFolder,
                 write = write,
                 restartModel = restartModel
                 )
+SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
 ```
 
 ```{r gif-creation, gganimate = list(nframes = 30, fps = 3)}
 # Rain file to grab the necessary rainfall method
 rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method)
-gifs <- desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, discharge = F, saveGraph = T)
+gifs <- desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, 
+                                  rainfall_method = rainfall_method, discharge = discharge, 
+                                  saveGraph = T, date = date)
 ```
+```{r, discharge}
+# Determine discharge peak and volume for a given day
+dischargeDF <- dailyDischarge(discharge_file_path = file.path(WatershedElements, "example_discharge.csv"),
+                                    discharge_date = date,
+                                    save_location = ModelFolder,
+                                    saveGraphs = F)
+volume <- dischargeVolume(dischargeDF)
+```
+

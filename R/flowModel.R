@@ -160,14 +160,22 @@ for(t in 1:(length(simulation_duration)-1)){
   ## - Calculates the amount of rainfall in a given time step
   if(simulation_duration[t] < total_rain_duration){ # could cut off rainfall if not careful
    rainfall_for_timestep <- rainfallAccum(rain, beginning_time, end_time, rainfall_method = rainfall_method)
+   if(rainfall_method == "goes" & class(rainfall_for_timestep) == "SpatRaster"){
+     if(terra::ext(rainfall_for_timestep) != terra::ext(SoilStack)){
+       rainfall_for_timestep <- terra::crop(rainfall_for_timestep, ext(SoilStack))
+     }
+   }
   }else{
     rainfall_for_timestep <- 0
   }
+
 
   # Calculate rainfall for time-step
   in_to_cm <- 2.54
   total_rain_cm <- rainfall_for_timestep * in_to_cm
   # # Same amount of rain per time step
+  # Check rainfall extent
+
   SoilStack$current_rainfall <- terra::ifel(is.finite(SoilStack$model_dem), total_rain_cm, NA) # rainfall distribution map
 
   # Volume calculations
@@ -231,9 +239,9 @@ for(t in 1:(length(simulation_duration)-1)){
   #terra::plot(velocity)
   SoilStack$slope <- runoffList[[3]]
   flowStack <- runoffList[[4]]
-  print(runoffList)
+  #print(runoffList)
   volumeDrained <- sum(unlist(runoffList[[5]]))
-  print(volumeDrained)
+  #print(volumeDrained)
   dischargeCalc <- volumeDrained/simulationTimeSecs
   volumeOut <- rbind(volumeOut, list(end_time, volumeDrained, dischargeCalc))
   data.table::fwrite(volumeOut, file.path(ModelFolder, "volumeOut.csv"))
@@ -331,10 +339,10 @@ close(progressBar)
   #file.remove(tempStorage)
 
 if(!impervious){
-  rasterCompile(ModelFolder, "soil", remove = F)
+  rasterCompile(ModelFolder, "soil", remove = T)
 }
-rasterCompile(ModelFolder, "surface", remove = F)
-rasterCompile(ModelFolder, "velocity", remove = F)
+rasterCompile(ModelFolder, "surface", remove = T)
+rasterCompile(ModelFolder, "velocity", remove = T)
 # Save simulation time as text
 end_time <- Sys.time()
 duration <- difftime(end_time, start_time)

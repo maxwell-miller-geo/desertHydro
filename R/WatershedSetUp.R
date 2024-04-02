@@ -14,7 +14,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
   if(file.exists(file.path(ModelFolder, "model_soil_stack.tif"))){
     return("Found model soil stack in model folder, using that file!")
   }
-  model_dem <- file.path(WatershedElements, "model_dem.tif")
+  model_dem <- file.path(ModelFolder, "model_dem.tif")
   print('Locating adjusted digital elevation model.')
   if(!file.exists(model_dem) | overwrite){
     print('Creating adjusted digital elevation model.')
@@ -30,7 +30,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
     print("Located DEM")
   }
   # Slope creation
-  slope <- file.path(WatershedElements, "model_slope.tif") # default name of slope file
+  slope <- file.path(ModelFolder, "model_slope.tif") # default name of slope file
   print('Locating slope file')
   if(!file.exists(slope) | overwrite){
     # Expects one of the outputs from previous function to produce "cropped_dem.tif"
@@ -39,12 +39,12 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
     edges <- terra::focal(slope_temp, w = 3, "modal", na.policy = "only", na.rm = F)
     names(edges) <- "slope"
     # NOTE - slope does not compute for boundary cells
-    terra::writeRaster(edges, filename = file.path(WatershedElements, "model_slope.tif"), overwrite = T)
+    terra::writeRaster(edges, filename = slope, overwrite = T)
   }
   # Land Cover
   # Project the land cover data into same coordinate system of the DEM
   # Check if the landcover raster is already there
-  model_landcover <- file.path(WatershedElements, "model_landcover.tif")
+  model_landcover <- file.path(ModelFolder, "model_landcover.tif")
   fileExists <- file.exists(model_landcover)
   print('Locating adjusted land cover map.')
   if(!fileExists | overwrite){
@@ -58,12 +58,14 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
         land_cover <- terra::rast(landCoverFile)
       }
       dem_local <- terra::rast(model_dem)
+      print(land_cover)
       land_cover_raster <- resizeShape(spatialObject = land_cover,
                                        extent_raster = dem_local,
                                        watershedboundary = WatershedShape,
                                        key = key,
                                        save = F)
       terra::writeRaster(land_cover_raster, model_landcover, overwrite = TRUE)
+      print(land_cover_raster)
       print("Land Cover file clipped and resized.")
   } else{
     # Local land cover raster
@@ -169,3 +171,34 @@ createVoronoi <- function(coords, combined, shapefile, write = F){ # Not run
 # p <- as.data.frame(geom(q))
 # writeVector(z, "voronoi-test.shp", filetype = "ESRI Shapefile", overwrite = T)
 # plot(vect("voronoi-test.shp"))
+## ---------------------------- Function to process landcover
+geologyProcess <- function(landCoverShape, SoilStack, key = "GEOFNT24K"){
+
+  if(is.character(landCoverShape)){
+    landCoverShape <- terra::vect(landCoverShape)
+  }
+  if(is.character(SoilStack)){
+    SoilStack <- terra::rast(SoilStack)
+  }
+  # project land cover into soils layer
+  reproject <- terra::project(landCoverShape, SoilStack)
+  if(key %in% names(reproject)){
+    geokey <- key
+  } else{
+    stop("Could not find key to match the geologic map. Check input key.")
+  }
+  # Rasterize land cover map
+  landCoverRast <- terra::rasterize(reproject, SoilStack, geokey)
+  # Geology excel adjustments
+  geo_excel <- readxl::read_xlsx(r"(C:\Thesis\Arid-Land-Hydrology\R\WatershedElements\geo_adjustments.xlsx)")
+
+  adjustmentMaps <- createSoilRasters(landCoverRast, geo_excel, geokey)
+  return(adjustmentMaps)
+  #uni <- terra::intersect(soils, reproject)
+  #terra::writeVector(uni, file.path(WatershedElements, "geo_soils.shp"))
+  # Load in land cover excel sheet - hard coded
+  #LandCoverCharacteristics <- readxl::read_xlsx(r"(C:\Thesis\Arid-Land-Hydrology\R\WatershedElements\LandCoverCharacteristics_Soils.xlsx)")
+  # hard coded flow
+
+
+}

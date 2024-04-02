@@ -56,9 +56,9 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
   gc()
   # List of created rasters
   crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
-  model_dem <- file.path(Outpath, "model_dem.tif")
-  flow_accum <- file.path(Outpath, "flow_accumulation.tif")
-  extracted_streams <- file.path(Outpath, "stream_extracted.tif")
+  model_dem <- file.path(ModelFolder, "model_dem.tif")
+  flow_accum <- file.path(ModelFolder, "flow_accumulation.tif")
+  extracted_streams <- file.path(ModelFolder, "stream_extracted.tif")
   # Remove model dem if present
   if(file.exists(model_dem) & overwrite){
     print("Overwriting model dem")
@@ -95,7 +95,7 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
     carve_dem <- carveDem(model_dem, flow_accum, outline = watershed_shape_path, depth = 1)
     #carve_dem <- carveDem(dem, flow_accum, depth = 1)
     terra::writeRaster(carve_dem[[1]], model_dem, overwrite = T)
-    flow_accum <- file.path(Outpath, "model_flow_accumlation.tif")
+    flow_accum <- file.path(ModelFolder, "model_flow_accumlation.tif")
     terra::writeRaster(carve_dem[[2]], flow_accum, overwrite = T)
   }
   #carve_dem <- terra::rast(model_dem) + 0

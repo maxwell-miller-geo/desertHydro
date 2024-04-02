@@ -203,10 +203,8 @@ gifCreation <- function(ModelFolder, rain_file, rainfall_method = "", date = NUL
   if(terra::nlyr(velocityStorage) == 1){
     velocityStorage <- rasterCompile(ModelFolder, "velocity", remove = T)
   }
+  rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method = rainfall_method)
 
-  if(is.na(rain_file)){
-    rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method = rainfall_method)
-  }
   xvalues <-as.vector(na.omit(as.numeric(names(surfaceStorage))))
 
   if(discharge & rainfall_method != "goes"){ # gathers total rain and rain duration values

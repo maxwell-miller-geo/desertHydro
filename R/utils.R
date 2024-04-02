@@ -251,7 +251,7 @@ rainfallMethodCheck <- function(ModelFolder, rainfall_method = "", rainfall_stri
     if(file.exists(rainfall_string)){
       rainfall <- rainfall_string
     }
-  }else if(rainfall_method == "gauges" | rainfall_method == "Synthetic"){
+  }else if(rainfall_method == "gauges" | rainfall_method == "synthetic"){
     rainfall <- filePresent("Model-Rainfall.csv", ModelFolder)
   }else if(rainfall_method == "spatial"){
     rainfall <- filePresent("Model-Spatial-Rainfall.csv", ModelFolder)

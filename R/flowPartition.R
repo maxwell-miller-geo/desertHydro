@@ -619,7 +619,7 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
     flowDirectionMap <- terra::rast(flowDirectionMap)
   }
   # Initial variables
-  maxTravel <- length/2 # 5m per time step
+  maxTravel <- length # 5m per time step
   n <- SoilStack$mannings_n
   surface <- SoilStack$surfaceWater # cm of current surface depth
   throughfall <- SoilStack$throughfall
@@ -627,10 +627,9 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
   rainSurface <- surface + throughfall # cm
   # Adjust manning's n based upon the depth of rainfall after
   n <- roughnessAdjust(rainSurface, n)
+  print(n)
   slope <- SoilStack$slope
   dem <- SoilStack$model_dem # m
-
-
   # Manning's n adjustment - dynamically adjust manning's n, if the depth is very low
 
   # Initial velocity
@@ -641,13 +640,16 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
   velocityStorage <- velocityIntermediate
   #print(paste("velocity out", velocityIntermediate))
   # Time step check - returns max distance traveled and adjusted depth
-  distanceDepth <- distanceCheck(velocityIntermediate, rainSurface, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity, drainCells = drainCells, check = T)
+  distanceDepth <- distanceCheck(velocityIntermediate, rainSurface, time_step,
+                                 flowDirectionMap, dem, n, timeVelocity = timeVelocity,
+                                 drainCells = drainCells, check = T)
   #print(distanceDepth)
   # Calculate which cells are to fast
-  fastCells <- distanceDepth[[2]] - maxTravel
-  terra::writeRaster(fastCells, file.path(ModelFolder, paste0("fastest-",round(distanceDepth[[1]],2),".tif")), overwrite = T)
+  #fastCells <- distanceDepth[[2]] - maxTravel
+  #terra::writeRaster(fastCells, file.path(ModelFolder, paste0("fastest-",round(distanceDepth[[1]],2),".tif")), overwrite = T)
   #print(distanceDepth)
   timeAdjustment <- ceiling(distanceDepth[[1]])
+  print(distanceDepth[[1]])
   timeAdjustment <- ifelse(timeAdjustment == 0, 1, timeAdjustment)
   #print(distanceDepth[[1]])
   time_step <- time_step / timeAdjustment
@@ -656,7 +658,7 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
   #distanceDepth[[2]] <- surface + rain_adjust
   volumeStorage <- c()
   dischargeStorage <- c()
-
+  print(timeAdjustment)
   for(x in 1:timeAdjustment){
     if(timeAdjustment == 1){
       volumeStorage <- c(volumeStorage, distanceDepth[[3]])
@@ -685,6 +687,7 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
     velocityAverage <- velocityStorage
   }
   slopeNew <- slopeCalculate(dem + distanceDepth[[2]])
+  slopeNew <- terra::ifel(slopeNew < 0.01, 0.01, slopeNew)
   flowNew <- flowMap(dem + distanceDepth[[2]])
   # surface depth cm, average velocity per time step, new slope, new flow direction map,volume, discharge
   return(list(distanceDepth[[2]], velocityAverage, slopeNew, flowNew, volumeStorage, dischargeStorage))
@@ -700,9 +703,10 @@ depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 1
   volumeDiff <- volumeTotal - volumeLoss
   depthLoss <- volumeLoss / (length^2) * 100 # depth loss (cm)
   depthNormalized <- terra::ifel(depthLoss > depth, depth, depthLoss)
-
+  print(paste("depth normalized", depthNormalized))
   outflowDepth <- depthNormalized[getCellNumber(drainCells, depthNormalized)[[1]]] # outflow cell
   volumeOut <- (outflowDepth/100) * length^2 # volume leaving during timestep in cubic meters
+  print(paste("time step in seconds: ", time_step))
   dischargeOut <- volumeOut/ time_step # timestep in seconds
   # Move the water - no volume changed
   depthChanges <- flowRouting(depthNormalized, flowDirectionMap)
@@ -747,7 +751,7 @@ distanceCheck <- function(velocity, depth, time_step, flowDirectionMap, dem, n, 
   #maxVelocity <- terra::global(velocityNew, fun = quantile, probs = c(0.98), na.rm = T)[[1]] # 95% velocities
   # Super max velocity
   distanceTraveled <- maxVelocity * time_step
-
+  print(paste(distanceTraveled, ": maximum travel distance per time step"))
   # Calculate and return the time and velocity at a given timestep
   timeVelocity <- rbind(timeVelocity,
                         list(tail(timeVelocity, 1)[[1]] + time_step/60,

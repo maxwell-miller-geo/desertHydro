@@ -128,7 +128,7 @@ rainfallAccum <- function(rain, beginning_time, end_time, rainfall_method = "gau
     # Could adjust voronoi
     rainfall_for_timestep <- rasterizeRainfall(voronoi_shape = file.path(WatershedElements, "voronoi.shp"),
                                                rainAtGauges = rainForGauges,
-                                               rainfallRaster = terra::rast(file.path(WatershedElements, "model_dem.tif")))
+                                               rainfallRaster = terra::rast(file.path(ModelFolder, "model_soil_stack.tif")))
     return(rainfall_for_timestep)
   }else if(rainfall_method == "goes"){
     if(beginning_time == 1){
@@ -478,6 +478,9 @@ rainfallCheck <- function(data, search_dates){
 cumulativeRain <- function(rainDF, left, right, spatial = F){
   # Function assumes two column rain data frame: time(minutes) | total rainfall
   time <- NULL
+  if(is.character(rainDF)){
+    rainDF <- readr::read_csv(rainDF, show_col_types = F)
+  }
   SelectRain <- rainDF |>
     dplyr::filter(dplyr::between(time, left-.001, right)) # because between is inclusive - this should make it not inclusive
   # assumes first column is rain_duration normalized to minutes
@@ -497,17 +500,13 @@ rasterizeRainfall <- function(voronoi_shape, rainfallRaster, rainAtGauges){
     shape <- terra::vect(voronoi_shape)
     # Pull out the values and convert to a dataframe
     df <- as.data.frame(terra::values(shape))
-    # replace rain values in dataframe with recorded values
-    # Note: Make sure the position is corresponding correctly
-    replacement_values <- c(round(rainAtGauges, 3))
-    conditions <- c(NaN, NaN, NaN) # Should not have any values saved here
-
-    df$rain <- replace(df$rain, df$rain %in% conditions, replacement_values)
+    df$rain <- NA
+    matchingIDX <- match(df$Gauge, names(rainAtGauges))
+    df$rain <- round(rainAtGauges[unlist(matchingIDX)],3)
     # Assign rainfall to a section the the table
     terra::values(shape) <- df
-
     # Use an input raster map onto
-    newRainfall <- terra::rasterize(shape, rainfallRaster, "rain")
+    newRainfall <- terra::rasterize(shape, rainfallRaster, field = "rain")
     return(newRainfall)
 }
 # Test

@@ -238,6 +238,7 @@ initial_conditions(ModelOutputs = ModelFolder, model_dem = model_dem) # saves in
 # source("Rainfall_Process.R")
 # Read in the rainfall data from a saved file, normalize it, and create a
 rain_file <- suppressWarnings(rainfallCreation(ModelFolder, WatershedElements, date = date, method = rainfall_method, overwrite = overwrite))
+print(rain_file)
 # Slight issue: will use saved rainfall data if present - does not check to see what type of data the rainfall is
 
 ## Discharge presence - obtain information for graphing
@@ -245,7 +246,7 @@ rain_file <- suppressWarnings(rainfallCreation(ModelFolder, WatershedElements, d
 
 # source("Discharge_Process.R")
 rain_discharge <- dischargeCreate(date = date, ModelFolder, WatershedElements, rain_file = rain_file, discharge = discharge)
-
+#return(rain_discharge)
 # For both cases of discharge
 # Calculate the number of observations
 observations <- nrow(rain_discharge)
@@ -368,6 +369,7 @@ if(store){
 print("Retrieving rainfall data for simulation")
 rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method)
 if(gif){
+  print("Creating gifs")
   gifCreation(ModelFolder, rain_file, rainfall_method = rainfall_method, gif = gif, discharge = discharge, date = date)
 }
 

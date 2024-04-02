@@ -4,21 +4,21 @@
 # library(tidyverse)
 
 # Create the land cover stacked map with soil characteristics
-createSoilRasters <- function(ClassMap, soilTable){
-  landtypes <- unique(terra::values(ClassMap, na.rm = TRUE))
-  outStack <- c() # creates empty vector
-  for(x in 1:length(soilTable)){
-
-    if(is.character(soilTable[[x]])){
-      next # Breaks if the value in the table is a character (names)
-    }
-    c_matrix <- matrix(cbind(as.numeric(soilTable$NLCD_Key), c(soilTable[[x]])), ncol = 2) # Create classification matrix
-    temp <- terra::classify(ClassMap, c_matrix) # classify ClassMap based on matrix
-    names(temp) <- names(soilTable[x]) # Assign a name to the Raster Layer
-    outStack <- append(outStack, temp) # Append raster layer to raster 'brick'
-  }
-  return(outStack)
-}
+# createSoilRasters <- function(ClassMap, soilTable){
+#   landtypes <- unique(terra::values(ClassMap, na.rm = TRUE))
+#   outStack <- c() # creates empty vector
+#   for(x in 1:length(soilTable)){
+#
+#     if(is.character(soilTable[[x]])){
+#       next # Breaks if the value in the table is a character (names)
+#     }
+#     c_matrix <- matrix(cbind(as.numeric(soilTable$NLCD_Key), c(soilTable[[x]])), ncol = 2) # Create classification matrix
+#     temp <- terra::classify(ClassMap, c_matrix) # classify ClassMap based on matrix
+#     names(temp) <- names(soilTable[x]) # Assign a name to the Raster Layer
+#     outStack <- append(outStack, temp) # Append raster layer to raster 'brick'
+#   }
+#   return(outStack)
+# }
 
 # Function to read in the land cover map - assumes NLCD - crops and resamples
 # to computational watershed
@@ -26,13 +26,16 @@ resizeShape <- function(spatialObject, extent_raster, watershedboundary, save = 
   land_cover_proj <- terra::project(spatialObject, extent_raster)
   # crop the landcover to the extend boundary
   if(!is.na(watershedboundary)){
+    print("Clipping to watershed boundary.")
     if(class(land_cover_proj)[1] == "SpatVector"){
+      print("Cropping land cover vector.")
       land_cover_crop <- terra::crop(land_cover_proj, terra::vect(watershedboundary), ext = FALSE)
-
       # Find KEY within names
-      if(key %in% names(land_cover_crop)){
-        land_cover_adj <- terra::rasterize(land_cover_crop, extent_raster, field = key, touches = T)
-      }
+      # if(key %in% names(land_cover_crop)){
+      print("Rasterizing land cover.")
+      land_cover_adj <- terra::rasterize(land_cover_crop, extent_raster, field = key, touches = T)
+      return(land_cover_adj)
+      # }
     }else{
       land_cover_adj <- terra::crop(land_cover_proj, terra::vect(watershedboundary), ext = FALSE, mask = TRUE)
     }
@@ -44,7 +47,7 @@ resizeShape <- function(spatialObject, extent_raster, watershedboundary, save = 
   if(save){
     # write the raster into the saved location
     outpath <- file.path(save_location, save_name)
-    terra::writeRaster(land_cover_adj, outpath, overwrite = FALSE)
+    terra::writeRaster(land_cover_adj, outpath, overwrite = TRUE)
   }
   return(land_cover_adj)
   #plot(land_cover)

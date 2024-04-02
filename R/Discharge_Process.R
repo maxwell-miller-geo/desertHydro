@@ -371,3 +371,17 @@ heightToDischarge <- function(height, time_step, units = "cm"){
   return(round(Q,3))
 }
 
+##----------------------------- Volume of discharge
+# Function that takes discharge data and integrates for volume
+dischargeVolume <- function(dischargeDF){
+  time <- stringMatch(dischargeDF, "time")
+  # discharge <- stringMatch(dischargeDF, "discharge")
+  meanQ <- zoo::rollapply(dischargeDF$discharge, width = 2, FUN = mean, by = 1, align = "left")
+  datetime <- as.POSIXct(dischargeDF[,time], format = "%Y-%m-%d %H:%M:%S")
+  diffTime <- diff(datetime)
+  volumePerTimestep <- diffTime * meanQ *60 # volume per time in ft/s
+  date <- lubridate::date(dischargeDF[,time][[1]])
+  volume <- data.table::data.table(date = date, volume_cfs = sum(volumePerTimestep, na.rm = T)[[1]])
+  data.table::fwrite(volume, file.path(ModelFolder, "observed-discharge-volume.csv"))
+  return(volume)
+ }

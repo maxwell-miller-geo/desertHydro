@@ -28,20 +28,51 @@ storage_amount <- function(landCoverTable){
 }
 
 # Create the land cover stacked map with soil characteristics
-createSoilRasters <- function(ClassMapFile, soilTable, key = "MUKEY"){
+
+createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
   requireNamespace("terra")
   # Load in the class map
-  ClassMap <- terra::rast(ClassMapFile)
-  Categories <- terra::catalyze(ClassMap)
+  if(is.character(ClassMapFile)){
+    ClassMap <- terra::rast(ClassMapFile)
+  }else{
+    ClassMap <- ClassMapFile
+  }
+  print(ClassMapFile)
+  print(soilTable)
+  # Categories <- terra::catalyze(ClassMap)
+  # Categories <- terra::as.factor(ClassMap)
+  if(key != "GEOFNT24K"){
+    # Convert the levels of the categorical map to match the key
+    selectColumn <- terra::levels(ClassMap)[[1]][key]
+    print(selectColumn)
+    selectColumn[,1] <- as.numeric(selectColumn[,1])
+    # print(selectColumn)
+    # getLevels <- data.frame(key = sapply(terra::levels(ClassMap)[[1]][key], as.double)) # not pretty
+    #print(getLevels)
+    joinDF <- dplyr::left_join(selectColumn, soilTable, by = key)
+  }else{
+    getLevels <- terra::levels(ClassMap)[[1]]
+    print(soilTable)
+    joinDF <- dplyr::left_join(getLevels, soilTable, by = key) # join by matching key
+  }
   outStack <- c() # creates empty vector
-  for(x in 1:length(soilTable)){
-    if(is.character(soilTable[[x]])){
+  for(x in 1:length(joinDF)){
+    if(is.character(joinDF[[x]])){
       next # Breaks if the value in the table is a character (names)
     }
-    c_matrix <- matrix(cbind(soilTable[[key]], soilTable[[x]]), ncol = 2) # Create classification matrix
-    temp <- terra::classify(x = Categories, rcl = c_matrix) # classify ClassMap based on matrix
+    #c_matrix <- matrix(cbind(soilTable[[key]], as.numeric(soilTable[[x]])), ncol = 2) # Create classification matrix
+    c_matrix <- matrix(cbind(joinDF[[1]], as.numeric(joinDF[[x]])), ncol = 2) # Create classification matrix
+    if(key != "GEOFNT24K"){
+      if(x == 1){
+        next
+      }
+      temp <- terra::subst(ClassMap, as.numeric(soilTable[[key]]), round(as.numeric(soilTable[[x]]),3)) # classify ClassMap based on matrix
+    }else{
+      temp <- terra::classify(x = ClassMap, rcl = c_matrix) # classify ClassMap based on matrix
+    }
+
     #temp <- terra::subst(ClassMap, as.numeric(soilTable[[key]]), round(as.numeric(soilTable[[x]]),3)) # classify ClassMap based on matrix
-    names(temp) <- names(soilTable[x]) # Assign a name to the Raster Layer
+    names(temp) <- names(joinDF[x]) # Assign a name to the Raster Layer
     outStack <- append(outStack, temp) # Append raster layer to raster 'brick'
   }
   return(outStack)
@@ -97,11 +128,16 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
 
   LCC$ET_Reduction <- LCC$fieldCapacityAmount * 0.8 / LCC$soilDepthCM
 
+  # Convert excel sheet to a raster format
+  print(ClassificationMap)
+  print(LCC)
+  print(key)
   SoilStack <- createSoilRasters(ClassMapFile = ClassificationMap, soilTable = LCC, key = key)
+  SoilStack <- c(SoilStack, WatershedStack) # combine watershed and flow stacks
 
-  SoilStack <- c(SoilStack, WatershedStack)
+  # Adjust slope based on elevation differences
   SoilStack$slope <- terra::ifel(SoilStack$slope < 0.01, 0.01, SoilStack$slope)
-  terra::plot(SoilStack$slope)
+  #terra::plot(SoilStack$slope)
   slopeName <- file.path(ModelOutputs, "model_slope.tif")
   terra::writeRaster(SoilStack$slope, slopeName, overwrite = T)
 
@@ -113,7 +149,8 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
 
   SoilStack$throughfall <- SoilStack$slope * 0
   names(SoilStack$throughfall) <- "throughfall"
-  # From - to classification
+
+  # From - to classification of soil depth from slope
   reclassTable <- c(0, 10, 1,
                     10, 20, .98,
                     20, 30, .95,
@@ -123,10 +160,29 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
 
   reclassMatrix <- matrix(reclassTable, ncol = 3, byrow = T)
   depthModifier <- terra::classify(SoilStack$slope, reclassMatrix, include.lowest = T)
-
+  print("original mannigns n")
+  print(SoilStack$mannings_n)
   if(depthAdj){
-    SoilStack$soilDepthCM <- SoilStack$soilDepthCM * depthModifier
+    SoilStack$soilDepthCM <- SoilStack$soilDepthCM *depthModifier
+    # Geo map adjustment
+    geologic_map <- file.path(WatershedElements, "geo_soils.shp")
+    if(file.exists(geologic_map)){
+      print("Found geologic map: Adjusting hydraulic parameters")
+      adjustmentMaps <- geologyProcess(geologic_map, SoilStack)
+      print(adjustmentMaps)
+      # Adjust the manning's N coefficients
+      SoilStack$mannings_n <- SoilStack$mannings_n * adjustmentMaps$mannings_n
+      print("adjusted mannings n")
+      print(SoilStack$mannings_n)
+      # Adjust the soil depths simulation
+      SoilStack$soilDepthCM <- SoilStack$soilDepthCM * adjustmentMaps$SoilDepthAdj
+      # Adjust the hydraulic conductivity
+      SoilStack$saturatedHydraulicMatrix <- SoilStack$saturatedHydraulicMatrix *
+                                            adjustmentMaps$saturatedHydraulicMatrix
+    }
+
     # Adjust certain characteristics base upon slope
+
     # Calculate Field capacity amount
     SoilStack$fieldCapacityAmount <- SoilStack$soilDepthCM * (SoilStack$fieldCapacityMoistureContent - SoilStack$residualMoistureContent)
     # Field Capacity Conductivity = Ksat * exp((-13.0/Sat_mc)*(sat_mc_1 -fieldcapt_amt/soilDepth))
@@ -135,6 +191,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
       SoilStack$saturatedMoistureContent,
       SoilStack$fieldCapacityAmount,
       SoilStack$soilDepthCM, raster = T)
+
     # Calculate maximum storage amount
     SoilStack$maxSoilStorageAmount <- storage_amount(SoilStack)
     # Calculate starting soil storage amount
@@ -156,7 +213,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
       stream_extracted <- terra::crop(stream_extracted, SoilStack$slope)
     }
     extracted <- terra::ifel(is.nan(stream_extracted), 0, stream_extracted)
-    SoilStack$mannings_n <- SoilStack$mannings_n - extracted*.01
+    SoilStack$mannings_n <- abs(SoilStack$mannings_n - extracted*.0025)
   }
 
   # Save the starting soil characteristic layers
