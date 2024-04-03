@@ -13,189 +13,192 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-
-```{r setup}
-library(desertHydro)
-library(terra)
-library(ggplot2) # For plotting
-library(gganimate) # For animations
-require(whitebox)
-whitebox::wbt_init() # initiation whitebox
-```
-
 ```{r}
-rainfall_method <- "spatial"
-date <- "2022-08-27" # Optional - if dates present must be in YYYY-MM-DD format
-type <- paste0("test-", rainfall_method,"-carve")
-# Important steps
-ModelFolder <- file.path(r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\SensitivityTests)", type) # replace path to folder where model is saved
-#WatershedElements <- paste0(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\)", type,"WatershedElements") # replace this with your folder
-WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\WatershedElements)"
-
-# WatershedElements <- r"(C:\PackageDev/desertHydro/inst/extdata/DemoElements/)" # replace this with your watershed elements folder
-demFile <- "dem.tif" # DEM file to simulate over
-boundary <- "test-boundary.shp" # Optional
-#boundary <- "boundary.shp" # Optional
-#boundary <- "waterholes_shape.shp" # Optional
-#boundary <- "mini_ws.shp" # Optional
-landCoverFile <- "soils.shp"
-LandCoverCharacteristics <- "LandCoverCharacteristics_soils.xlsx"
-key <- "MUSYM" # key is present in both the landcoverfile and the land cover characteristics
-
-rainFile <- "USGS_Rain_2001_2021.xlsx"
-dischargeFile <- "example_discharge.csv"
-discharge <-  F # If TRUE, expects discharge present in file
-
-# If rainfall method is synthetic - uses 1/2 inch - 15 minute storm
-
-length <- 10 # grid cell length - assumes uniform grid
-store = T
-time_step <- 1/12 # time step in minutes
-simulation_length <- 2 # time length in minutes
-impervious <- T # no infiltration
-overwrite <- F # overwrite previous inputs in both watershed elements and model folder
-write <- T # create graphs and write outputs to model folder
-restartModel <- T # If model is paused mid-run, can be restarted with same inputs
-gif <- F # If TRUE, gif's will be created automatically. Can be created at the end
+print("Coming soon!")
 ```
 
-```{r, check files}
-# Check if the necessary folders are present
-foldersToCheck <- c(ModelFolder, WatershedElements)
-folders <- sapply(foldersToCheck, FUN = file.exists)
-if(!all(folders)){
-  print(paste0("All folders are not found. Here is a list of folders not found."))
-  print(folders)
-}
-# Check if the necessary files are present
-filesToCheck <- c(demFile, boundary, landCoverFile, LandCoverCharacteristics, rainFile, dischargeFile)
-filesCheck <- sapply(file.path(WatershedElements, filesToCheck), FUN = file.exists)
-if(!all(filesCheck)){
-  print("All files are not found. Here is a list of the files present.")
-  print(filesCheck)
-}else{
-  print("All files found.")
-}
-```
+<!-- ```{r setup} -->
+<!-- library(desertHydro) -->
+<!-- library(terra) -->
+<!-- library(ggplot2) # For plotting -->
+<!-- library(gganimate) # For animations -->
+<!-- require(whitebox) -->
+<!-- whitebox::wbt_init() # initiation whitebox -->
+<!-- ``` -->
 
-```{r}
-a <- arid_model(ModelFolder,
-                WatershedElements,
-                date = date,
-                demFile = demFile,
-                boundary = boundary,
-                landCoverFile = landCoverFile,
-                LandCoverCharacteristics = LandCoverCharacteristics,
-                key = key,
-                impervious = impervious,
-                rainfall_method = rainfall_method,
-                store = store,
-                gif = gif,
-                discharge = discharge,
-                time_step = time_step,
-                simulation_length = simulation_length,
-                overwrite = overwrite,
-                write = write,
-                restartModel = restartModel
-                )
-SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
-```
+<!-- ```{r} -->
+<!-- rainfall_method <- "spatial" -->
+<!-- date <- "2022-08-27" # Optional - if dates present must be in YYYY-MM-DD format -->
+<!-- type <- paste0("test-", rainfall_method,"-carve") -->
+<!-- # Important steps -->
+<!-- ModelFolder <- file.path(r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\SensitivityTests)", type) # replace path to folder where model is saved -->
+<!-- #WatershedElements <- paste0(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\)", type,"WatershedElements") # replace this with your folder -->
+<!-- WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\WatershedElements)" -->
 
-```{r}
+<!-- # WatershedElements <- r"(C:\PackageDev/desertHydro/inst/extdata/DemoElements/)" # replace this with your watershed elements folder -->
+<!-- demFile <- "dem.tif" # DEM file to simulate over -->
+<!-- boundary <- "test-boundary.shp" # Optional -->
+<!-- #boundary <- "boundary.shp" # Optional -->
+<!-- #boundary <- "waterholes_shape.shp" # Optional -->
+<!-- #boundary <- "mini_ws.shp" # Optional -->
+<!-- landCoverFile <- "soils.shp" -->
+<!-- LandCoverCharacteristics <- "LandCoverCharacteristics_soils.xlsx" -->
+<!-- key <- "MUSYM" # key is present in both the landcoverfile and the land cover characteristics -->
 
-# Plot the maximum values for each cell
-surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
-maxDepth <- max(surfaceStorage)
-terra::writeRaster(maxDepth, file.path(ModelFolder, "max-depth-map.tif"))
+<!-- rainFile <- "USGS_Rain_2001_2021.xlsx" -->
+<!-- dischargeFile <- "example_discharge.csv" -->
+<!-- discharge <-  F # If TRUE, expects discharge present in file -->
 
-#plot(maxDepth)
-velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
-maxVelocity <- max(velocityStorage)
-terra::writeRaster(maxVelocity, file.path(ModelFolder, "max-velocity-map.tif"))
-#plot(maxVelocity)
-slope <- SoilStack$slope
-dem <- terra::rast(file.path(ModelFolder, "model_dem.tif"))
-# Plot values that are a little to high - maybe
-plot(maxDepth > 30)
-plot(maxVelocity > 4)
-terra::writeRaster(maxDepth > 30, file.path(ModelFolder, "greaterThan30cm.tif"))
-terra::writeRaster(maxVelocity > 4, file.path(ModelFolder, "greaterThan4ms.tif"))
+<!-- # If rainfall method is synthetic - uses 1/2 inch - 15 minute storm -->
 
-# stream section
-stream <- terra::vect(file.path(WatershedElements, "stream_path.shp"))
-# Load in created mainstem in QGIS
-# ms <- terra::vect(file.path(WatershedElements, "main-stem.shp"))
-# crsAssign(file.path(WatershedElements, "main-stem.shp"))
-stream <- ms
-# dem <- terra::rast(breach_test)
-model_dem_rast <- terra::rast(file.path(ModelFolder, "model_dem.tif"))
-ogdem <- terra::rast(file.path(WatershedElements, "dem.tif"))
+<!-- length <- 10 # grid cell length - assumes uniform grid -->
+<!-- store = T -->
+<!-- time_step <- 1/12 # time step in minutes -->
+<!-- simulation_length <- 2 # time length in minutes -->
+<!-- impervious <- T # no infiltration -->
+<!-- overwrite <- F # overwrite previous inputs in both watershed elements and model folder -->
+<!-- write <- T # create graphs and write outputs to model folder -->
+<!-- restartModel <- T # If model is paused mid-run, can be restarted with same inputs -->
+<!-- gif <- F # If TRUE, gif's will be created automatically. Can be created at the end -->
+<!-- ``` -->
 
-plot(ogdem - model_dem_rast)
-dem <- model_dem_rast
-# Extract values along stream
-demExt <- terra::extract(dem, stream)
-depthExt <- terra::extract(maxDepth, stream, xy = T)
-velExt <- terra::extract(maxVelocity, stream)
-slopeExt <- terra::extract(slope, stream)
-stream_x <- nrow(demExt)
-x <- 1:stream_x
-vValues <- c(75, 97, 112, 138, 147, 194, 200)
-# Combine datasets
-df <- data.frame(x = x, dem = demExt$model_dem)
+<!-- ```{r, check files} -->
+<!-- # Check if the necessary folders are present -->
+<!-- foldersToCheck <- c(ModelFolder, WatershedElements) -->
+<!-- folders <- sapply(foldersToCheck, FUN = file.exists) -->
+<!-- if(!all(folders)){ -->
+<!--   print(paste0("All folders are not found. Here is a list of folders not found.")) -->
+<!--   print(folders) -->
+<!-- } -->
+<!-- # Check if the necessary files are present -->
+<!-- filesToCheck <- c(demFile, boundary, landCoverFile, LandCoverCharacteristics, rainFile, dischargeFile) -->
+<!-- filesCheck <- sapply(file.path(WatershedElements, filesToCheck), FUN = file.exists) -->
+<!-- if(!all(filesCheck)){ -->
+<!--   print("All files are not found. Here is a list of the files present.") -->
+<!--   print(filesCheck) -->
+<!-- }else{ -->
+<!--   print("All files found.") -->
+<!-- } -->
+<!-- ``` -->
 
-demG <- ggplot(df) + geom_line(aes(x, dem)) + geom_vline(xintercept = vValues, color = "grey")
+<!-- ```{r} -->
+<!-- a <- arid_model(ModelFolder, -->
+<!--                 WatershedElements, -->
+<!--                 date = date, -->
+<!--                 demFile = demFile, -->
+<!--                 boundary = boundary, -->
+<!--                 landCoverFile = landCoverFile, -->
+<!--                 LandCoverCharacteristics = LandCoverCharacteristics, -->
+<!--                 key = key, -->
+<!--                 impervious = impervious, -->
+<!--                 rainfall_method = rainfall_method, -->
+<!--                 store = store, -->
+<!--                 gif = gif, -->
+<!--                 discharge = discharge, -->
+<!--                 time_step = time_step, -->
+<!--                 simulation_length = simulation_length, -->
+<!--                 overwrite = overwrite, -->
+<!--                 write = write, -->
+<!--                 restartModel = restartModel -->
+<!--                 ) -->
+<!-- SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif")) -->
+<!-- ``` -->
 
-df <- data.frame(x = x, depth = depthExt$max, velocity = velExt$max, slope = slopeExt$slope, dem = demExt$model_dem)
-# Plot values
-labelx <- "Distance from Gauge (# cells)"
-velocityG <- ggplot(df) + geom_point(aes(x, velocity), colour = "red", shape = "square") +
-  labs(title = "Canyon Stream Properties") + xlab("") + ylab("Velocity (m/s)")+ theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5)) + geom_vline(xintercept = vValues, color = "grey")
+<!-- ```{r} -->
 
-depthG <- ggplot(df) + geom_point(aes(x, depth), color = "blue", shape = "circle")+xlab("") + ylab("Maximum depth (cm)") + theme_minimal() + geom_vline(xintercept = vValues, color = "grey")
+<!-- # Plot the maximum values for each cell -->
+<!-- surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif")) -->
+<!-- maxDepth <- max(surfaceStorage) -->
+<!-- terra::writeRaster(maxDepth, file.path(ModelFolder, "max-depth-map.tif")) -->
 
-slopeG <- ggplot(df) + geom_point(aes(x, slope), color = "black", shape = "diamond")+xlab(labelx) + ylab("Slope (°)") + theme_minimal() + geom_vline(xintercept = vValues, color = "grey")
+<!-- #plot(maxDepth) -->
+<!-- velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif")) -->
+<!-- maxVelocity <- max(velocityStorage) -->
+<!-- terra::writeRaster(maxVelocity, file.path(ModelFolder, "max-velocity-map.tif")) -->
+<!-- #plot(maxVelocity) -->
+<!-- slope <- SoilStack$slope -->
+<!-- dem <- terra::rast(file.path(ModelFolder, "model_dem.tif")) -->
+<!-- # Plot values that are a little to high - maybe -->
+<!-- plot(maxDepth > 30) -->
+<!-- plot(maxVelocity > 4) -->
+<!-- terra::writeRaster(maxDepth > 30, file.path(ModelFolder, "greaterThan30cm.tif")) -->
+<!-- terra::writeRaster(maxVelocity > 4, file.path(ModelFolder, "greaterThan4ms.tif")) -->
 
-demG <- ggplot(df) + geom_line(aes(x, dem))+ geom_vline(xintercept = vValues, color = "grey")
-library(gridExtra)
+<!-- # stream section -->
+<!-- stream <- terra::vect(file.path(WatershedElements, "stream_path.shp")) -->
+<!-- # Load in created mainstem in QGIS -->
+<!-- # ms <- terra::vect(file.path(WatershedElements, "main-stem.shp")) -->
+<!-- # crsAssign(file.path(WatershedElements, "main-stem.shp")) -->
+<!-- stream <- ms -->
+<!-- # dem <- terra::rast(breach_test) -->
+<!-- model_dem_rast <- terra::rast(file.path(ModelFolder, "model_dem.tif")) -->
+<!-- ogdem <- terra::rast(file.path(WatershedElements, "dem.tif")) -->
 
-comb <- gridExtra::grid.arrange(velocityG, depthG, slopeG, demG)
-ggsave(file.path(ModelFolder, "stream_props.png"), plot = comb, width = 8, height = 8)
+<!-- plot(ogdem - model_dem_rast) -->
+<!-- dem <- model_dem_rast -->
+<!-- # Extract values along stream -->
+<!-- demExt <- terra::extract(dem, stream) -->
+<!-- depthExt <- terra::extract(maxDepth, stream, xy = T) -->
+<!-- velExt <- terra::extract(maxVelocity, stream) -->
+<!-- slopeExt <- terra::extract(slope, stream) -->
+<!-- stream_x <- nrow(demExt) -->
+<!-- x <- 1:stream_x -->
+<!-- vValues <- c(75, 97, 112, 138, 147, 194, 200) -->
+<!-- # Combine datasets -->
+<!-- df <- data.frame(x = x, dem = demExt$model_dem) -->
 
-plot(x, depthExt$max)
+<!-- demG <- ggplot(df) + geom_line(aes(x, dem)) + geom_vline(xintercept = vValues, color = "grey") -->
 
-```
+<!-- df <- data.frame(x = x, depth = depthExt$max, velocity = velExt$max, slope = slopeExt$slope, dem = demExt$model_dem) -->
+<!-- # Plot values -->
+<!-- labelx <- "Distance from Gauge (# cells)" -->
+<!-- velocityG <- ggplot(df) + geom_point(aes(x, velocity), colour = "red", shape = "square") + -->
+<!--   labs(title = "Canyon Stream Properties") + xlab("") + ylab("Velocity (m/s)")+ theme_minimal() + -->
+<!--   theme(plot.title = element_text(hjust = 0.5)) + geom_vline(xintercept = vValues, color = "grey") -->
 
+<!-- depthG <- ggplot(df) + geom_point(aes(x, depth), color = "blue", shape = "circle")+xlab("") + ylab("Maximum depth (cm)") + theme_minimal() + geom_vline(xintercept = vValues, color = "grey") -->
 
-```{r gif-creation, gganimate = list(nframes = 30, fps = 3)}
-# Rain file to grab the necessary rainfall method
-rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method)
-gifs <- desertHydro:::gifCreation(ModelFolder, rain_file = rain_file,
-                                  rainfall_method = rainfall_method, discharge = discharge,
-                                  saveGraph = T, date = date)
-```
-```{r, discharge}
-# Determine discharge peak and volume for a given day
-dischargeDF <- dailyDischarge(discharge_file_path = file.path(WatershedElements, "example_discharge.csv"),
-                                    discharge_date = date,
-                                    save_location = ModelFolder,
-                                    saveGraphs = F)
-volume <- dischargeVolume(dischargeDF)
+<!-- slopeG <- ggplot(df) + geom_point(aes(x, slope), color = "black", shape = "diamond")+xlab(labelx) + ylab("Slope (°)") + theme_minimal() + geom_vline(xintercept = vValues, color = "grey") -->
 
-```
-```{r}
-# Flow to string
-flow_accum <- terra::rast(file.path(WatershedElements, "flow_accumulation.tif"))
+<!-- demG <- ggplot(df) + geom_line(aes(x, dem))+ geom_vline(xintercept = vValues, color = "grey") -->
+<!-- library(gridExtra) -->
 
-# Extract mainstep - 300,000 cells
-main_stem <- terra::ifel(flow_accum > 200000, 1, 0)
-writeRaster(main_stem, file.path(WatershedElements, "main_stem.tif"))
-main_lines <- as.lines(main_stem)
+<!-- comb <- gridExtra::grid.arrange(velocityG, depthG, slopeG, demG) -->
+<!-- ggsave(file.path(ModelFolder, "stream_props.png"), plot = comb, width = 8, height = 8) -->
+
+<!-- plot(x, depthExt$max) -->
+
+<!-- ``` -->
 
 
-plot(main_stem)
+<!-- ```{r gif-creation, gganimate = list(nframes = 30, fps = 3)} -->
+<!-- # Rain file to grab the necessary rainfall method -->
+<!-- rain_file <- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method) -->
+<!-- gifs <- desertHydro:::gifCreation(ModelFolder, rain_file = rain_file, -->
+<!--                                   rainfall_method = rainfall_method, discharge = discharge, -->
+<!--                                   saveGraph = T, date = date) -->
+<!-- ``` -->
+<!-- ```{r, discharge} -->
+<!-- # Determine discharge peak and volume for a given day -->
+<!-- dischargeDF <- dailyDischarge(discharge_file_path = file.path(WatershedElements, "example_discharge.csv"), -->
+<!--                                     discharge_date = date, -->
+<!--                                     save_location = ModelFolder, -->
+<!--                                     saveGraphs = F) -->
+<!-- volume <- dischargeVolume(dischargeDF) -->
 
-# Vectorize mainstem
-```
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- # Flow to string -->
+<!-- flow_accum <- terra::rast(file.path(WatershedElements, "flow_accumulation.tif")) -->
+
+<!-- # Extract mainstep - 300,000 cells -->
+<!-- main_stem <- terra::ifel(flow_accum > 200000, 1, 0) -->
+<!-- writeRaster(main_stem, file.path(WatershedElements, "main_stem.tif")) -->
+<!-- main_lines <- as.lines(main_stem) -->
+
+
+<!-- plot(main_stem) -->
+
+<!-- # Vectorize mainstem -->
+<!-- ``` -->
 
