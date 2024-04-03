@@ -27,6 +27,7 @@ library(desertHydro)
 library(terra)
 library(ggplot2) # For plotting
 library(gganimate) # For animations
+library(whitebox)
 #require(whitebox)
 whitebox::wbt_init(
   exe_path = whitebox::wbt_exe_path(shell_quote = FALSE),

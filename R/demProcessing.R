@@ -185,6 +185,7 @@ streamCreate <- function(flowRasterPath, model_dem, Outpath, threshold = 100){
 #   Outpath = WatershedElements,
 #   DemFolder = ModelFolder
 # )
+
 ## ---------------------------- Stream network analysis
 # wbt_vector_stream_network_analysis(
 #   streams = streams,

@@ -299,3 +299,5 @@ folderCheck <- function(folder, example_file = "dem.tif", demo = T){
       stop(paste0("Could not find the '", example_file ,"' in the: '", folder,"' path"))
     }
 }
+
+
