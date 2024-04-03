@@ -44,6 +44,7 @@ streamBurn <- function(stream, dem, flow_accumulation){
   }
 
   smoothDEM <- dem
+  terra::writeRaster(smoothDEM, file.path(WatershedElements, "smooth_dem.tif"))
   # selectSegment <- sapply(x = 1:nUnique, FUN = extractedDF[ID == x, mod_dem])
   # selectIdOne <- extractedDF[ID == 1, mod_dem] # ID = 1, dem column
   # selectId2 <- extractedDF[ID == 2, mod_dem]# ID = 1, dem column

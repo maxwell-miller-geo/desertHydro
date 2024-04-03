@@ -282,14 +282,17 @@ for(t in 1:(length(simulation_duration)-1)){
   # }
   ##---------------- Save step-------------
   #if(counter %% saveRate == 0){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
-  if(T | gif | counter %% saveRate == 0 | t == length(simulation_duration)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
+  if(TRUE | gif | counter %% saveRate == 0 | t == length(simulation_duration)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
 
     # writeLayers to disk space
     # writeLayer(subsurfacePath, round(SoilStack$currentSoilStorage, 3), layername = end_time)
     # writeLayer(surfacePath, round(SoilStack$surfaceWater, 3), layername = end_time)
     # writeLayer(velocityPath, round(velocity, 3), layername = end_time)
 
+
+
     # Write single rasters for important features
+    if(t == 1 | end_time %% 0.5 == 0){
     if(!impervious){
       soil <- "soil"
       rasterWrite(round(SoilStack$currentSoilStorage,3), ModelFolder, end_time, layername = soil)
@@ -299,7 +302,7 @@ for(t in 1:(length(simulation_duration)-1)){
     rasterWrite(round(SoilStack$surfaceWater,3), ModelFolder, end_time, layername = surface)
     velocityName <- "velocity"
     rasterWrite(round(velocity,3), ModelFolder, end_time, layername = velocityName)
-
+    }
     # Shapefile saves
     # vectCreation(velocityMax_df, saveLoc = ModelFolder, name = "max-velocity.shp", coords = terra::crs(SoilStack))
     # vectCreation(depthMaxDF, saveLoc = ModelFolder, name = "max-depth.shp", coords = terra::crs(SoilStack))
@@ -338,11 +341,12 @@ close(progressBar)
   utils::write.table(model_complete, file = file.path(ModelFolder, "ModelComplete.txt"))
   #file.remove(tempStorage)
 
-if(!impervious){
-  rasterCompile(ModelFolder, "soil", remove = T)
-}
-rasterCompile(ModelFolder, "surface", remove = T)
-rasterCompile(ModelFolder, "velocity", remove = T)
+  if(!impervious){
+    rasterCompile(ModelFolder, "soil", remove = T)
+  }
+  rasterCompile(ModelFolder, "surface", remove = T)
+  rasterCompile(ModelFolder, "velocity", remove = T)
+
 # Save simulation time as text
 end_time <- Sys.time()
 duration <- difftime(end_time, start_time)
