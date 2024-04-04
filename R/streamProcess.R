@@ -52,7 +52,6 @@ streamBurn <- function(stream, demPath, outpath = NULL){
     extractedDF[ID==x, mod_dem := smoothVector(extractedDF[ID == x, mod_dem])]
   }
 
-  points <-
   # # Put DF back into original
   # for(i in 1:nrow(extractedDF)){
   #   dem[extractedDF[[i,3]]] <- extractedDF[i,2]

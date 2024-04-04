@@ -56,20 +56,26 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
   gc()
   # List of created rasters
   crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
-  crs_dem <- paste0("epsg:",terra::crs(terra::rast(file.path(WatershedElements, "dem.tif")), describe = T)[[3]])
+  units <- terra::res(terra::rast(dem_file_path))[1] # units of dem
+  # crs_dem <- paste0("epsg:",terra::crs(terra::rast(file.path(WatershedElements, "dem.tif")), describe = T)[[3]])
   model_dem <- file.path(ModelFolder, "model_dem.tif")
   flow_accum <- file.path(ModelFolder, "flow_accumulation.tif")
   extracted_streams <- file.path(ModelFolder, "stream_extracted.tif")
+  vect_stream <- file.path(ModelFolder, "vect_stream.shp")
   # Remove model dem if present
   if(file.exists(model_dem) & overwrite){
     print("Overwriting model dem")
     file.remove(model_dem)
   }
   if(!file.exists(model_dem)){
-    whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_change)
-    whitebox::wbt_breach_depressions_least_cost(dem = file.path(WatershedElements, "dem.tif"), output = model_dem, dist = 1000, fill = TRUE)
+    #whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_change)
+    whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = 1000, flat_increment = .01)
     crsAssign(model_dem, coordinateSystem = crs_dem)
   }
+
+  # Calculate D8 points
+  d8_pntr <- file.path(ModelFolder, "fd8_pntr.tif")
+  whitebox::wbt_d8_pointer(model_dem, d8_pntr)
 
   # Remove flow accumulation if exists
   if(file.exists(flow_accum) & overwrite){
@@ -80,21 +86,53 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
     whitebox::wbt_d8_flow_accumulation(input = model_dem, output = flow_accum)
     crsAssign(flow_accum, coordinateSystem = crs_dem)
   }
-
-
   # Extract streams
   if(file.exists(extracted_streams) & overwrite){
     print("Overwriting extracted streams")
     file.remove(extracted_streams)
   }
   if(!file.exists(extracted_streams)){
-    whitebox::wbt_extract_streams(flow_accum, extracted_streams, threshold = 1000)
+    whitebox::wbt_extract_streams(flow_accum, extracted_streams, threshold = 1200)
     crsAssign(extracted_streams, coordinateSystem = crs_dem)
   }
 
+  # Vector stream network
+  if(file.exists(vect_stream) & overwrite){
+    print("Overwriting stream netwowrk")
+    file.remove(vect_stream)
+  }
+
+  # RasterStreams to Vector
+  whitebox::wbt_raster_streams_to_vector(extracted_streams, d8_pntr, vect_stream)
+  crsAssign(vect_stream, coordinateSystem = crs_dem)
+
+  # Create stream netowrk analysis
+  stream_network <- file.path(ModelFolder, "stream_network.shp")
+  whitebox::wbt_vector_stream_network_analysis(vect_stream, model_dem, stream_network)
+  crsAssign(stream_network, coordinateSystem = crs_dem)
+
+  # Create Long Profile hmtl files for visualization
+  profile <-
+  whitebox::wb
+  # Create vector stream network
+  # whitebox::wbt_raster_to_vector_lines(extracted_streams, vect_stream)
+  # crsAssign(vect_stream, coordinateSystem = crs_dem)
+
+  # Repair stream vectors - should not run on digital created networks
+  # repair_streams <- file.path(ModelFolder, "stream_repair.shp")
+  # if(file.exists(repair_streams) & overwrite){
+  #   print("Overwriting repaired streams")
+  #   file.remove(repair_streams)
+  # }
+  #
+  # if(!file.exists(repair_streams)){
+  #   whitebox::wbt_repair_stream_vector_topology(vect_stream, repair_streams, dist = 1*units) # sqrt(2) length away
+  #   crsAssign(repair_streams, coordinateSystem = crs_dem)
+  # }
+
   # Carve dem
   if(carve){
-    carve_dem <- carveDem(model_dem, flow_accum, outline = watershed_shape_path, depth = 1)
+    carve_dem <- carveDem(model_dem, flow_accum, outline = watershed_shape_path, depth = 2)
     #carve_dem <- carveDem(dem, flow_accum, depth = 1)
     terra::writeRaster(carve_dem[[1]], model_dem, overwrite = T)
     flow_accum <- file.path(ModelFolder, "model_flow_accumlation.tif")
