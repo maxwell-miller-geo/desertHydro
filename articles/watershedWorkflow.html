@@ -128,12 +128,12 @@ With these two elements, the model can run on impervious mode
 (impervious = T)</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
-<span><span class="va">demFile</span> <span class="op">&lt;-</span> <span class="st">"smooth_dem.tif"</span> <span class="co"># DEM file to simulate over - should be named dem.tif</span></span>
+<span><span class="va">demFile</span> <span class="op">&lt;-</span> <span class="st">"smooth_dem.tif"</span> <span class="co"># DEM file to simulate over - should be named smooth/dem.tif</span></span>
 <span></span>
 <span><span class="co"># Check if watershed elements folder exists</span></span>
 <span><span class="va">WatershedElements</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/folderCheck.html">folderCheck</a></span><span class="op">(</span><span class="va">WatershedElements</span>, <span class="va">demFile</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">boundary</span> <span class="op">&lt;-</span> <span class="st">"boundary.shp"</span> <span class="co"># Name of shapefile for outline</span></span>
+<span><span class="va">boundary</span> <span class="op">&lt;-</span> <span class="st">"test-boundary.shp"</span> <span class="co"># Name of shapefile for outline</span></span>
 <span><span class="va">landCoverFile</span> <span class="op">&lt;-</span> <span class="st">"soils.shp"</span> <span class="co"># name of soils data</span></span>
 <span><span class="va">LandCoverCharacteristics</span> <span class="op">&lt;-</span> <span class="st">"LandCoverCharacteristics_Soils.xlsx"</span></span>
 <span><span class="va">key</span> <span class="op">&lt;-</span> <span class="st">"MUSYM"</span> <span class="co"># key is present in both the landcoverfile and the land cover characteristics</span></span></code></pre></div>
@@ -169,7 +169,7 @@ the spatial file and the excel file.</p>
 <span><span class="va">length</span> <span class="op">&lt;-</span> <span class="fl">10</span> <span class="co"># grid cell length - assumes uniform grid</span></span>
 <span><span class="va">store</span> <span class="op">=</span> <span class="cn">T</span></span>
 <span><span class="va">time_step</span> <span class="op">&lt;-</span> <span class="fl">.1</span> <span class="co"># time step in minutes</span></span>
-<span><span class="va">simulation_length</span> <span class="op">&lt;-</span>  <span class="fl">2</span> <span class="co"># time length in minutes</span></span>
+<span><span class="va">simulation_length</span> <span class="op">&lt;-</span>  <span class="fl">5</span> <span class="co"># time length in minutes</span></span>
 <span><span class="va">impervious</span> <span class="op">&lt;-</span>  <span class="co"># no infiltration</span></span>
 <span><span class="va">overwrite</span> <span class="op">&lt;-</span> <span class="cn">T</span> <span class="co"># overwrite previous inputs in both watershed elements and model folder</span></span>
 <span><span class="va">write</span> <span class="op">&lt;-</span> <span class="cn">T</span> <span class="co"># create graphs and write outputs to model folder</span></span>
