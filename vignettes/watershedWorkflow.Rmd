@@ -68,12 +68,12 @@ With these two elements, the model can run on impervious mode (impervious = T)
 
 ```{r, important files, results='hide'}
 
-demFile <- "smooth_dem.tif" # DEM file to simulate over - should be named dem.tif
+demFile <- "smooth_dem.tif" # DEM file to simulate over - should be named smooth/dem.tif
 
 # Check if watershed elements folder exists
 WatershedElements <- folderCheck(WatershedElements, demFile)
 
-boundary <- "boundary.shp" # Name of shapefile for outline
+boundary <- "test-boundary.shp" # Name of shapefile for outline
 landCoverFile <- "soils.shp" # name of soils data
 LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
 key <- "MUSYM" # key is present in both the landcoverfile and the land cover characteristics
@@ -105,7 +105,7 @@ rainfall_method <- "synthetic"
 length <- 10 # grid cell length - assumes uniform grid
 store = T
 time_step <- .1 # time step in minutes
-simulation_length <-  2 # time length in minutes
+simulation_length <-  5 # time length in minutes
 impervious <-  # no infiltration
 overwrite <- T # overwrite previous inputs in both watershed elements and model folder
 write <- T # create graphs and write outputs to model folder
