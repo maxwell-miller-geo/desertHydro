@@ -13,9 +13,7 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
-```{r}
-print("Coming soon!")
-```
+
 
 ```{r setup}
 library(desertHydro)
@@ -154,6 +152,7 @@ demG <- ggplot(df) + geom_line(aes(x, dem)) + geom_vline(xintercept = vValues, c
 df <- data.frame(x = x, depth = depthExt$max, velocity = velExt$max, slope = slopeExt$slope, dem = demExt$model_dem)
 # Plot values
 labelx <- "Distance from Gauge (# cells)"
+
 velocityG <- ggplot(df) + geom_point(aes(x, velocity), colour = "red", shape = "square") +
   labs(title = "Canyon Stream Properties") + xlab("") + ylab("Velocity (m/s)")+ theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5)) + geom_vline(xintercept = vValues, color = "grey")

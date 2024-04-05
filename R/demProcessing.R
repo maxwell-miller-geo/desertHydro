@@ -52,7 +52,26 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
 ## Flow accumulation function - creates smoothed dem, breached map, and flow accumulation map
 # Note the projections must be the same! - Whitebox will forget the coordinate systems when it creates rasters - makes this less pretty
 
-flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = NA, ModelFolder = NA, smooth_tif = "smoothed_dem.tif", filled_dem = "filled_dem.tif", breached_tif = "breached.tif", out_accum = "flow_accumulation.tif", max_change = 25, carve = T, overwrite = T){
+#' Hydrological pre-processing workflow for digital elevation models
+#'
+#' @param dem_file_path path to digital elevation file
+#' @param ModelFolder Output path to save model outputs
+#' @param watershed_shape_path Optional shapefile to clip the resulting results
+#' @param max_dist numeric value in meters to breach the digital elevation model
+#' @param stream_threshold Flow accumulation number (cells) to create channels
+#' @param carve numeric. Number of meters to carve the channel network down by.
+#' @param overwrite T/F. If TRUE, the model will overwrite previous files in
+#' Model Folder
+#'
+#' @return SpatRaster of the modified digital elevation model
+#' @export
+#'
+#' @examples
+#' ModelFolder <- tempdir() # Create a temporary directory to save files into
+# dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") # pass dem as file path
+# hydro_workflow <- flow_accumlation_wb(dem_path, ModelFolder, )
+
+flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA, max_dist = 1000, stream_threshold = 1200, carve = 0, overwrite = T){
   gc()
   # List of created rasters
   crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
@@ -69,7 +88,7 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
   }
   if(!file.exists(model_dem)){
     #whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_change)
-    whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = 1000, flat_increment = .01)
+    whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_dist, flat_increment = .01)
     crsAssign(model_dem, coordinateSystem = crs_dem)
   }
 
@@ -92,7 +111,7 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
     file.remove(extracted_streams)
   }
   if(!file.exists(extracted_streams)){
-    whitebox::wbt_extract_streams(flow_accum, extracted_streams, threshold = 1200)
+    whitebox::wbt_extract_streams(flow_accum, extracted_streams, threshold = stream_threshold)
     crsAssign(extracted_streams, coordinateSystem = crs_dem)
   }
 
@@ -112,8 +131,8 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
   crsAssign(stream_network, coordinateSystem = crs_dem)
 
   # Create Long Profile hmtl files for visualization
-  profile <-
-  whitebox::wb
+  profile <- file.path(ModelFolder, "profile.html")
+  whitebox::wbt_long_profile(d8_pntr, extracted_streams, model_dem, profile, verbose_mode = F)
   # Create vector stream network
   # whitebox::wbt_raster_to_vector_lines(extracted_streams, vect_stream)
   # crsAssign(vect_stream, coordinateSystem = crs_dem)
@@ -131,8 +150,8 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
   # }
 
   # Carve dem
-  if(carve){
-    carve_dem <- carveDem(model_dem, flow_accum, outline = watershed_shape_path, depth = 2)
+  if(carve > 0){
+    carve_dem <- carveDem(model_dem, flow_accum, outline = watershed_shape_path, depth = carve) #
     #carve_dem <- carveDem(dem, flow_accum, depth = 1)
     terra::writeRaster(carve_dem[[1]], model_dem, overwrite = T)
     flow_accum <- file.path(ModelFolder, "model_flow_accumlation.tif")
@@ -145,6 +164,7 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
   xy <- data.frame(x = drain$x, y = drain$y)
   v <- terra::vect(xy, geom = c("x","y"), crs = crs_dem)
   terra::writeVector(v, file.path(ModelFolder, "drainPoints.shp"), overwrite = T)
+
   # Clip files if necessary
   if(!is.na(watershed_shape_path)){
     # Clip the dem, if a shapefile is present
@@ -168,6 +188,7 @@ flow_accumlation_wb <- function(dem_file_path, Outpath, watershed_shape_path = N
       stop("The coordinates for the input files do not match.")
     }
   }
+  return(terra::rast(model_dem))
 }
 
 d8_flow_accumulation <- function(raster_path, coordinateSys, creation_method = "fill"){

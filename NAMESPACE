@@ -2,4 +2,5 @@
 
 export(arid_model)
 export(dischargeAnalysis)
+export(flow_accumlation_wb)
 export(folderCheck)

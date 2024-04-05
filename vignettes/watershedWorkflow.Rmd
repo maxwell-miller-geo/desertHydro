@@ -8,13 +8,11 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-
 knitr::opts_chunk$set(
   eval = whitebox::check_whitebox_binary(),
   collapse = TRUE,
   comment = "#>",
   progress = FALSE
-  
 )
 ```
 
@@ -68,7 +66,7 @@ With these two elements, the model can run on impervious mode (impervious = T)
 
 ```{r, important files, results='hide'}
 
-demFile <- "smooth_dem.tif" # DEM file to simulate over - should be named smooth/dem.tif
+demFile <- "dem.tif" # DEM file to simulate over - should be named smooth/dem.tif
 
 # Check if watershed elements folder exists
 WatershedElements <- folderCheck(WatershedElements, demFile)

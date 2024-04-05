@@ -1,7 +1,7 @@
 # Stream analysis processsing
 ## ------------------------ Function to take a collection of vector
 # streams lines and burn in the elevation profiles into the model
-streamBurn <- function(stream, demPath, outpath = NULL){
+smoothStream <- function(stream, demPath, outpath = NULL){
   # WatershedElements <- r"(C:\PackageDev\desertHydro\inst\extdata)"
   # stream <- file.path(WatershedElements, "stream_analysis.shp")
   #dem <- file.path(WatershedElements, "dem.tif")
@@ -9,6 +9,7 @@ streamBurn <- function(stream, demPath, outpath = NULL){
   require(whitebox)
   require(data.table)
   require(terra)
+
   WatershedElements <- outpath
   if(class(demPath) == "SpatRaster"){
     stop("Please input dem as a path, not a spatial raster")
@@ -30,8 +31,8 @@ streamBurn <- function(stream, demPath, outpath = NULL){
   if(is.character(mod_dem)){
     dem <- terra::rast(mod_dem)
   }
-  print(mod_dem)
-  print(dem)
+  # print(mod_dem)
+  # print(dem)
   # Extract DEM values
   extractedDEM <- terra::extract(dem, stream, cells = T, xy = T)
   extractedDF <- data.table::data.table(extractedDEM)

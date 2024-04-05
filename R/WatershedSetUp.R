@@ -21,9 +21,8 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
     #library(whitebox)
     #source("demProcessing.R", local = TRUE) # Custom function with whitebox scripts
     flow_accumlation_wb(dem_file_path = DEM,
-                        Outpath = WatershedElements,
-                        watershed_shape_path = WatershedShape,
                         ModelFolder = ModelFolder,
+                        watershed_shape_path = WatershedShape,
                         overwrite = overwrite) # Does not overwrite - creates many rasters
     print('Finished creating adjusted DEM.')
   } else{
