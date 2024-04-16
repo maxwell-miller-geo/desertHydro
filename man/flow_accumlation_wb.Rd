@@ -10,7 +10,7 @@ flow_accumlation_wb(
   watershed_shape_path = NA,
   max_dist = 1000,
   stream_threshold = 1200,
-  carve = 2,
+  carve = 0,
   overwrite = T
 )
 }
@@ -19,12 +19,13 @@ flow_accumlation_wb(
 
 \item{ModelFolder}{Output path to save model outputs}
 
-\item{watershed_shape_path}{Optional clipping option to clip the resulting results}
+\item{watershed_shape_path}{Optional shapefile to clip the resulting results}
 
 \item{max_dist}{numeric value in meters to breach the digital elevation model}
 
-\item{carve}{T/F. If True, what is considered a channel will be incised
-proportional to the flow accumulation value}
+\item{stream_threshold}{Flow accumulation number (cells) to create channels}
+
+\item{carve}{numeric. Number of meters to carve the channel network down by.}
 
 \item{overwrite}{T/F. If TRUE, the model will overwrite previous files in
 Model Folder}

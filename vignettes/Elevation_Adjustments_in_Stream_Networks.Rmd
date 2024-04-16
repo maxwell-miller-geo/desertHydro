@@ -23,6 +23,8 @@ library(terra)
 library(whitebox)
 library(ggplot2)
 library(htmltools)
+library(data.table)
+# usethis::use_data_table()
 # Ensure whitebox executable works
 whitebox::wbt_init(
   exe_path = whitebox::wbt_exe_path(shell_quote = FALSE),
@@ -31,6 +33,7 @@ whitebox::wbt_init(
 ```
 
 ```{r}
+library(devtools)
 # example digital elevation model within the desertHydro package
 dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") 
 ```
@@ -120,14 +123,27 @@ Now, the profile isn't adjusted by much. With a spatially distributed water mode
 water will pool within these valleys.
 Let's adjust the elevations and smooth them out to remove holes, but only for the
 channel.
-```{r}
+```{r, smooth}
 # Obtain saved flow accumulation map
-stream_network <- file.path(ModelFolder, "stream_network.shp")
+stream_network <- terra::vect(file.path(ModelFolder, "stream_network.shp"))
 dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") 
-carve_dem <- streamCarve(stream_network, dem_path)
+mod_dem_path <- file.path(ModelFolder, "model_dem.tif")
+carve_dem <- smoothStream(stream_network, mod_dem_path)
+carveExtract <- terra::extract(carve_dem, stream_network)
+
+df$carve <- carveExtract[which(carveExtract$ID == 1),2]
 ```
 
 ```{r}
-
+df2 <- df[1:50,]
+cols <- c("orig_dem" = "purple", "adjusted_dem" = "blue", "carve" = "red")
+ggplot(df2, aes(x = x)) + geom_point(aes(y=orig_dem, color = "orig_dem")) +
+            geom_line(aes(y=adjusted_dem, color = "adjusted_dem")) +
+            geom_line(aes(y=carve, color = "carve")) +
+            labs(title = "Elevation Profile of Stream Segment") +
+            scale_color_manual(values = cols,
+                               breaks = c("orig_dem", "adjusted_dem", "carve"),
+                               labels = c("Original DEM", "Breached DEM", "Smoothed DEM"))
+      
 ```
 
