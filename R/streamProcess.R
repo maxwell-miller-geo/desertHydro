@@ -47,37 +47,21 @@ smoothStream <- function(stream, demPath, outpath = NULL){
   # Extract DEM values
   extractedDEM <- terra::extract(dem, stream, cells = T, xy = T)
   extractedDF <- data.table::data.table(extractedDEM)
+
   # Change the names
   data.table::setnames(extractedDF, "mod_dem", "elev")
-  # return(extractedDF)
-  # Count unique ID's
-  #nUnique <- length(unique(extractedDF$ID))
-  #data.table::is.data.table(extractedDF)
-  #return(extractedDF)
-  # fill <- zoo::na.approx(extractedDF[ID == x, mod_dem])
-  # emptyDF[ID==x, mod_dem := fill]
-  #"ID" %in% extractedDF
-  #emptyDF <- extractedDF
-  #return(emptyDF)
-  # Loop through the segments
-    # x <- as.numeric(x)
-    # if(NA %in% extractedDF[extractedDF$ID == x, elev]){
-    #   fill <- zoo::na.approx(extractedDF[ID == x, elev])
-    #   extractedDF[, elev := smoothVector(fill), by = ID]
-    # }
-  #return(extractedDF)
   #extractedDF[, elev, by = ID]
-  extractedDF[, elev := smoothVector(elev), by = ID]
-
+  extractedDF <- extractedDF[, max_elev := smoothVector(elev), by = ID]
+  # Check smoothVector is working
+  extractedDF[ID == 1, max_elev][1:50]
   # Get coordinate system
   coords <- paste0("epsg:",terra::crs(dem, describe = T)[[3]])
   burn <- terra::vect(extractedDF, geom = c("x", "y"), crs= coords)
   # # Put DF back into original
-  # for(i in 1:nrow(extractedDF)){
-  #   dem[extractedDF[[i,3]]] <- extractedDF[i,2]
-  # }
 
-  smoothDEM <- terra::rasterize(x = burn, y = dem, field = "elev")
+  rasterized <- terra::rasterize(x = burn, y = dem, field = "max_elev")
+  # Replace
+  smoothDEM <- terra::ifel(!is.na(rasterized), rasterized, dem)
   if(!is.null(WatershedElements)){
     terra::writeRaster(smoothDEM, file.path(WatershedElements, "smooth_dem.tif"))
   }
@@ -107,6 +91,7 @@ smoothStream <- function(stream, demPath, outpath = NULL){
 #' # If NA's are present
 #' s2 <- c(1,2,4,5,NA,6)
 #' smooth <- smoothVector(s2)
+
 smoothVector <- function(x, n = 1000, h_adj = .01){
   # Find NA values if present
   if(NA %in% x){
