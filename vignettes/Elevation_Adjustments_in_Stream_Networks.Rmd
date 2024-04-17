@@ -100,7 +100,7 @@ This graphic is produced by whitebox tools
 
 How did the elevations change over these streams? 
 ```{r}
-demExt <- terra::extract(dem, stream_network)
+demExt <- terra::extractAlong(dem, stream_network)
 demAdjusted <- terra::extract(mod_dem, stream_network)
 
 # Grab one length of the channel by the ID
@@ -126,15 +126,17 @@ Now, the profile isn't adjusted by much. With a spatially distributed water mode
 water will pool within these valleys.
 Let's adjust the elevations and smooth them out to remove holes, but only for the
 channel.
+
 ```{r, smooth}
 # Obtain saved flow accumulation map
 stream_network <- terra::vect(file.path(ModelFolder, "stream_network.shp"))
 dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") 
 mod_dem_path <- file.path(ModelFolder, "model_dem.tif")
 carve_dem <- smoothStream(stream_network, dem_path)
-carveExtract <- terra::extract(carve_dem, stream_network)
+carveExtract <- terra::extractAlong(carve_dem, stream_network, ID = TRUE)
 
 df$carve <- carveExtract[which(carveExtract$ID == 1),2]
+q <- carveExtract[which(carveExtract$ID == 1),2]
 ```
 
 ```{r, fig.dim=c(6,6)}

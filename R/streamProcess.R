@@ -45,7 +45,7 @@ smoothStream <- function(stream, demPath, outpath = NULL){
   # print(mod_dem)
   # print(dem)
   # Extract DEM values
-  extractedDEM <- terra::extract(dem, stream, cells = T, xy = T)
+  extractedDEM <- terra::extractAlong(dem, stream, cells = T, xy = T)
   extractedDF <- data.table::data.table(extractedDEM)
 
   # Change the names
@@ -53,7 +53,7 @@ smoothStream <- function(stream, demPath, outpath = NULL){
   #extractedDF[, elev, by = ID]
   extractedDF <- extractedDF[, max_elev := smoothVector(elev), by = ID]
   # Check smoothVector is working
-  extractedDF[ID == 1, max_elev][1:50]
+  # extractedDF[ID == 1, max_elev][1:50]
   # Get coordinate system
   coords <- paste0("epsg:",terra::crs(dem, describe = T)[[3]])
   burn <- terra::vect(extractedDF, geom = c("x", "y"), crs= coords)
