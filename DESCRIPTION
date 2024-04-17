@@ -1,6 +1,6 @@
 Package: desertHydro
 Title: Spatially Distributed Hydrology Model for Arid Watersheds 
-Version: 0.0.0.9000
+Version: 0.0.0.9001
 Authors@R: 
     person("Maxwell", "Miller", , "mmm683@nau.edu", role = c("aut", "cre"),
            comment = c(ORCID = "0009-0000-2965-695X"))
