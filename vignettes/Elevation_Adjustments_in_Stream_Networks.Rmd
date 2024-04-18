@@ -101,7 +101,7 @@ This graphic is produced by whitebox tools
 How did the elevations change over these streams? 
 ```{r}
 demExt <- terra::extractAlong(dem, stream_network)
-demAdjusted <- terra::extract(mod_dem, stream_network)
+demAdjusted <- terra::extractAlong(mod_dem, stream_network)
 
 # Grab one length of the channel by the ID
 stream_seg_dem <- demExt[which(demExt$ID == 1),2]

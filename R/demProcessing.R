@@ -71,7 +71,7 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
 # dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") # pass dem as file path
 # hydro_workflow <- flow_accumlation_wb(dem_path, ModelFolder, )
 
-flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA, max_dist = 1000, stream_threshold = 1200, carve = 0, overwrite = T){
+flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA, max_dist = 1000, stream_threshold = 1200, carve = 1, overwrite = T){
   gc()
   # List of created rasters
   crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])

@@ -29,7 +29,7 @@ rainfall_method <- "spatial"
 date <- "2022-08-27" # Optional - if dates present must be in YYYY-MM-DD format
 type <- paste0("test-", rainfall_method,"-carve")
 # Important steps
-ModelFolder <- file.path(r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\SensitivityTests)", type) # replace path to folder where model is saved
+ModelFolder <- file.path(tempdir(), type) # replace path to folder where model is saved
 #WatershedElements <- paste0(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\)", type,"WatershedElements") # replace this with your folder
 #WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\WatershedElements)"
 WatershedElements <- dirname(system.file("extdata", "dem.tif", package = "desertHydro"))
@@ -51,7 +51,7 @@ discharge <-  F # If TRUE, expects discharge present in file
 
 # If rainfall method is synthetic - uses 1/2 inch - 15 minute storm
 
-length <- 10 # grid cell length - assumes uniform grid
+length <- 5 # grid cell length - assumes uniform grid
 store = T
 time_step <- 1/12 # time step in minutes
 simulation_length <- 2 # time length in minutes

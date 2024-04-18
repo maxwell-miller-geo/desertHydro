@@ -97,11 +97,19 @@ smoothVector <- function(x, n = 1000, h_adj = .01){
   if(NA %in% x){
     x <- zoo::na.approx(x)
   }
+  # Determine increasing or decreasing array
+  slope <- sign(tail(x, 1) - x[1]) # sign of increasing or decreasing
   i <- 1
   xDiff <- diff(x)
-  while(sum(xDiff < 0) > 0){
-    diffAdd <- c(0, ifelse(xDiff <= 0, xDiff-h_adj, 0))
-    x <- x - diffAdd
+  # Check if increasing or decreasing
+  while(abs(sum(sign(xDiff))) != length(xDiff)){
+    # If slope is positive
+    if(slope == -1){
+      subtract <- c(0, ifelse(xDiff >=0, xDiff + h_adj, 0))
+    }else{
+      subtract <- c(ifelse(xDiff <=0, abs(xDiff - h_adj), 0), 0)
+    }
+    x <- x - subtract
     i <- i + 1
     xDiff <- diff(x)
     if(i == n){
