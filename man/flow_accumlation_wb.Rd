@@ -10,7 +10,7 @@ flow_accumlation_wb(
   watershed_shape_path = NA,
   max_dist = 1000,
   stream_threshold = 1200,
-  carve = 0,
+  carve = 1,
   overwrite = T
 )
 }

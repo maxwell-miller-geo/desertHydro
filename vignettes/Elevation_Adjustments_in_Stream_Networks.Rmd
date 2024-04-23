@@ -16,139 +16,139 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Libraries
-```{r setup}
-library(desertHydro)
-library(terra)
-library(whitebox)
-library(ggplot2)
-library(htmltools)
-library(data.table)
-# usethis::use_data_table()
-# Ensure whitebox executable works
-whitebox::wbt_init(
-  exe_path = whitebox::wbt_exe_path(shell_quote = FALSE),
-  check_version = TRUE
-)
-```
+<!-- # Libraries -->
+<!-- ```{r setup} -->
+<!-- library(desertHydro) -->
+<!-- library(terra) -->
+<!-- library(whitebox) -->
+<!-- library(ggplot2) -->
+<!-- library(htmltools) -->
+<!-- library(data.table) -->
+<!-- # usethis::use_data_table() -->
+<!-- # Ensure whitebox executable works -->
+<!-- whitebox::wbt_init( -->
+<!--   exe_path = whitebox::wbt_exe_path(shell_quote = FALSE), -->
+<!--   check_version = TRUE -->
+<!-- ) -->
+<!-- ``` -->
 
-```{r}
-library(devtools)
-# example digital elevation model within the desertHydro package
-dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") 
-```
+<!-- ```{r} -->
+<!-- library(devtools) -->
+<!-- # example digital elevation model within the desertHydro package -->
+<!-- dem_path <- system.file("extdata", "dem.tif", package = "desertHydro")  -->
+<!-- ``` -->
 
-Let's take a look at the study area
-```{r, fig.dim=c(6,6)}
-dem <- terra::rast(dem_path)
-terra::plot(dem, main = "DEM Waterholes, AZ", 
-            plg = list(title = "Elevation (m)"))
-```
+<!-- Let's take a look at the study area -->
+<!-- ```{r, fig.dim=c(6,6)} -->
+<!-- dem <- terra::rast(dem_path) -->
+<!-- terra::plot(dem, main = "DEM Waterholes, AZ",  -->
+<!--             plg = list(title = "Elevation (m)")) -->
+<!-- ``` -->
 
-Waterholes is located in Northern Arizona and is a tributary to the Grand Canyon.
-The spatial resolution of the 3DEP DEM is ~10m.
+<!-- Waterholes is located in Northern Arizona and is a tributary to the Grand Canyon. -->
+<!-- The spatial resolution of the 3DEP DEM is ~10m. -->
 
-Perform some hydrological analysis with Whitebox tools! Wrapped with the desertHydro 
-package.
-```{r, echo = F, cache = F}
-ModelFolder <- tempdir() # Create a temporary directory to save files into
-dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") # pass dem as file path
+<!-- Perform some hydrological analysis with Whitebox tools! Wrapped with the desertHydro  -->
+<!-- package. -->
+<!-- ```{r, echo = F, cache = F} -->
+<!-- ModelFolder <- tempdir() # Create a temporary directory to save files into -->
+<!-- dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") # pass dem as file path -->
 
-mod_dem <- desertHydro::flow_accumlation_wb(dem_path, ModelFolder, overwrite = F, carve = 2)
-```
-# Files created
-```{r}
-# Files created
-list.files(ModelFolder)
-```
+<!-- mod_dem <- desertHydro::flow_accumlation_wb(dem_path, ModelFolder, overwrite = F, carve = 2) -->
+<!-- ``` -->
+<!-- # Files created -->
+<!-- ```{r} -->
+<!-- # Files created -->
+<!-- list.files(ModelFolder) -->
+<!-- ``` -->
 
-Many files are created from this function. This function works as a wrapper for
-some of the stream functions within the Whitebox package.
- Adjust DEM
-```{r, fig.dim=c(6,6)}
-terra::plot(mod_dem, main = "Adjusted DEM Waterholes, AZ",
-            cex.main = .8,
-            plg = list(title = "Elevation (m)", title.cex = .8))
-```
+<!-- Many files are created from this function. This function works as a wrapper for -->
+<!-- some of the stream functions within the Whitebox package. -->
+<!--  Adjust DEM -->
+<!-- ```{r, fig.dim=c(6,6)} -->
+<!-- terra::plot(mod_dem, main = "Adjusted DEM Waterholes, AZ", -->
+<!--             cex.main = .8, -->
+<!--             plg = list(title = "Elevation (m)", title.cex = .8)) -->
+<!-- ``` -->
 
-Now, the adjusted DEM does not look significantly different from this scale. 
-Let's check the differences.
+<!-- Now, the adjusted DEM does not look significantly different from this scale.  -->
+<!-- Let's check the differences. -->
 
-```{r, fig.dim=c(6,6)}
-# Use terra's ifel function to spot the differences
-elevation_diff <- terra::ifel(dem - mod_dem != 0, 1, 0) 
-terra::plot(elevation_diff, main = "Elevation Adjustments",
-            cex.main = .8,
-            plg = list(title = "Elevation Change", title.cex = .8))
-```
+<!-- ```{r, fig.dim=c(6,6)} -->
+<!-- # Use terra's ifel function to spot the differences -->
+<!-- elevation_diff <- terra::ifel(dem - mod_dem != 0, 1, 0)  -->
+<!-- terra::plot(elevation_diff, main = "Elevation Adjustments", -->
+<!--             cex.main = .8, -->
+<!--             plg = list(title = "Elevation Change", title.cex = .8)) -->
+<!-- ``` -->
 
-# Observe Channel Profiles - through whitebox tools
-```{r, fig.dim=c(6,6)}
-stream_network <- terra::vect(file.path(ModelFolder, "stream_network.shp"))
-head(stream_network)
-plot(stream_network, "STRAHLER", main = "Strahler Stream Order", plg = (title = "Order"))
-```
+<!-- # Observe Channel Profiles - through whitebox tools -->
+<!-- ```{r, fig.dim=c(6,6)} -->
+<!-- stream_network <- terra::vect(file.path(ModelFolder, "stream_network.shp")) -->
+<!-- head(stream_network) -->
+<!-- plot(stream_network, "STRAHLER", main = "Strahler Stream Order", plg = (title = "Order")) -->
+<!-- ``` -->
 
-How does this look along the channel profiles?
-```{r, out.width= "50%"}
-library(htmltools)
-profile <- file.path(ModelFolder, "profile.html")
-htmltools::includeHTML(profile)
+<!-- How does this look along the channel profiles? -->
+<!-- ```{r, out.width= "50%"} -->
+<!-- library(htmltools) -->
+<!-- profile <- file.path(ModelFolder, "profile.html") -->
+<!-- htmltools::includeHTML(profile) -->
 
-```
-This graphic is produced by whitebox tools
+<!-- ``` -->
+<!-- This graphic is produced by whitebox tools -->
 
-How did the elevations change over these streams? 
-```{r}
-demExt <- terra::extractAlong(dem, stream_network)
-demAdjusted <- terra::extractAlong(mod_dem, stream_network)
+<!-- How did the elevations change over these streams?  -->
+<!-- ```{r} -->
+<!-- demExt <- terra::extractAlong(dem, stream_network) -->
+<!-- demAdjusted <- terra::extractAlong(mod_dem, stream_network) -->
 
-# Grab one length of the channel by the ID
-stream_seg_dem <- demExt[which(demExt$ID == 1),2]
-stream_seg_mod_dem <- demAdjusted[which(demAdjusted$ID == 1),2]
-stream_length <- 1:length(stream_seg_dem)
+<!-- # Grab one length of the channel by the ID -->
+<!-- stream_seg_dem <- demExt[which(demExt$ID == 1),2] -->
+<!-- stream_seg_mod_dem <- demAdjusted[which(demAdjusted$ID == 1),2] -->
+<!-- stream_length <- 1:length(stream_seg_dem) -->
 
-# Combine into a data frame
-df <- data.frame(x = stream_length, 
-                 orig_dem = stream_seg_dem,
-                 adjusted_dem = stream_seg_mod_dem)
+<!-- # Combine into a data frame -->
+<!-- df <- data.frame(x = stream_length,  -->
+<!--                  orig_dem = stream_seg_dem, -->
+<!--                  adjusted_dem = stream_seg_mod_dem) -->
 
-```
+<!-- ``` -->
 
 
-```{r, fig.dim=c(6,6)}
-# Take only a section of the channel, so it is more easily discernible
-df2 <- df[1:50,] # 1st 100 rows
-ggplot(df2) + geom_line(aes(x, orig_dem), color = "purple") + geom_point(aes(x, adjusted_dem), color = "blue") + labs(title = "Elevation Profile of Stream Segment")
-```
+<!-- ```{r, fig.dim=c(6,6)} -->
+<!-- # Take only a section of the channel, so it is more easily discernible -->
+<!-- df2 <- df[1:50,] # 1st 100 rows -->
+<!-- ggplot(df2) + geom_line(aes(x, orig_dem), color = "purple") + geom_point(aes(x, adjusted_dem), color = "blue") + labs(title = "Elevation Profile of Stream Segment") -->
+<!-- ``` -->
 
-Now, the profile isn't adjusted by much. With a spatially distributed water model
-water will pool within these valleys.
-Let's adjust the elevations and smooth them out to remove holes, but only for the
-channel.
+<!-- Now, the profile isn't adjusted by much. With a spatially distributed water model -->
+<!-- water will pool within these valleys. -->
+<!-- Let's adjust the elevations and smooth them out to remove holes, but only for the -->
+<!-- channel. -->
 
-```{r, smooth}
-# Obtain saved flow accumulation map
-stream_network <- terra::vect(file.path(ModelFolder, "stream_network.shp"))
-dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") 
-mod_dem_path <- file.path(ModelFolder, "model_dem.tif")
-carve_dem <- smoothStream(stream_network, dem_path)
-carveExtract <- terra::extractAlong(carve_dem, stream_network, ID = TRUE)
+<!-- ```{r, smooth} -->
+<!-- # Obtain saved flow accumulation map -->
+<!-- stream_network <- terra::vect(file.path(ModelFolder, "stream_network.shp")) -->
+<!-- dem_path <- system.file("extdata", "dem.tif", package = "desertHydro")  -->
+<!-- mod_dem_path <- file.path(ModelFolder, "model_dem.tif") -->
+<!-- carve_dem <- smoothStream(stream_network, dem_path) -->
+<!-- carveExtract <- terra::extractAlong(carve_dem, stream_network, ID = TRUE) -->
 
-df$carve <- carveExtract[which(carveExtract$ID == 1),2]
-q <- carveExtract[which(carveExtract$ID == 1),2]
-```
+<!-- df$carve <- carveExtract[which(carveExtract$ID == 1),2] -->
+<!-- q <- carveExtract[which(carveExtract$ID == 1),2] -->
+<!-- ``` -->
 
-```{r, fig.dim=c(6,6)}
-df2 <- df[1:50,]
-cols <- c("orig_dem" = "purple", "adjusted_dem" = "blue", "carve" = "red")
-ggplot(df2, aes(x = x)) + geom_point(aes(y=orig_dem, color = "orig_dem")) +
-            geom_line(aes(y=adjusted_dem, color = "adjusted_dem")) +
-            geom_line(aes(y=carve, color = "carve")) +
-            labs(title = "Elevation Profile of Stream Segment") +
-            scale_color_manual(values = cols,
-                               breaks = c("orig_dem", "adjusted_dem", "carve"),
-                               labels = c("Original DEM", "Breached DEM", "Smoothed DEM"))
-      
-```
+<!-- ```{r, fig.dim=c(6,6)} -->
+<!-- df2 <- df[1:50,] -->
+<!-- cols <- c("orig_dem" = "purple", "adjusted_dem" = "blue", "carve" = "red") -->
+<!-- ggplot(df2, aes(x = x)) + geom_point(aes(y=orig_dem, color = "orig_dem")) + -->
+<!--             geom_line(aes(y=adjusted_dem, color = "adjusted_dem")) + -->
+<!--             geom_line(aes(y=carve, color = "carve")) + -->
+<!--             labs(title = "Elevation Profile of Stream Segment") + -->
+<!--             scale_color_manual(values = cols, -->
+<!--                                breaks = c("orig_dem", "adjusted_dem", "carve"), -->
+<!--                                labels = c("Original DEM", "Breached DEM", "Smoothed DEM")) -->
+
+<!-- ``` -->
 

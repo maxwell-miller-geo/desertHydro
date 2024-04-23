@@ -46,6 +46,7 @@ WatershedElements Folder -> folder containing the necessary inputs for the model
 # Important steps
 
 ModelFolder <- "ModelFolder" # replace path to folder where model is saved
+ModelFolder <- tempdir()
 #ModelFolder <- r"(C:\PackageDev\desertHydro\ModelElementsTest)" # <- Example
 
 #WatershedElements <- "./inst/extdata/DemoElements" # replace this with your watershed
@@ -103,7 +104,7 @@ rainfall_method <- "synthetic"
 length <- 10 # grid cell length - assumes uniform grid
 store = T
 time_step <- .1 # time step in minutes
-simulation_length <-  5 # time length in minutes
+simulation_length <-  1 # time length in minutes
 impervious <-  # no infiltration
 overwrite <- T # overwrite previous inputs in both watershed elements and model folder
 write <- T # create graphs and write outputs to model folder
@@ -156,7 +157,7 @@ a <- arid_model(ModelFolder,
                 )
 
 ```
-The model will create files within the Model Folder was it runs. The length of simulation
+The model will create files within the Model Folder where it runs. The length of simulation
 is based on the size of the grid, the initial timestep, and the duration. It is always encouraged
 to run a small scale version in both space and time to determine if things are working properly.
 
