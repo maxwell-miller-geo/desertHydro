@@ -22,7 +22,7 @@ smoothStream <- function(stream, demPath, outpath = NULL){
   # Note dem must be a path
   max_elev <- ID <- elev <- NULL
   WatershedElements <- outpath
-  if(inherits(demPath) == "SpatRaster"){
+  if(inherits(demPath, "SpatRaster")){
     stop("Please input dem as a path, not a spatial raster")
   }
   mod_dem <- file.path(tempdir(), "mod_dem.tif")
