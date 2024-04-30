@@ -213,7 +213,7 @@ streamCreate <- function(flowRasterPath, model_dem, Outpath, threshold = 100){
   # Flow accumulation raster
   #flowRaster <- terra::rast(file.path(WatershedElements, "flow_accumulation.tif"))
   demFile <- model_dem
-  #dem_alternate <- file.path(Outpath, dem)
+  dem_alternate <- file.path(Outpath, model_dem) # does not work for backups currently
   streams <- file.path(Outpath, "streams.shp")
   flow_direction <- file.path(Outpath, "flow_d8.tif")
 
@@ -223,6 +223,7 @@ streamCreate <- function(flowRasterPath, model_dem, Outpath, threshold = 100){
       crsAssign(flow_direction, terra::crs(terra::rast(demFile))) # flow direction
 
     }else if(file.exists(dem_alternate)){
+      print("Using DEM alternate...")
       whitebox::wbt_d8_pointer(dem_alternate, flow_direction) # flow direction
       crsAssign(flow_direction, terra::crs(terra::rast(dem_alternate))) # coords
 

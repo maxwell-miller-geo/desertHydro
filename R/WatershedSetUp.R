@@ -111,7 +111,8 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
                           ClassificationMap = ClassificationMap,
                           WatershedStack = WatershedStack,
                           outline = WatershedShape,
-                          ModelOutputs = ModelFolder,
+                          ModelFolder = ModelFolder,
+                          WatershedElements = WatershedElements,
                           key = key,
                           overwrite = overwrite
                           )
@@ -171,7 +172,7 @@ createVoronoi <- function(coords, combined, shapefile, write = F){ # Not run
 # writeVector(z, "voronoi-test.shp", filetype = "ESRI Shapefile", overwrite = T)
 # plot(vect("voronoi-test.shp"))
 ## ---------------------------- Function to process landcover
-geologyProcess <- function(landCoverShape, SoilStack, key = "GEOFNT24K"){
+geologyProcess <- function(landCoverShape, SoilStack, WatershedElements, ModelFolder, key = "GEOFNT24K"){
 
   if(is.character(landCoverShape)){
     landCoverShape <- terra::vect(landCoverShape)

@@ -63,7 +63,7 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, dis
 #
 # ##----------------------discharge totals
 # # Function that takes rainfall data from a watersheds gauges and gathers total rainfall
-dischargeTotal <- function(discharge_file, write = F){
+dischargeTotal <- function(discharge_file, write = F, WatershedElements = ""){
     print("Calculating total discharge values")
     date_time <- height <- discharge <- temp_c <- stream <-  NULL
     stream <- data.table::fread(discharge_file) # reads tsv and csv files
@@ -137,7 +137,7 @@ discharge_present <- function(data_folder, date, ModelFolder = NULL, discharge_n
 
   # Use the discharge - total function to reorganize the stream gauges by day
   # then compare if input date - before or after exists
-  dischargeDF <- suppressWarnings(dischargeTotal(stream_data, write = write)) # dataframe with recorded discharge values (>0)
+  dischargeDF <- suppressWarnings(dischargeTotal(stream_data, write = write, WatershedElements = data_folder)) # dataframe with recorded discharge values (>0)
 
   # use the dischargeResample function to obtain the highest discharge for a each day
   dischargeDaily <- dischargeResample(dischargeDF, units = "day") # dataframe with discharge per day
@@ -256,20 +256,22 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
 #
 # # # Plot rainfall - discharge
 plot_rainfall_discharge <- function(rain_discharge_DF, date, store = T, outpath = ""){
+  # Clean up variables
+  Time_minute <- discharge <- Total_in <- NULL
   # Change the x-axis from time to Time_minute
   rain_plot <- ggplot2::ggplot(rain_discharge_DF) +
-    ggplot2::geom_col(mapping = aes(x = Time_minute, y = Total_in)) +
+    ggplot2::geom_col(mapping = ggplot2::aes(x = Time_minute, y = Total_in)) +
     ggplot2::labs(title = paste("Rainfall at Waterholes Watershed, AZ:", date), x = "", y = "Measured Rainfall (in)") +
     ggplot2::theme_bw() +
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 
 
   discharge_plot <- ggplot2::ggplot(rain_discharge_DF) +
-    ggplot2::geom_line(mapping = aes(x = Time_minute, y = discharge))  +
+    ggplot2::geom_line(mapping = ggplot2::aes(x = Time_minute, y = discharge))  +
     #labs(title = paste("Discharge at Waterholes Watershed, AZ:", date), x = "", y = bquote("Measured Discharge" (ft^3/s))) +
     ggplot2::labs(title = paste("Discharge at Waterholes Watershed, AZ:", date), x = "", y = paste0("Measured Discharge ft\u00b3/s)")) +
     ggplot2::theme_bw() +
-    ggplot2::theme(plot.title = element_text(hjust = 0.5))
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 
     # Combine the two graphs
     combined_plot <- gridExtra::grid.arrange(discharge_plot, rain_plot)
@@ -374,7 +376,7 @@ heightToDischarge <- function(height, time_step, units = "cm"){
 
 ##----------------------------- Volume of discharge
 # Function that takes discharge data and integrates for volume
-dischargeVolume <- function(dischargeDF){
+dischargeVolume <- function(dischargeDF, ModelFolder){
   time <- stringMatch(dischargeDF, "time")
   # discharge <- stringMatch(dischargeDF, "discharge")
   meanQ <- zoo::rollapply(dischargeDF$discharge, width = 2, FUN = mean, by = 1, align = "left")

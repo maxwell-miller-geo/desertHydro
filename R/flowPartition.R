@@ -614,7 +614,7 @@ manningsVelocity <- function(n, depth, slope, length){
 
 ## ---------------------------- Flow Routing fixed
 # Flow routing that has a semi fixed spacing and save rate
-routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10, timeVelocity = list(0,0), drainCells = NA, ...){
+routeWater2 <- function(ModelFolder, SoilStack, flowDirectionMap, time_step = 5, length = 10, timeVelocity = list(0,0), drainCells = NA, ...){
   if(is.character(flowDirectionMap)){
     flowDirectionMap <- terra::rast(flowDirectionMap)
   }
@@ -640,7 +640,7 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
   velocityStorage <- velocityIntermediate
   #print(paste("velocity out", velocityIntermediate))
   # Time step check - returns max distance traveled and adjusted depth
-  distanceDepth <- distanceCheck(velocityIntermediate, rainSurface, time_step,
+  distanceDepth <- distanceCheck(ModelFolder, velocityIntermediate, rainSurface, time_step,
                                  flowDirectionMap, dem, n, timeVelocity = timeVelocity,
                                  drainCells = drainCells, check = T)
   #print(distanceDepth)
@@ -668,14 +668,14 @@ routeWater2 <- function(SoilStack, flowDirectionMap, time_step = 5, length = 10,
     if(x ==1){
       velocityAfterRain <- manningsVelocity(n,surface + rain_adjust,slope,length = length)
       terra::add(velocityStorage) <- velocityAfterRain # add velocity
-      distanceDepth <- distanceCheck(velocityAfterRain, surface + rain_adjust, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity, drainCells = drainCells, check = T)
+      distanceDepth <- distanceCheck(ModelFolder, velocityAfterRain, surface + rain_adjust, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity, drainCells = drainCells, check = T)
       volumeStorage <- c(volumeStorage, distanceDepth[[3]])
       dischargeStorage <- c(dischargeStorage, distanceDepth[[4]])
     }
     newSurface <- distanceDepth[[2]] + rain_adjust
     velocityAfterRain <- manningsVelocity(n, newSurface,slope,length = length)
     terra::add(velocityStorage) <- velocityAfterRain # add velocity
-    distanceDepth <- distanceCheck(velocityAfterRain, newSurface, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity, drainCells = drainCells, check = T)
+    distanceDepth <- distanceCheck(ModelFolder, velocityAfterRain, newSurface, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity, drainCells = drainCells, check = T)
     volumeStorage <- c(volumeStorage, distanceDepth[[3]])
     dischargeStorage <- c(dischargeStorage, distanceDepth[[4]])
     #print(distanceDepth[[2]])
@@ -735,7 +735,7 @@ slopeCalculate <- function(dem){
   return(slopeAdj)
 }
 
-distanceCheck <- function(velocity, depth, time_step, flowDirectionMap, dem, n, length = 10, timeVelocity = data.frame(0,0), drainCells = NA, ...){
+distanceCheck <- function(ModelFolder, velocity, depth, time_step, flowDirectionMap, dem, n, length = 10, timeVelocity = data.frame(0,0), drainCells = NA, check = TRUE, ...){
   #
   depth_change <- depthChange(velocity, depth, time_step, flowDirectionMap, length = length, drainCells = drainCells, check = check)
   #print(depth_change)
@@ -754,7 +754,7 @@ distanceCheck <- function(velocity, depth, time_step, flowDirectionMap, dem, n, 
   #print(paste(distanceTraveled, ": maximum travel distance per time step"))
   # Calculate and return the time and velocity at a given timestep
   timeVelocity <- rbind(timeVelocity,
-                        list(tail(timeVelocity, 1)[[1]] + time_step/60,
+                        list(utils::tail(timeVelocity, 1)[[1]] + time_step/60,
                         maxVelocity))
 
   data.table::fwrite(data.table::data.table(timeVelocity), file = file.path(ModelFolder, "time-velocity.csv"))

@@ -15,7 +15,7 @@
 # }
 
 ## Function that takes a raster stack, resamples, and produces a melted dataframe
-meltStack <- function(rasterStack, resample = 1, timevalues = xvalues){ # assumes terra raster stack in latitude/longitude
+meltStack <- function(rasterStack, resample = 1, timevalues){ # assumes terra raster stack in latitude/longitude
   # Check if it is a filepath or a loaded in raster
   if(is.character(rasterStack)){ # if passed a file string instead of SpatRaster object
     rasterStack <- terra::rast(rasterStack)
@@ -44,7 +44,7 @@ meltStack <- function(rasterStack, resample = 1, timevalues = xvalues){ # assume
 
   # Convert "Time" to numeric and remove missing values
   meltedDF$Time <- as.numeric(as.character(meltedDF$Time))
-  meltedDF <- na.omit(meltedDF)
+  meltedDF <- stats::na.omit(meltedDF)
   return(meltedDF)
 }
 

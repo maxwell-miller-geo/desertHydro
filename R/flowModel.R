@@ -159,10 +159,10 @@ for(t in 1:(length(simulation_duration)-1)){
   ## [1] Rainfall
   ## - Calculates the amount of rainfall in a given time step
   if(simulation_duration[t] < total_rain_duration){ # could cut off rainfall if not careful
-   rainfall_for_timestep <- rainfallAccum(rain, beginning_time, end_time, rainfall_method = rainfall_method)
-   if(rainfall_method == "goes" & class(rainfall_for_timestep) == "SpatRaster"){
+   rainfall_for_timestep <- rainfallAccum(rain, beginning_time, end_time, rainfall_method = rainfall_method, ModelFolder = ModelFolder)
+   if(rainfall_method == "goes" & inherits(rainfall_for_timestep) == "SpatRaster"){
      if(terra::ext(rainfall_for_timestep) != terra::ext(SoilStack)){
-       rainfall_for_timestep <- terra::crop(rainfall_for_timestep, ext(SoilStack))
+       rainfall_for_timestep <- terra::crop(rainfall_for_timestep, terra::ext(SoilStack))
      }
    }
   }else{
@@ -223,7 +223,8 @@ for(t in 1:(length(simulation_duration)-1)){
 
   ## [4] Surface Runoff
   # Calculate the surface runoff for the water present at the surface.
-  runoffList <- routeWater2(SoilStack,
+  runoffList <- routeWater2(ModelFolder,
+                            SoilStack,
                            flowDirectionMap = flowStack_file,
                            time_step = simulationTimeSecs,
                            length = gridsize,

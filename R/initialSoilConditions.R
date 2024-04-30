@@ -82,10 +82,10 @@ createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
 
 
 initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap, WatershedStack,
-                                    ModelOutputs, key = "NLCD_Key", outline = "",
+                                    ModelFolder, WatershedElements = "", key = "NLCD_Key", outline = "",
                                     depthAdj = T, saturatedPercentage = 0.2, overwrite = T){
 
-  soilstack_file <- file.path(ModelOutputs, "model_soil_stack.tif")
+  soilstack_file <- file.path(ModelFolder, "model_soil_stack.tif")
   if(file.exists(soilstack_file)){
     return("Found model soil file..")
   }
@@ -136,7 +136,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   # Adjust slope based on elevation differences
   SoilStack$slope <- terra::ifel(SoilStack$slope < 0.01, 0.01, SoilStack$slope)
   #terra::plot(SoilStack$slope)
-  slopeName <- file.path(ModelOutputs, "model_slope.tif")
+  slopeName <- file.path(ModelFolder, "model_slope.tif")
   terra::writeRaster(SoilStack$slope, slopeName, overwrite = T)
 
   SoilStack$surfaceWater <- SoilStack$slope * 0
@@ -169,7 +169,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
     geologic_map <- file.path(WatershedElements, "geo_soils.shp")
     if(file.exists(geologic_map)){
       print("Found geologic map: Adjusting hydraulic parameters")
-      adjustmentMaps <- geologyProcess(geologic_map, SoilStack)
+      adjustmentMaps <- geologyProcess(geologic_map, SoilStack, WatershedElements, ModelFolder)
      #int('original n')
       #print(SoilStack$mannings_n)
       ##print(adjustmentMaps$mannings_n)
@@ -220,7 +220,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   }
 
   # Save the starting soil characteristic layers
-  readr::write_csv(LCC, file.path(ModelOutputs, "Starting_Soil_Characteristics.csv"))
+  readr::write_csv(LCC, file.path(ModelFolder, "Starting_Soil_Characteristics.csv"))
   # # startingSoil <- write.csv(LCC, file.path(DataStorage, "Starting_LandCover.csv"), overwrite = TRUE)
 
   terra::writeRaster(SoilStack
@@ -233,12 +233,12 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
 # LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
 # ClassificationMap <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements\landcover_soil.tif)"
 # DEM <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements\model_dem.tif)"
-# ModelOutputs <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel)"
+# ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel)"
 # #
 # test <- initial_soil_conditions(LandCoverCharacteristics = LandCoverCharacteristics,
 #                         ClassificationMap = ClassificationMap,
 #                         DEM = DEM,
-#                         ModelOutputs = ModelOutputs,
+#                         ModelFolder = ModelFolder,
 #                         key = "MUKEY")
 
 # # Attach the flow direction stack to the land cover stack

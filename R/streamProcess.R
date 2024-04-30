@@ -22,7 +22,7 @@ smoothStream <- function(stream, demPath, outpath = NULL){
   # Note dem must be a path
   max_elev <- ID <- elev <- NULL
   WatershedElements <- outpath
-  if(class(demPath) == "SpatRaster"){
+  if(inherits(demPath) == "SpatRaster"){
     stop("Please input dem as a path, not a spatial raster")
   }
   mod_dem <- file.path(tempdir(), "mod_dem.tif")
@@ -98,7 +98,7 @@ smoothVector <- function(x, n = 1000, h_adj = .01){
     x <- zoo::na.approx(x)
   }
   # Determine increasing or decreasing array
-  slope <- sign(tail(x, 1) - x[1]) # sign of increasing or decreasing
+  slope <- sign(utils::tail(x, 1) - x[1]) # sign of increasing or decreasing
   i <- 1
   xDiff <- diff(x)
   # Check if increasing or decreasing

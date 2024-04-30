@@ -224,7 +224,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, gif = T,
     print(paste("No rain-discharge data: Retrieving rainfall data from rainfile...", rain_file))
     rain <- readr::read_csv(file.path(ModelFolder, "Model-Rainfall.csv"), show_col_types = F)
     total_rain <- round(sum(rain$Total_in),3)
-    total_rain_duration <- as.numeric((tail(rain$time, n = 1) - rain$time[1]))
+    total_rain_duration <- as.numeric((utils::tail(rain$time, n = 1) - rain$time[1]))
   }
 
   if(gif){

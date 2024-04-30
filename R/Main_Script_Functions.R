@@ -7,7 +7,7 @@
 #   return()
 #   for(x in categories){
 #     temp <- subset(table, table$NLCD_Key == x)
-#     
+#
 #   }
 # }
 
@@ -35,10 +35,10 @@ hydraulicFieldConductivity <- function(KsatMatrix, SaturatedMC, FieldCapAmt, Soi
 # For values inbetween those use
 # (K_{macro} -  K_{FieldCond}) *  \frac{(\frac{W_{surf}-Field_{cap}} { d_{soil}})}{ (\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_FieldCond})
 effectiveConductivity <- function(surfaceWaterStorage, FieldCapacityAmount, KsatMatrix, SatMoistureContent, KsatMacropore, SoilDepth, KFieldConductivity){
-  effK <- ifel(surfaceWaterStorage < FieldCapacityAmount, 
-               (KsatMatrix * exp((-13.0/SatMoistureContent) * (SatMoistureContent - surfaceWaterStorage/SoilDepth))), 
-               ifel(surfaceWaterStorage >= (SatMoistureContent*SoilDepth), 
-                    KsatMacropore, 
+  effK <- terra::ifel(surfaceWaterStorage < FieldCapacityAmount,
+               (KsatMatrix * exp((-13.0/SatMoistureContent) * (SatMoistureContent - surfaceWaterStorage/SoilDepth))),
+               terra::ifel(surfaceWaterStorage >= (SatMoistureContent*SoilDepth),
+                    KsatMacropore,
                     (KsatMacropore - KFieldConductivity) * ((surfaceWaterStorage - FieldCapacityAmount) / SoilDepth) /  (SatMoistureContent - FieldCapacityAmount / SoilDepth) + KFieldConductivity))
   return(effK)
 }
@@ -70,26 +70,26 @@ lateral_flow <- function(effectiveK, slope, soilDepth, waterStorage){
 infiltration <- function(SoilStack, simulationTimeSecs){
   # Depth of surface water after rain has accumulated
   tempSurfaceWater <- SoilStack$surfaceWater + SoilStack$throughfall
-  
+
   # Infiltration - amount
   SoilStack$effectiveInfiltrationRate <- effectiveConductivity(tempSurfaceWater, SoilStack$fieldCapacityAmount, SoilStack$saturatedHydraulicMatrix, SoilStack$saturatedMoistureContent, SoilStack$saturatedHydraulicConductivityMacropore, SoilStack$soilDepthCM, SoilStack$conductivityAtFieldCapacity) * simulationTimeSecs
-  
-  # Ponding of water - 
+
+  # Ponding of water -
   SoilStack$pondedWater <- terra::ifel((tempSurfaceWater > SoilStack$effectiveInfiltrationRate),
                                        tempSurfaceWater - SoilStack$effectiveInfiltrationRate, 0) # if
-  
-  # Calculate the soil storage after infiltration rate is calculated         
+
+  # Calculate the soil storage after infiltration rate is calculated
   SoilStack$currentSoilStorage <- SoilStack$currentSoilStorage + SoilStack$effectiveInfiltrationRate
-  
+
   # Calculate the excess moisture in soil as saturation excess
-  throughflow <- terra::ifel(SoilStack$currentSoilStorage > SoilStack$maxSoilStorageAmount, 
+  throughflow <- terra::ifel(SoilStack$currentSoilStorage > SoilStack$maxSoilStorageAmount,
                              SoilStack$currentSoilStorage - SoilStack$maxSoilStorageAmount, 0)
   # Adjust the soil storage for the throughflow that returned to surface
   SoilStack$currentSoilStorage <- SoilStack$currentSoilStorage - throughflow
-  
+
   # Calculate the surface depth of water
   SoilStack$surfaceWater <- tempSurfaceWater + throughflow - SoilStack$effectiveInfiltrationRate# water stored on surface
-  
+
   return(list(SoilStack$surfaceWater, SoilStack$currentSoilStorage))
 }
   # Adjust the soil storage - keeping it under the maximum soil storage amount
@@ -102,7 +102,7 @@ subsurfaceFlow <- function(SoilStack, simulationTimeSecs, flowStack_file){
   # Effective conductivity function for subsurface flow for unsaturated, saturated, and at fields capacity.
   # Rate of m/s
   SoilStack$effectiveConductivity <- effectiveConductivity(SoilStack$currentSoilStorage, SoilStack$fieldCapacityAmount, SoilStack$saturatedHydraulicMatrix, SoilStack$saturatedMoistureContent, SoilStack$saturatedHydraulicConductivityMacropore, SoilStack$soilDepthCM, SoilStack$conductivityAtFieldCapacity) * simulationTimeSecs
-  
+
   # [3b] Lateral flow
   ## The following command uses Darcy's law to rout lateral flow through different land use
   # Lateral flow minimum between Darcy's law and amount of water on the surface
