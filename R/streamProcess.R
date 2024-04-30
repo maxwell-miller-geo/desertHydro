@@ -20,7 +20,7 @@ smoothStream <- function(stream, demPath, outpath = NULL){
   # stream <- file.path(WatershedElements, "stream_analysis.shp")
   #dem <- file.path(WatershedElements, "dem.tif")
   # Note dem must be a path
-  #ID <- NULL
+  max_elev <- ID <- elev <- NULL
   WatershedElements <- outpath
   if(class(demPath) == "SpatRaster"){
     stop("Please input dem as a path, not a spatial raster")

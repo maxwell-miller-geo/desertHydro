@@ -20,6 +20,19 @@ options(rmarkdown.html_vignette.check_title = FALSE)
 <!-- $$(K_{macro} -  K_{FieldCond}) {\frac{W_{surf}-Field_{cap}}{d_{soil}}} ({\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}})^{-1}$$ -->
 <!-- $${\frac{W_{surf}-Field_{cap}}{d_{soil}}}$$ -->
 <!-- $$ {\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}$$ -->
+The purpose of this package is to provide a method of computational hydrology for arid regions.
+Arid regions provide unique challenge to hydrological modeling ranging from 
+very steep terrain with canyons and cliffs, lack of detailed soil data and land cover data,
+complex interactions between infiltration and lack of detailed rainfall data.
+
+The utility of the desertHydro model is built upon the integration of field measurements, e.i.,
+rainfall and stream gauge data, with remotely sensed or publically available data.
+
+Some of the data that can be utilized within this package:
+Rainfall data: https://www.goes-r.gov/
+Some information about GOES files: https://docs.opendata.aws/noaa-goes16/cics-readme.html#about-the-data
+
+
 ## Load in the necessary libraries
 ```{r, setup, message=FALSE, warning=FALSE}
 library(desertHydro)

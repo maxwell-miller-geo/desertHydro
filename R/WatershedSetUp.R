@@ -110,7 +110,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
   initial_soil_conditions(LandCoverCharacteristics = LandCoverCharacteristics,
                           ClassificationMap = ClassificationMap,
                           WatershedStack = WatershedStack,
-                          outline = watershed_shape_path,
+                          outline = WatershedShape,
                           ModelOutputs = ModelFolder,
                           key = key,
                           overwrite = overwrite

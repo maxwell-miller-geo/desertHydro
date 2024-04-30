@@ -13,6 +13,7 @@
 ##-------------------- Discharge Creation
 # Function that checks and/or creates discharge for given date
 dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, discharge = F, store = T, discharge_file = "example_discharge.csv"){
+  time <- Total_in <- NULL
   # Load in the filtered rainfall file
   rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
   rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
@@ -96,7 +97,7 @@ dischargeTotal <- function(discharge_file, write = F){
 #
 # # Function that resamples the data to different time scales - mean approximation
 # # date_time, height, discharge, temp_c
-dischargeResample <- function(dischargeDF, units = "day", write = F){
+dischargeResample <- function(dischargeDF, ModelFolder = NULL, units = "day", write = F){
   resampledDF <- dischargeDF |>
     stats::aggregate(cbind(discharge, temp_c) ~ lubridate::floor_date(date_time, unit = units), FUN = max) |>
     purrr::set_names(units, "maxDischarge", "temp_c") # want the peaks
@@ -125,7 +126,7 @@ dischargeResample <- function(dischargeDF, units = "day", write = F){
 #
 ## ----------------------------------------------
 # # Create a function to look up if discharge is recorded on a particular date
-discharge_present <- function(data_folder, date, discharge_name = "example_discharge.csv", write = T){
+discharge_present <- function(data_folder, date, ModelFolder = NULL, discharge_name = "example_discharge.csv", write = T){
   # Currently only works for 1 downloaded gauge - does select by stream gauge
   stream_data <- file.path(data_folder, discharge_name)
   if(!file.exists(stream_data)){ # check file location

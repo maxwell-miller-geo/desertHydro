@@ -212,23 +212,24 @@ streamCreate <- function(flowRasterPath, model_dem, Outpath, threshold = 100){
   crsAssign(extracted_streams, coordinateSystem = terra::crs(terra::rast(flowRasterPath)))
   # Flow accumulation raster
   #flowRaster <- terra::rast(file.path(WatershedElements, "flow_accumulation.tif"))
-  demFile <- dem
-  dem_alternate <- file.path(Outpath, dem)
+  demFile <- model_dem
+  #dem_alternate <- file.path(Outpath, dem)
   streams <- file.path(Outpath, "streams.shp")
   flow_direction <- file.path(Outpath, "flow_d8.tif")
 
-  # if(!file.exists(flow_direction)){
-  #   if(file.exists(demFile)){
-  #     whitebox::wbt_d8_pointer(demFile, flow_direction)
-  #     crsAssign(flow_direction, terra::crs(terra::rast(demFile))) # flow direction
-  #
-  #   }else if(file.exists(dem_alternate)){
-  #     whitebox::wbt_d8_pointer(dem_alternate, flow_direction) # flow direction
-  #     crsAssign(flow_direction, terra::crs(terra::rast(dem_alternate))) # coords
-  #   }else{
-  #     errorCondition("Could not find digital elevation model in input folders.")
-  #   }
-  # }
+  if(!file.exists(flow_direction)){
+    if(file.exists(demFile)){
+      whitebox::wbt_d8_pointer(demFile, flow_direction)
+      crsAssign(flow_direction, terra::crs(terra::rast(demFile))) # flow direction
+
+    }else if(file.exists(dem_alternate)){
+      whitebox::wbt_d8_pointer(dem_alternate, flow_direction) # flow direction
+      crsAssign(flow_direction, terra::crs(terra::rast(dem_alternate))) # coords
+
+    }else{
+      errorCondition("Could not find digital elevation model in input folders.")
+    }
+  }
   coords <- terra::crs(terra::rast(flow_direction)) # coordinates of flow direction
   whitebox::wbt_raster_streams_to_vector(extracted_streams, flow_direction, streams)
   crsAssign(streams, coordinateSystem = coords)

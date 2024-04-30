@@ -104,7 +104,7 @@ totalVolume <- function(time, discharge){
 #' @examples \dontrun{#See vignette}
 #'
 dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length, discharge = F, store = T, date = NULL){
-  time <- Total_in <- NULL
+  time <- Total_in <- xsection_next <- NULL # keep the global variables at bay
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
   velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
   #subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
@@ -207,19 +207,19 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, gif = T,
   }
   rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method = rainfall_method)
 
-  xvalues <-as.vector(na.omit(as.numeric(names(surfaceStorage))))
+  xvalues <- as.vector(stats::na.omit(as.numeric(names(surfaceStorage))))
 
   if(discharge & rainfall_method != "goes"){ # gathers total rain and rain duration values
     print("Retrieving rainfall data from simulation: rain_discharge")
     rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
     rainFiltered <- readr::read_csv(rainFiltered_file, show_col_types = F)
     total_rain <- round(sum(rainFiltered$Total_in),3)
-    total_rain_duration <- as.numeric((tail(rainFiltered$Time_minute, n = 1) - rainFiltered$Time_minute[1]))
+    total_rain_duration <- as.numeric((utils::tail(rainFiltered$Time_minute, n = 1) - rainFiltered$Time_minute[1]))
     rain <- readr::read_csv(rain_file, show_col_types = F)
   }else if(rainfall_method == "goes"){
     rain <- terra::rast(rain_file)
-    total_rain <- max(values(sum(rain)), na.rm = T) / 25.4 # rainfall in inches
-    total_rain_duration <- (nlyr(rain) -1) * 10 # rainfall minutes
+    total_rain <- max(terra::values(sum(rain)), na.rm = T) / 25.4 # rainfall in inches
+    total_rain_duration <- (terra::nlyr(rain) -1) * 10 # rainfall minutes
   }else{
     print(paste("No rain-discharge data: Retrieving rainfall data from rainfile...", rain_file))
     rain <- readr::read_csv(file.path(ModelFolder, "Model-Rainfall.csv"), show_col_types = F)
