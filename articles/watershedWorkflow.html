@@ -176,7 +176,7 @@ the spatial file and the excel file.</p>
 <span><span class="va">time_step</span> <span class="op">&lt;-</span> <span class="fl">.1</span> <span class="co"># time step in minutes</span></span>
 <span><span class="va">simulation_length</span> <span class="op">&lt;-</span>  <span class="fl">1</span> <span class="co"># time length in minutes</span></span>
 <span><span class="va">impervious</span> <span class="op">&lt;-</span>  <span class="co"># no infiltration</span></span>
-<span><span class="va">overwrite</span> <span class="op">&lt;-</span> <span class="cn">T</span> <span class="co"># overwrite previous inputs in both watershed elements and model folder</span></span>
+<span><span class="va">overwrite</span> <span class="op">&lt;-</span> <span class="cn">T</span> <span class="co"># overwrite watershed elements and model folder</span></span>
 <span><span class="va">write</span> <span class="op">&lt;-</span> <span class="cn">T</span> <span class="co"># create graphs and write outputs to model folder</span></span>
 <span><span class="va">restartModel</span> <span class="op">&lt;-</span> <span class="cn">F</span> <span class="co"># If model is paused mid-run, can be restarted with same inputs</span></span>
 <span><span class="va">gif</span> <span class="op">&lt;-</span> <span class="cn">F</span> <span class="co"># If TRUE, gif's will be created automatically. Can be created at the end</span></span></code></pre></div>
@@ -189,12 +189,14 @@ the spatial file and the excel file.</p>
 <span><span class="va">foldersToCheck</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">WatershedElements</span><span class="op">)</span></span>
 <span><span class="va">folders</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">foldersToCheck</span>, FUN <span class="op">=</span> <span class="va">file.exists</span><span class="op">)</span></span>
 <span><span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="va">folders</span><span class="op">)</span><span class="op">)</span><span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"All folders are not found. Here is a list of folders not found."</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"All folders not found. List of folders not found."</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">folders</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="co"># Check if the necessary files are present</span></span>
-<span><span class="va">filesToCheck</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">demFile</span>, <span class="va">boundary</span>, <span class="va">landCoverFile</span>, <span class="va">LandCoverCharacteristics</span>, <span class="va">rainFile</span>, <span class="va">dischargeFile</span><span class="op">)</span></span>
-<span><span class="va">filesCheck</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">WatershedElements</span>, <span class="va">filesToCheck</span><span class="op">)</span>, FUN <span class="op">=</span> <span class="va">file.exists</span><span class="op">)</span></span>
+<span><span class="va">filesToCheck</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">demFile</span>, <span class="va">boundary</span>, <span class="va">landCoverFile</span>, </span>
+<span>                  <span class="va">LandCoverCharacteristics</span>, <span class="va">rainFile</span>, <span class="va">dischargeFile</span><span class="op">)</span></span>
+<span><span class="va">filesCheck</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">WatershedElements</span>, <span class="va">filesToCheck</span><span class="op">)</span>, </span>
+<span>                     FUN <span class="op">=</span> <span class="va">file.exists</span><span class="op">)</span></span>
 <span><span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="va">filesCheck</span><span class="op">)</span><span class="op">)</span><span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="st">"All files are not found. Here is a list of the files present."</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">filesCheck</span><span class="op">)</span></span>
@@ -206,6 +208,27 @@ the spatial file and the excel file.</p>
 <div class="section level2">
 <h2 id="model-run---off-and-running">2 Model Run - off and running<a class="anchor" aria-label="anchor" href="#model-run---off-and-running"></a>
 </h2>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="va">a</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/arid_model.html">arid_model</a></span><span class="op">(</span><span class="va">ModelFolder</span>,</span>
+<span>                <span class="va">WatershedElements</span>,</span>
+<span>                date <span class="op">=</span> <span class="va">date</span>,</span>
+<span>                demFile <span class="op">=</span> <span class="va">demFile</span>,</span>
+<span>                boundary <span class="op">=</span> <span class="va">boundary</span>,</span>
+<span>                landCoverFile <span class="op">=</span> <span class="va">landCoverFile</span>,</span>
+<span>                LandCoverCharacteristics <span class="op">=</span> <span class="va">LandCoverCharacteristics</span>,</span>
+<span>                key <span class="op">=</span> <span class="va">key</span>,</span>
+<span>                impervious <span class="op">=</span> <span class="va">impervious</span>,</span>
+<span>                rainfall_method <span class="op">=</span> <span class="va">rainfall_method</span>,</span>
+<span>                store <span class="op">=</span> <span class="va">store</span>,</span>
+<span>                gif <span class="op">=</span> <span class="va">gif</span>,</span>
+<span>                discharge <span class="op">=</span> <span class="va">discharge</span>,</span>
+<span>                time_step <span class="op">=</span> <span class="va">time_step</span>,</span>
+<span>                simulation_length <span class="op">=</span> <span class="va">simulation_length</span>,</span>
+<span>                overwrite <span class="op">=</span> <span class="va">overwrite</span>,</span>
+<span>                write <span class="op">=</span> <span class="va">write</span>,</span>
+<span>                restartModel <span class="op">=</span> <span class="va">restartModel</span></span>
+<span>                <span class="op">)</span></span></code></pre></div>
 <p>The model will create files within the Model Folder where it runs.
 The length of simulation is based on the size of the grid, the initial
 timestep, and the duration. It is always encouraged to run a small scale
@@ -218,21 +241,22 @@ properly.</p>
 <p>After the model has run, there are many files that are present within
 the Model Folder that can be viewed in-situ or loaded into R for
 viewing.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Rain file to grab the necessary rainfall method</span></span>
 <span><span class="co">#rain_file &lt;- desertHydro:::rainfallMethodCheck(ModelFolder, rainfall_method)</span></span>
-<span><span class="va">gifs</span> <span class="op">&lt;-</span> <span class="fu">desertHydro</span><span class="fu">:::</span><span class="fu">gifCreation</span><span class="op">(</span><span class="va">ModelFolder</span>, <span class="va">rainfall_method</span>, discharge <span class="op">=</span> <span class="cn">F</span>, saveGraph <span class="op">=</span> <span class="cn">T</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">gifs</span> <span class="op">&lt;-</span> <span class="fu">desertHydro</span><span class="fu">::</span><span class="fu">gifCreation</span><span class="op">(</span><span class="va">ModelFolder</span>, <span class="va">rainfall_method</span>, </span>
+<span>                                  discharge <span class="op">=</span> <span class="cn">F</span>, saveGraph <span class="op">=</span> <span class="cn">T</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="surface-gif">Surface gif<a class="anchor" aria-label="anchor" href="#surface-gif"></a>
 </h2>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gifs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="co"># surface gif</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="velocity-gif">Velocity gif<a class="anchor" aria-label="anchor" href="#velocity-gif"></a>
 </h2>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gifs</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span> <span class="co"># velocity gif</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
