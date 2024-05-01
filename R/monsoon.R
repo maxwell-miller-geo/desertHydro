@@ -9,23 +9,23 @@ monsoon <- function(ModelFolder = NULL){
 
   # Necessary variables
   demFile <- "dem.tif"
-  boundary <- "test-boundary.shp" # Name of shapefile for outline
+  boundary <- "waterholes_shape.shp" # Name of shapefile for outline
   landCoverFile <- "soils.shp" # name of soils data
   LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
   key <- "MUSYM" # key is present in both the landcoverfile and the land cover characteristics
 
   # Date options
-  date <- NULL # Optional - if dates present must be in YYYY-MM-DD format
+  date <- "2018-07-13" # Optional - if dates present must be in YYYY-MM-DD format
   rainFile <- "USGS_Rain_2001_2021.xlsx"
-  dischargeFile <- "example_discharge.csv"
-  discharge = F # If TRUE, expects discharge present in file
+  dischargeFile <- "observable-discharge.csv"
+  discharge = T # If TRUE, expects discharge present in file
   # If rainfall method is synthetic - uses 1/2 inch - 15 minute storm
-  rainfall_method <- "synthetic"
+  rainfall_method <- "gauges" # Synthetic, Gauges, Spatial
   length <- 10 # grid cell length - assumes uniform grid
   store = T
-  time_step <- .1 # time step in minutes
-  simulation_length <-  1 # time length in minutes
-  impervious <-  # no infiltration
+  time_step <- .5 # time step in minutes
+  simulation_length <-  2 # time length in minutes
+  impervious <- T # no infiltration
   overwrite <- T # overwrite watershed elements and model folder
   write <- T # create graphs and write outputs to model folder
   restartModel <- T # If model is paused mid-run, can be restarted with same inputs
@@ -68,9 +68,8 @@ monsoon <- function(ModelFolder = NULL){
             write = write,
             restartModel = restartModel
   )
-
+  return(a)
   gifs <- desertHydro:::gifCreation(ModelFolder, rainfall_method,
                                     discharge = discharge, saveGraph = T)
   return(ModelFolder)
-
 }

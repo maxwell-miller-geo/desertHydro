@@ -237,7 +237,9 @@ initial_conditions(ModelOutputs = ModelFolder, model_dem = model_dem) # saves in
 #eventDate <- "2012-07-15"
 # source("Rainfall_Process.R")
 # Read in the rainfall data from a saved file, normalize it, and create a
-rain_file <- suppressWarnings(rainfallCreation(ModelFolder, WatershedElements, date = date, method = rainfall_method, overwrite = overwrite))
+rain_file <- suppressWarnings(rainfallCreation(ModelFolder, WatershedElements,
+                                               date = date, method = rainfall_method,
+                                               overwrite = overwrite))
 print(rain_file)
 # Slight issue: will use saved rainfall data if present - does not check to see what type of data the rainfall is
 
@@ -246,7 +248,7 @@ print(rain_file)
 
 # source("Discharge_Process.R")
 rain_discharge <- dischargeCreate(date = date, ModelFolder, WatershedElements, rain_file = rain_file, discharge = discharge)
-#return(rain_discharge)
+
 # For both cases of discharge
 # Calculate the number of observations
 observations <- nrow(rain_discharge)
@@ -256,7 +258,6 @@ duration <- max(rain_discharge$time) # minutes
 
 # Calculate the total rainfall
 total_rain <- sum(rain_discharge$Total_in)
-
 
 # store plots
 if(store & discharge){

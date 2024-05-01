@@ -12,7 +12,7 @@
 
 ##-------------------- Discharge Creation
 # Function that checks and/or creates discharge for given date
-dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, discharge = F, store = T, discharge_file = "example_discharge.csv"){
+dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, discharge = F, store = T, discharge_file = "observage-discharge.csv"){
   time <- Total_in <- NULL
   # Load in the filtered rainfall file
   rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
@@ -25,7 +25,7 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, dis
     }else {
       print("Creating discharge data")
       # Check if discharge present on day - returns the date or optional date
-      date <- lubridate::date(discharge_present(WatershedElements, date))[1] # returns discharge date or next day (first     entry)
+      #date <- lubridate::date(discharge_present(WatershedElements, date))[1] # returns discharge date or next day (first     entry)
       #print(date)
       # Load in stream data from Waterholes - GCMRC
       dischargeDataPath <- file.path(WatershedElements, "example_discharge.csv") #- sloppy
@@ -65,6 +65,11 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, dis
 # # Function that takes rainfall data from a watersheds gauges and gathers total rainfall
 dischargeTotal <- function(discharge_file, write = F, WatershedElements = ""){
     print("Calculating total discharge values")
+    out_discharge <- file.path(WatershedElements, "observable-discharge.csv")
+    if(file.exists(out_discharge)){
+      observable_discharge <- utils::read.csv(out_discharge)
+      return(as.data.frame(observable_discharge))
+    }
     date_time <- height <- discharge <- temp_c <- stream <-  NULL
     stream <- data.table::fread(discharge_file) # reads tsv and csv files
 
@@ -74,16 +79,21 @@ dischargeTotal <- function(discharge_file, write = F, WatershedElements = ""){
     timeIndex <- stringMatch(stream, guessName = "time", string = F)
     heightIndex <- stringMatch(stream, guessName = "Height", string = F)
     dischIndex <- stringMatch(stream, guessName = "Discharge", string = F)
-    tempIndex <- stringMatch(stream, guessName = "Temp", string = F)
-    stream[,tempIndex] <- zoo::na.approx(stream[, tempIndex]) # filter out NA values
+    tempIndex <- stringMatch(stream, guessName = "temp", string = F)
+
+    #filt <- zoo::na.approx(stream[, ..tempIndex]) # filter out NA values
+    # print(length(filter))
+    # print(length(stream[, ..tempIndex]))
+    #stream[, tempIndex := zoo::na.approx(tempIndex)]
+    #stream[,tempIndex:=zoo::na.approx(stream[tempIndex])] # filter out NA values
 
     observable_discharge <- as.data.frame(stream) |>
-      dplyr::mutate(date_time = stream[,timeIndex],
-                    height = stream[,heightIndex],
-                    discharge = stream[,dischIndex],
-                    temp_c = stream[,dischIndex]) |>
+      dplyr::mutate(date_time = stream[, timeIndex],
+                    height = stream[, heightIndex],
+                    discharge = stream[, dischIndex],
+                    temp_c = stream[, tempIndex]) |>
       dplyr::select(date_time, height, discharge, temp_c) |>
-      dplyr::mutate(temp_c = ifelse(temp_c < -50, NA, temp_c)) |> # deal with values less then possible (-999)
+      #dplyr::mutate(temp_c = ifelse(temp_c < -50, NA, temp_c)) |> # deal with values less then possible (-999)
       dplyr::filter(discharge > 0) # filter out all the discharge greater than 0
 
   if(write){
@@ -126,7 +136,7 @@ dischargeResample <- function(dischargeDF, ModelFolder = NULL, units = "day", wr
 #
 ## ----------------------------------------------
 # # Create a function to look up if discharge is recorded on a particular date
-discharge_present <- function(data_folder, date, ModelFolder = NULL, discharge_name = "example_discharge.csv", write = T){
+discharge_present <- function(data_folder, date, ModelFolder = NULL, discharge_name = "observable-discharge.csv", write = T){
   # Currently only works for 1 downloaded gauge - does select by stream gauge
   stream_data <- file.path(data_folder, discharge_name)
   if(!file.exists(stream_data)){ # check file location
@@ -137,6 +147,7 @@ discharge_present <- function(data_folder, date, ModelFolder = NULL, discharge_n
 
   # Use the discharge - total function to reorganize the stream gauges by day
   # then compare if input date - before or after exists
+  print(stream_data)
   dischargeDF <- suppressWarnings(dischargeTotal(stream_data, write = write, WatershedElements = data_folder)) # dataframe with recorded discharge values (>0)
 
   # use the dischargeResample function to obtain the highest discharge for a each day

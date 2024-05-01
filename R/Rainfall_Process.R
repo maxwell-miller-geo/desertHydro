@@ -202,7 +202,7 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", total_col = 
   if(substr(date, 1, 4) == "2022"){ # Year 2022
     rainfall_file <- file.path(rainfall_folder, "USGS_Rain_2022.xlsx")
   }else{
-    rainfall_file <- file.path(rainfall_folder, "USGS-GCMRC rain-gauge data WY 2000_2021.xlsx") # Should be changed
+    rainfall_file <- file.path(rainfall_folder, "USGS_Rain_2001_2021.xlsx") # Should be changed
   }
   # if(new){
   #   rainfall_file <- file.path(rainfall_file, "USGS_Rain_2023.xlsx")

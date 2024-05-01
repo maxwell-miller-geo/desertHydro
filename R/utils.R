@@ -4,7 +4,7 @@
 
 ## ---------------------------------- Wrapper finder function
 stringMatch <- function(dataset, guessName = "Discharge", string = T){
-  matchLocations <- grep(guessName, colnames(dataset)) # index of guesses
+  matchLocations <- grep(guessName, colnames(dataset), ignore.case = T) # index of guesses
   if(length(matchLocations) == 1){
     stringName <- colnames(dataset)[matchLocations]
   }else if(length(matchLocations > 1)){

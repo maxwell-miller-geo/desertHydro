@@ -71,7 +71,7 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
 # dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") # pass dem as file path
 # hydro_workflow <- flow_accumlation_wb(dem_path, ModelFolder, )
 
-flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA, max_dist = 1000, stream_threshold = 1200, carve = 1, overwrite = T){
+flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA, smooth = T, max_dist = 1000, stream_threshold = 1200, carve = 1, overwrite = T){
   gc()
   # List of created rasters
   crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
@@ -151,11 +151,14 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
 
   # Carve dem
   if(carve > 0){
-    carve_dem <- carveDem(model_dem, flow_accum, outline = watershed_shape_path, depth = carve) #
+    carve_dem <- carveDem(model_dem, flow_accum, outline = watershed_shape_path, depth = carve)
     #carve_dem <- carveDem(dem, flow_accum, depth = 1)
     terra::writeRaster(carve_dem[[1]], model_dem, overwrite = T)
     flow_accum <- file.path(ModelFolder, "model_flow_accumlation.tif")
     terra::writeRaster(carve_dem[[2]], flow_accum, overwrite = T)
+    # Smooth the stream
+    print("Smoothing stream network...")
+    smoothStream(stream_network, model_dem, ModelFolder)
   }
   #carve_dem <- terra::rast(model_dem) + 0
   # Determine outflow points of model to prevent back filling
