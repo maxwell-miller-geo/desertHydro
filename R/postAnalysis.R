@@ -194,7 +194,22 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
 
 ## ----------------------------------- GIF Creation
 # Function to create gifs from stacked raster layers
-gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, gif = T, discharge = F, saveGraph = T){
+#' Create GIFS
+#'
+#' @param ModelFolder Location to save Model Folder
+#' @param rainfall_method String: "guages","spatial", "synthetic", "goes based on
+#' the input rainfall method
+#' @param date String: Optional, will display the rainfall totals in GIF
+#' @param discharge T/F: If T, will incorporate discharge data
+#' @param saveGraph T/F: If T, will save graph to ModelFOlder
+#'
+#' @return Returns list containing surface and velocity GIFS.
+#' @export
+#'
+#' @examples \dontrun{
+#' gifCreation(ModelFolder, saveGraph = T)
+#' }
+gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharge = F, saveGraph = T){
 
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
   velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
@@ -229,7 +244,6 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, gif = T,
     total_rain_duration <- as.numeric((utils::tail(rain$time, n = 1) - rain$time[1]))
   }
 
-  if(gif){
     print(paste("Creating surface depth animation..."))
     # Load in surface storage
     #surfaceStorage <- rast(file.path(ModelFolder, "Surface_Storage.tif"))
@@ -285,7 +299,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, gif = T,
       gganimate::anim_save(filename = paste0(date,"-velocity.gif"), path = ModelFolder, animation = velocity_plot, fps = 10, renderer = gganimate::gifski_renderer())
     }
     return(list(surface_plot, velocity_plot))
-  }
+
 }
 # Test
 # gifCreation(ModelFolder, rainfall_method = "goes")

@@ -8,6 +8,7 @@ flow_accumlation_wb(
   dem_file_path,
   ModelFolder,
   watershed_shape_path = NA,
+  smooth = T,
   max_dist = 1000,
   stream_threshold = 1200,
   carve = 1,
@@ -20,6 +21,8 @@ flow_accumlation_wb(
 \item{ModelFolder}{Output path to save model outputs}
 
 \item{watershed_shape_path}{Optional shapefile to clip the resulting results}
+
+\item{smooth}{T/F: If TRUE, will smooth stream segements to remove flat areas}
 
 \item{max_dist}{numeric value in meters to breach the digital elevation model}
 

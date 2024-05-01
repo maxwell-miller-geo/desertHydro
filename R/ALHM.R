@@ -371,7 +371,7 @@ print("Retrieving rainfall data for simulation")
 rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method)
 if(gif){
   print("Creating gifs")
-  gifCreation(ModelFolder, rain_file, rainfall_method = rainfall_method, gif = gif, discharge = discharge, date = date)
+  gifCreation(ModelFolder, rain_file, rainfall_method = rainfall_method, discharge = discharge, date = date)
 }
 
 

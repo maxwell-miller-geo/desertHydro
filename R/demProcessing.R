@@ -56,6 +56,7 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
 #'
 #' @param dem_file_path path to digital elevation file
 #' @param ModelFolder Output path to save model outputs
+#' @param smooth T/F: If TRUE, will smooth stream segements to remove flat areas
 #' @param watershed_shape_path Optional shapefile to clip the resulting results
 #' @param max_dist numeric value in meters to breach the digital elevation model
 #' @param stream_threshold Flow accumulation number (cells) to create channels
