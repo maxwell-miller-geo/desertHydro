@@ -10,6 +10,9 @@
     <loc>/LICENSE.html</loc>
   </url>
   <url>
+    <loc>/articles/Elevation_Adjustments_in_Stream_Networks.html</loc>
+  </url>
+  <url>
     <loc>/articles/desertHydro-Template.html</loc>
   </url>
   <url>
@@ -28,12 +31,24 @@
     <loc>/reference/arid_model.html</loc>
   </url>
   <url>
+    <loc>/reference/desertHydro-package.html</loc>
+  </url>
+  <url>
     <loc>/reference/dischargeAnalysis.html</loc>
+  </url>
+  <url>
+    <loc>/reference/flow_accumlation_wb.html</loc>
   </url>
   <url>
     <loc>/reference/folderCheck.html</loc>
   </url>
   <url>
     <loc>/reference/index.html</loc>
+  </url>
+  <url>
+    <loc>/reference/smoothStream.html</loc>
+  </url>
+  <url>
+    <loc>/reference/smoothVector.html</loc>
   </url>
 </urlset>
