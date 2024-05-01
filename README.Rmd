@@ -55,14 +55,43 @@ The set-up for desertHydro is to separate the whole process into two folders.
 WatershedElements <- 
   dirname(system.file("extdata", "dem.tif", package = "desertHydro")) 
 ```
+Some elements present within the demo within the package.
+```{r}
+list.files(WatershedElements)
+```
 
 The watershed elements folder will contain all of the necessary information about a given watershed.
 
 For example,
 ```{r watershed}
 # Examples for models
-dem <- "dem.tif" # name of digital elevation model
+demFile <- "dem.tif" # name of digital elevation model
+dem <- terra::rast(file.path(WatershedElements, demFile))
+terra::plot(dem)
+```
+Other types of data, Soil from [Web Soil Survey](https://websoilsurvey.nrcs.usda.gov/app/ "Soil App")
+```{r, warning=FALSE}
+soils <- terra::vect(file.path(WatershedElements, "soils.shp"))
+terra::plot(soils, "muname")
+```
 
+Handling rainfall data
+```{r}
+rainfall <- file.path(WatershedElements, "USGS_Rain_2022.xlsx")
+gauges_list <- readxl::read_xlsx(rainfall) # contains multiple spreadsheets
+tail(gauges_list)
+```
+Filter rainfall
+```{r}
+# Rainfall file - "USGS_Rain_2022.xlsx" is stored in Watershed Elements
+# Select days of rainfall for spreadsheet with year "2022"
+rain <- suppressWarnings(
+  desertHydro::rainfallTotalRain(WatershedElements,
+                                 date = "2022", 
+                                level = "day")
+)
+# Suppress warnings to ignore dirty data
+tail(rain)
 ```
 
 

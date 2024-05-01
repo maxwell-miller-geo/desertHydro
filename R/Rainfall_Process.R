@@ -197,7 +197,24 @@ rainfallTotal <- function(rainfall, filepath = T, inches = T){
 # rainfallTotal(rainfall_file)
 
 # Function that takes rainfall data from a watersheds gauges and gathers total rainfall
-rainfallTotalRain <- function(rainfall_folder, date, level = "day", total_col = "TOTAL", gauges = c("WATER-1", "WATER-2", "WATER-G"),  write = T){
+#' Gathers rainfall data based on date from spreadsheet
+#'
+#' @param rainfall_folder Folder path of rainfall data
+#' @param date Date string in format: "2021-07-13"
+#' @param level Optional filter: can filter by "day", "hour", "minute" based on
+#' utilizes lubridate package
+#' @param total_col Name of total column: Default "TOTAL"
+#' @param gauges Name of gauges spreadsheets:
+#' gauges = c("WATER-1", "WATER-2", "WATER-G")
+#' @param write T/F. If TRUE, will write output to rainfall_folder
+#'
+#' @return Returns data frame with rainfall data filtered by level
+#' @export
+#'
+#' @examples
+#' rain_f <- dirname(system.file("extdata", "dem.tif", package = "desertHydro"))
+#' rainfallTotalRain(rain_f, "2022-07-05", level = "day")
+rainfallTotalRain <- function(rainfall_folder, date, level = "day", total_col = "TOTAL", gauges = c("WATER-1", "WATER-2", "WATER-G"),  write = F){
   rain_in <- date_time <- NULL
   if(substr(date, 1, 4) == "2022"){ # Year 2022
     rainfall_file <- file.path(rainfall_folder, "USGS_Rain_2022.xlsx")
@@ -216,7 +233,6 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", total_col = 
 
   # Select the rainfall gauges in the list
   rainSelected <- rain[gauges]
-
   # Dirty way to adjust the cumulative amounts into differences
   for(x in 1:length(rainSelected)){
     # print(x)
@@ -251,8 +267,7 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", total_col = 
   # Join all of the rainfall amounts together
   joinedDF <- dplyr::full_join(rainSelected[[1]],rainSelected[[2]],  by = "date") |>
     dplyr::full_join(rainSelected[[3]], by = "date")
-  # #return(rainSelected)
-  # return(joinedDF)
+  #return(rainSelected)
   # #rainDay <- plyr::join_all(rainSelected, by = "date", type = "full")
   # rainDay <- dplyr::full_join(rainSelected, by = "date", type = "full")
   #return(rainDay)
