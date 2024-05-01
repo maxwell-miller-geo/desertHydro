@@ -8,6 +8,13 @@
 \description{
 The desertHydro watershed model simulates the surface and shallow subsurface flow from an input rainfall event. The primary flow routing algorithm is modified from a Soil Moisture Routing (SMR) algorithm. The user inputs a digital elevation model (DEM), watershed boundary, (shapefile), soil characteristics, and precipitation data. The model outputs stacked tif files with each timestep as a layer including velocity, soil moisture, and surface depth. Optionally, these stacked rasters can be converted into gifs for visual aids. Note - This is still in early stages of development.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://maxwell-miller-geo.github.io/desertHydro/}
+}
+
+}
 \author{
 \strong{Maintainer}: Maxwell Miller \email{mmm683@nau.edu} (\href{https://orcid.org/0009-0000-2965-695X}{ORCID})
 
