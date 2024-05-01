@@ -300,4 +300,5 @@ folderCheck <- function(folder, example_file = "dem.tif", demo = T){
     }
 }
 
+# Create an object that contains all the information needed to perform a model run
 

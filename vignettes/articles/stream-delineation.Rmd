@@ -1,0 +1,41 @@
+---
+title: "stream delineation"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Purpose
+The purpose of this article is to detail one of the most important steps in creating
+a hydrological model: Watershed boundaries. A key component of watersheds is that
+all of the water that falls within a watershed will end up at one point, commonly 
+lakes, oceans, or within stream channels.
+
+Commonly, watersheds are delineated or separated using digital elevation models or
+DEMs. There are different algorithms to compute where water is going to go and that
+is usually downhill or down in elevation. The most common algorithm is a D8 flow
+direction that determines flow in one of 8 cardinal directions. After picking a
+point or cell on a DEM, these algorithms will determine the cells that will 
+eventually connect to that point.
+
+# Creating a watershed boundary
+There are many ways to create a watershed boundary with different GIS software.
+You only need 3 things to create a watershed.
+
+## 1) DEM
+## 2) Pour point or outlet (point along the stream)
+## 3) Flow algorithm (QGIS, Whitebox tools, ArcGIS Pro Spatial Analyst)
+
+One important pre-processing step is to deal with any "pits" or "ridges" within
+a DEM. A DEM is the average elevation over an area and if the spatial resolution
+is coarse (not very detailed) then the flow path of water with get "stuck" within
+the middle of the watershed instead of the outlet. 
+
+
+```{r setup}
+library(desertHydro)
+```

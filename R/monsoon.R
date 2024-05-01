@@ -2,6 +2,7 @@
 # Blank function that will just be run once inside of monsoon
 
 monsoon <- function(ModelFolder = NULL){
+
   if(is.null(ModelFolder)){
     ModelFolder <- tempdir()
   }
