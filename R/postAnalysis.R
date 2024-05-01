@@ -85,7 +85,7 @@ totalVolume <- function(time, discharge){
 
 ## ---------------------------- Discharge Figures
 # Function that creates discharge figures
-#' Discharge Analysis after desertFlo simulation
+#' Discharge Analysis after desertHydro simulation
 #'
 #' @param ModelFolder Model Folder with saved outputs
 #' @param WatershedElements Watershed Folder with Watershed components. Assumes that
@@ -101,7 +101,9 @@ totalVolume <- function(time, discharge){
 #' @return Returns discharge excel table and plots from model simulation
 #' @export
 #'
-#' @examples \dontrun{#See vignette}
+#' @examples \dontrun{
+#' dischargeAnalysis(ModelFolder, WatershedElements, time_step, simulation_length) #See vignette
+#' }
 #'
 dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length, discharge = F, store = T, date = NULL){
   time <- Total_in <- xsection_next <- NULL # keep the global variables at bay

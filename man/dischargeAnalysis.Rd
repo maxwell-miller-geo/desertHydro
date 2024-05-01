@@ -2,7 +2,7 @@
 % Please edit documentation in R/postAnalysis.R
 \name{dischargeAnalysis}
 \alias{dischargeAnalysis}
-\title{Discharge Analysis after desertFlo simulation}
+\title{Discharge Analysis after desertHydro simulation}
 \usage{
 dischargeAnalysis(
   ModelFolder,
@@ -36,9 +36,10 @@ file.}
 Returns discharge excel table and plots from model simulation
 }
 \description{
-Discharge Analysis after desertFlo simulation
+Discharge Analysis after desertHydro simulation
 }
 \examples{
-\dontrun{#See vignette}
+\dontrun{
+dischargeAnalysis(ModelFolder, WatershedElements, time_step, simulation_length)#See vignette}
 
 }
