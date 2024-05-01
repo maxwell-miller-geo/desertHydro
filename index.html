@@ -64,7 +64,13 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>The goal of desertHydro is to create a spatially distributed hydrological model built with R tools!</p>
+<p>The goal of desertHydro is to create a spatially distributed hydrological model built with R tools! Many spatially distributed hydrological tools exist, but the purpose of this one is to provide the space for those familiar with R to build and create their own models. The integration of many outstanding packages within the R community makes this possible. This package serves to utilize free and/or readily available hydrological data to improve the hydrological understanding of these arid regions.</p>
+</div>
+<div class="section level1">
+<h1 id="abstract">Abstract<a class="anchor" aria-label="anchor" href="#abstract"></a>
+</h1>
+<p>Quantifying hydrologic response of arid region watersheds to convective storms is poorly constrained and needs to be addressed with implications for agriculture, land management, and hazard assessment. Modeling of arid and semi-arid watershed hydrology presents many challenges, including dynamic infiltration, widely distributed storm cells both spatially and temporally, and steep slopes. Novel techniques and remotely sensed data are necessary to model arid watersheds.</p>
+<p>The example below is the Waterhole’s watershed located in northern Arizona and is representative of the challenges that face arid watersheds. This package seeks to create a physically based, spatially distributed hydrology model to evaluate watershed hydrology under different land cover and climate scenarios in arid regions. The flow model desertHydro is built using R software and CRAN packages with widely used packages such as whitebox and terra. The desertHydro package facilitates the creation and modification hydrological simulations with GIS applications. The paper compares the effects that different rainfall inputs have on the discharge within the watershed. The purpose of this model is to create spatially distributed rainfall-runoff results for a watershed with repeatable results. Future improvements to surface water flow calculations and infiltration will increase the effectiveness of the model.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -78,11 +84,100 @@
 </h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://maxwell-miller-geo.github.io/desertHydro/" class="external-link">desertHydro</a></span><span class="op">)</span></span>
-<span><span class="co">## basic example code</span></span></code></pre></div>
-<p>What is special about using <code>README.Rmd</code> instead of just <code>README.md</code>? You can include R chunks like so:</p>
-<p>You’ll still need to render <code>README.Rmd</code> regularly, to keep <code>README.md</code> up-to-date. <code>devtools::build_readme()</code> is handy for this.</p>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rspatial.org/" class="external-link">terra</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; terra 1.7.71</span></span>
+<span><span class="co"># library(whitebox)</span></span></code></pre></div>
+<p>The set-up for desertHydro is to separate the whole process into two folders.</p>
+<div class="section level3">
+<h3 id="id_1-watershed-elements">1 Watershed Elements<a class="anchor" aria-label="anchor" href="#id_1-watershed-elements"></a>
+</h3>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Using the example directory within the package</span></span>
+<span><span class="va">WatershedElements</span> <span class="op">&lt;-</span> </span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">dirname</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"dem.tif"</span>, package <span class="op">=</span> <span class="st">"desertHydro"</span><span class="op">)</span><span class="op">)</span> </span></code></pre></div>
+<p>Some elements present within the demo within the package.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">WatershedElements</span><span class="op">)</span></span>
+<span><span class="co">#&gt;  [1] "boundary.cpg"                        "boundary.dbf"                       </span></span>
+<span><span class="co">#&gt;  [3] "boundary.prj"                        "boundary.qmd"                       </span></span>
+<span><span class="co">#&gt;  [5] "boundary.shp"                        "boundary.shx"                       </span></span>
+<span><span class="co">#&gt;  [7] "breach-test.tif"                     "dem.tif"                            </span></span>
+<span><span class="co">#&gt;  [9] "dem.tif.aux.xml"                     "example_discharge.csv"              </span></span>
+<span><span class="co">#&gt; [11] "geo_adjustments.xlsx"                "geo_soils.cpg"                      </span></span>
+<span><span class="co">#&gt; [13] "geo_soils.dbf"                       "geo_soils.prj"                      </span></span>
+<span><span class="co">#&gt; [15] "geo_soils.shp"                       "geo_soils.shx"                      </span></span>
+<span><span class="co">#&gt; [17] "LandCoverCharacteristics_Soils.xlsx" "main-stem.dbf"                      </span></span>
+<span><span class="co">#&gt; [19] "main-stem.shp"                       "main_stem.tif"                      </span></span>
+<span><span class="co">#&gt; [21] "mini_ws.cpg"                         "mini_ws.dbf"                        </span></span>
+<span><span class="co">#&gt; [23] "mini_ws.prj"                         "mini_ws.shp"                        </span></span>
+<span><span class="co">#&gt; [25] "mini_ws.shx"                         "mod_dem.tif"                        </span></span>
+<span><span class="co">#&gt; [27] "model_landcover.tif.aux.xml"         "observable-discharge.csv"           </span></span>
+<span><span class="co">#&gt; [29] "rain-data-day-2022.csv"              "smooth_dem.tif"                     </span></span>
+<span><span class="co">#&gt; [31] "soils.cpg"                           "soils.dbf"                          </span></span>
+<span><span class="co">#&gt; [33] "soils.prj"                           "soils.shp"                          </span></span>
+<span><span class="co">#&gt; [35] "soils.shx"                           "stream_analysis.dbf"                </span></span>
+<span><span class="co">#&gt; [37] "stream_analysis.prj"                 "stream_analysis.shp"                </span></span>
+<span><span class="co">#&gt; [39] "stream_analysis.shx"                 "stream_path.cpg"                    </span></span>
+<span><span class="co">#&gt; [41] "stream_path.dbf"                     "stream_path.prj"                    </span></span>
+<span><span class="co">#&gt; [43] "stream_path.qmd"                     "stream_path.shp"                    </span></span>
+<span><span class="co">#&gt; [45] "stream_path.shx"                     "test-boundary.cpg"                  </span></span>
+<span><span class="co">#&gt; [47] "test-boundary.dbf"                   "test-boundary.prj"                  </span></span>
+<span><span class="co">#&gt; [49] "test-boundary.qmd"                   "test-boundary.shp"                  </span></span>
+<span><span class="co">#&gt; [51] "test-boundary.shx"                   "USGS_Rain_2001_2021.xlsx"           </span></span>
+<span><span class="co">#&gt; [53] "USGS_Rain_2022.xlsx"                 "voronoi.cpg"                        </span></span>
+<span><span class="co">#&gt; [55] "voronoi.dbf"                         "voronoi.prj"                        </span></span>
+<span><span class="co">#&gt; [57] "voronoi.shp"                         "voronoi.shx"                        </span></span>
+<span><span class="co">#&gt; [59] "waterholes_extent.tif"               "waterholes_shape.dbf"               </span></span>
+<span><span class="co">#&gt; [61] "waterholes_shape.prj"                "waterholes_shape.shp"               </span></span>
+<span><span class="co">#&gt; [63] "waterholes_shape.shx"                "watershed_stack.tif.aux.xml"</span></span></code></pre></div>
+<p>The watershed elements folder will contain all of the necessary information about a given watershed.</p>
+<p>For example,</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Examples for models</span></span>
+<span><span class="va">demFile</span> <span class="op">&lt;-</span> <span class="st">"dem.tif"</span> <span class="co"># name of digital elevation model</span></span>
+<span><span class="va">dem</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">WatershedElements</span>, <span class="va">demFile</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dem</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-watershed-1.png" width="100%"> Other types of data, Soil from <a href="https://websoilsurvey.nrcs.usda.gov/app/" title="Soil App" class="external-link">Web Soil Survey</a></p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">soils</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/vect.html" class="external-link">vect</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">WatershedElements</span>, <span class="st">"soils.shp"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">soils</span>, <span class="st">"muname"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-unnamed-chunk-3-1.png" width="100%"></p>
+<p>Handling rainfall data</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rainfall</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">WatershedElements</span>, <span class="st">"USGS_Rain_2022.xlsx"</span><span class="op">)</span></span>
+<span><span class="va">gauges_list</span> <span class="op">&lt;-</span> <span class="fu">readxl</span><span class="fu">::</span><span class="fu"><a href="https://readxl.tidyverse.org/reference/read_excel.html" class="external-link">read_xlsx</a></span><span class="op">(</span><span class="va">rainfall</span><span class="op">)</span> <span class="co"># contains multiple spreadsheets</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/headtail.html" class="external-link">tail</a></span><span class="op">(</span><span class="va">gauges_list</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # A tibble: 6 × 4</span></span>
+<span><span class="co">#&gt;   Gage    Longitude Latitude `Start date`</span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;       &lt;dbl&gt;    &lt;dbl&gt;        &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt; 1 TAN-G       -112.     36.7           NA</span></span>
+<span><span class="co">#&gt; 2 TATER-1     -112.     36.5           NA</span></span>
+<span><span class="co">#&gt; 3 TATER-2     -112.     36.5           NA</span></span>
+<span><span class="co">#&gt; 4 WATER-1     -111.     36.8           NA</span></span>
+<span><span class="co">#&gt; 5 WATER-2     -111.     36.8           NA</span></span>
+<span><span class="co">#&gt; 6 WATER-G     -112.     36.8           NA</span></span></code></pre></div>
+<p>Filter rainfall</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Rainfall file - "USGS_Rain_2022.xlsx" is stored in Watershed Elements</span></span>
+<span><span class="co"># Select days of rainfall for spreadsheet with year "2022"</span></span>
+<span><span class="va">rain</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span></span>
+<span>  <span class="fu">desertHydro</span><span class="fu">::</span><span class="fu"><a href="reference/rainfallTotalRain.html">rainfallTotalRain</a></span><span class="op">(</span><span class="va">WatershedElements</span>,</span>
+<span>                                 date <span class="op">=</span> <span class="st">"2022"</span>, </span>
+<span>                                level <span class="op">=</span> <span class="st">"day"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># Suppress warnings to ignore dirty data</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/headtail.html" class="external-link">tail</a></span><span class="op">(</span><span class="va">rain</span><span class="op">)</span></span>
+<span><span class="co">#&gt;      Time_day WATER-1 WATER-2 WATER-G Total_in</span></span>
+<span><span class="co">#&gt; 80 2022-06-17       0       0    0.04     0.04</span></span>
+<span><span class="co">#&gt; 81 2022-06-18       0       0    0.06     0.06</span></span>
+<span><span class="co">#&gt; 82 2022-06-19       0       0    0.02     0.02</span></span>
+<span><span class="co">#&gt; 83 2022-06-26       0       0    0.02     0.02</span></span>
+<span><span class="co">#&gt; 84 2022-07-11       0       0    0.01     0.01</span></span>
+<span><span class="co">#&gt; 85 2022-07-23       0       0    0.05     0.05</span></span></code></pre></div>
 </div>
 </div>
+</div>
+
   </main><aside class="col-md-3"><div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">
