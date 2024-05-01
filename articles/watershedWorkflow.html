@@ -158,10 +158,10 @@ the spatial file and the excel file.</p>
 <h3 id="rainfall-event-elements">Rainfall event elements<a class="anchor" aria-label="anchor" href="#rainfall-event-elements"></a>
 </h3>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">date</span> <span class="op">&lt;-</span> <span class="cn">NULL</span> <span class="co"># Optional - if dates present must be in YYYY-MM-DD format</span></span>
+<code class="sourceCode R"><span><span class="va">date</span> <span class="op">&lt;-</span> <span class="st">"2018-07-13"</span> <span class="co"># Optional - if dates present must be in YYYY-MM-DD format</span></span>
 <span><span class="va">rainFile</span> <span class="op">&lt;-</span> <span class="st">"USGS_Rain_2001_2021.xlsx"</span></span>
-<span><span class="va">dischargeFile</span> <span class="op">&lt;-</span> <span class="st">"example_discharge.csv"</span></span>
-<span><span class="va">discharge</span> <span class="op">=</span> <span class="cn">F</span> <span class="co"># If TRUE, expects discharge present in file</span></span>
+<span><span class="va">dischargeFile</span> <span class="op">&lt;-</span> <span class="st">"observable-discharge.csv"</span></span>
+<span><span class="va">discharge</span> <span class="op">=</span> <span class="cn">T</span> <span class="co"># If TRUE, expects discharge present in file</span></span>
 <span></span>
 <span><span class="co"># If rainfall method is synthetic - uses 1/2 inch - 15 minute storm</span></span>
 <span><span class="va">rainfall_method</span> <span class="op">&lt;-</span> <span class="st">"synthetic"</span> </span></code></pre></div>
@@ -175,7 +175,7 @@ the spatial file and the excel file.</p>
 <span><span class="va">store</span> <span class="op">=</span> <span class="cn">T</span></span>
 <span><span class="va">time_step</span> <span class="op">&lt;-</span> <span class="fl">.1</span> <span class="co"># time step in minutes</span></span>
 <span><span class="va">simulation_length</span> <span class="op">&lt;-</span>  <span class="fl">1</span> <span class="co"># time length in minutes</span></span>
-<span><span class="va">impervious</span> <span class="op">&lt;-</span>  <span class="co"># no infiltration</span></span>
+<span><span class="va">impervious</span> <span class="op">&lt;-</span> <span class="cn">T</span>  <span class="co"># no infiltration</span></span>
 <span><span class="va">overwrite</span> <span class="op">&lt;-</span> <span class="cn">T</span> <span class="co"># overwrite watershed elements and model folder</span></span>
 <span><span class="va">write</span> <span class="op">&lt;-</span> <span class="cn">T</span> <span class="co"># create graphs and write outputs to model folder</span></span>
 <span><span class="va">restartModel</span> <span class="op">&lt;-</span> <span class="cn">F</span> <span class="co"># If model is paused mid-run, can be restarted with same inputs</span></span>
@@ -251,13 +251,13 @@ viewing.</p>
 <h2 id="surface-gif">Surface gif<a class="anchor" aria-label="anchor" href="#surface-gif"></a>
 </h2>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">gifs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="co"># surface gif</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co">#gifs[[1]] # surface gif</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="velocity-gif">Velocity gif<a class="anchor" aria-label="anchor" href="#velocity-gif"></a>
 </h2>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">gifs</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span> <span class="co"># velocity gif</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co">#gifs[[2]] # velocity gif</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside>
