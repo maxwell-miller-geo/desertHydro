@@ -55,6 +55,7 @@
 <span>  <span class="va">dem_file_path</span>,</span>
 <span>  <span class="va">ModelFolder</span>,</span>
 <span>  watershed_shape_path <span class="op">=</span> <span class="cn">NA</span>,</span>
+<span>  smooth <span class="op">=</span> <span class="cn">T</span>,</span>
 <span>  max_dist <span class="op">=</span> <span class="fl">1000</span>,</span>
 <span>  stream_threshold <span class="op">=</span> <span class="fl">1200</span>,</span>
 <span>  carve <span class="op">=</span> <span class="fl">1</span>,</span>
@@ -74,6 +75,10 @@
 
 <dt>watershed_shape_path</dt>
 <dd><p>Optional shapefile to clip the resulting results</p></dd>
+
+
+<dt>smooth</dt>
+<dd><p>T/F: If TRUE, will smooth stream segements to remove flat areas</p></dd>
 
 
 <dt>max_dist</dt>
