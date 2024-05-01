@@ -1,6 +1,6 @@
-# # Singular model
-# source("ALHM.R")
-# 
+# Singular model
+#source("ALHM.R")
+
 # date <- "2022-08-27"
 # rainfall_method <-  "gauges"
 # time_step <- .5
@@ -27,10 +27,10 @@
 # key = "MUKEY"
 # library(profvis)
 # out <- arid_model(ModelFolder,date,time_step,simulation_length,WatershedElements,mini,rainfall_method,store,gif,crop,discharge,impervious,overwrite,write,restartModel,landCoverFile,key)
-# 
+#
 # # Gif creation
 # gifCreation(ModelFolder, out[[1]], rainfall_method, gif = T)
-# 
+#
 # # Points of Interest` `
 # # Last layer
 # # last <- length(names(out[[3]]))
@@ -44,7 +44,7 @@
 # for(x in 1:(nlyr(surface)-1)){
 #   terra:::add(mannings_n) <- SS$mannings_n
 # }
-# 
+#
 # velocities <- ManningsWideChannelVelocity(mannings_n, surface, slope, length = 10)
 # last <- length(names(surface))
 # plot(surface[[last]])

@@ -52,7 +52,8 @@ The set-up for desertHydro is to separate the whole process into two folders.
 ### 1 Watershed Elements
 ```{r elements}
 # Using the example directory within the package
-WatershedElements <- dirname(system.file("extdata", "dem.tif", package = "desertHydro")) 
+WatershedElements <- 
+  dirname(system.file("extdata", "dem.tif", package = "desertHydro")) 
 ```
 
 The watershed elements folder will contain all of the necessary information about a given watershed.

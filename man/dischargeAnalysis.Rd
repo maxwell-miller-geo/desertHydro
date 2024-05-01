@@ -40,6 +40,7 @@ Discharge Analysis after desertHydro simulation
 }
 \examples{
 \dontrun{
-dischargeAnalysis(ModelFolder, WatershedElements, time_step, simulation_length)#See vignette}
+dischargeAnalysis(ModelFolder, WatershedElements, time_step, simulation_length) #See vignette
+}
 
 }
