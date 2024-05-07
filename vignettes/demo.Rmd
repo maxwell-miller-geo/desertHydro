@@ -1,79 +1,146 @@
 ---
-title: "desertHydro-Template"
+title: "demo"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{desertHydro-Template}
+  %\VignetteIndexEntry{demo}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
+  eval = whitebox::check_whitebox_binary(),
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  progress = FALSE
 )
 options(rmarkdown.html_vignette.check_title = FALSE)
 ```
 
+<!-- $$(K_{macro} -  K_{FieldCond}) {\frac{W_{surf}-Field_{cap}}{d_{soil}}} ({\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}})^{-1}$$ -->
+<!-- $${\frac{W_{surf}-Field_{cap}}{d_{soil}}}$$ -->
+<!-- $$ {\frac{Sat_{mc} - Field_{cap}}{d_{soil} + K_{FieldCond}}$$ -->
+The purpose of this package is to provide a method of computational hydrology for arid regions.
+Arid regions provide unique challenge to hydrological modeling ranging from 
+very steep terrain with canyons and cliffs, lack of detailed soil data and land cover data,
+complex interactions between infiltration and lack of detailed rainfall data.
 
-```{r setup}
+The utility of the desertHydro model is built upon the integration of field measurements, e.i.,
+rainfall and stream gauge data, with remotely sensed or publically available data.
+
+Some of the data that can be utilized within this package:
+Rainfall data: https://www.goes-r.gov/
+Some information about GOES files: https://docs.opendata.aws/noaa-goes16/cics-readme.html#about-the-data
+
+
+## Load in the necessary libraries
+```{r, setup, message=FALSE, warning=FALSE}
 library(desertHydro)
 library(terra)
 library(ggplot2) # For plotting
 library(gganimate) # For animations
-require(whitebox)
-whitebox::wbt_init() # initiation whitebox
+library(whitebox)
+#require(whitebox)
+whitebox::wbt_init(
+  exe_path = whitebox::wbt_exe_path(shell_quote = FALSE),
+  check_version = TRUE
+)
+
 ```
 
-```{r}
-rainfall_method <- "spatial"
-date <- "2022-08-27" # Optional - if dates present must be in YYYY-MM-DD format
-type <- paste0("test-", rainfall_method,"-carve")
+## Model Set-up
+The desertHydro package is split into three levels.
+
+### 1 Pre-process: Create and gather necessary files
+Model Folder -> where to save the outputs from the model
+WatershedElements Folder -> folder containing the necessary inputs for the model run.
+
+
+```{r, important folders, results='hide'}
 # Important steps
-ModelFolder <- file.path(tempdir(), type) # replace path to folder where model is saved
-#WatershedElements <- paste0(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\)", type,"WatershedElements") # replace this with your folder
-#WatershedElements <- r"(C:\Thesis\Arid-Land-Hydrology\R\WatershedElements)"
-WatershedElements <- dirname(system.file("extdata", "dem.tif", package = "desertHydro"))
 
+#ModelFolder <- "ModelFolder" # replace path to folder where model is saved
+ModelFolder <- tempdir()
+#ModelFolder <- r"(C:\PackageDev\desertHydro\ModelElementsTest)" # <- Example
+
+#WatershedElements <- "./inst/extdata/DemoElements" # replace this with your watershed
+WatershedElements <- dirname(system.file("extdata", "dem.tif", package = "desertHydro")) # replace this with your watershedelements folder
+# Checking model folder
 # WatershedElements <- r"(C:\PackageDev/desertHydro/inst/extdata/DemoElements/)" # replace this with your watershed elements folder
-demFile <- "dem.tif" # DEM file to simulate over
 
-boundary <- "test-boundary.shp" # Optional
-#boundary <- "boundary.shp" # Optional
-#boundary <- "waterholes_shape.shp" # Optional
-#boundary <- "mini_ws.shp" # Optional
-landCoverFile <- "soils.shp"
-LandCoverCharacteristics <- "LandCoverCharacteristics_soils.xlsx"
+```
+
+The priority of the model is to utilize the intersection of land cover types, 
+soil profiles from soil databases, and adjustable tables (excel files) to model
+a particular rainfall event. 
+
+Necessary Inputs:
+1) DEM or digital elevation file
+2) Manning's n or surface roughness map (.tif or .shp) embedded within land cover file
+With these two elements, the model can run on impervious mode (impervious = T)
+
+```{r, important files, results='hide'}
+
+demFile <- "dem.tif" # DEM file to simulate over - should be named smooth/dem.tif
+
+# Check if watershed elements folder exists
+WatershedElements <- folderCheck(WatershedElements, demFile)
+
+boundary <- "test-boundary.shp" # Name of shapefile for outline
+landCoverFile <- "soils.shp" # name of soils data
+LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
 key <- "MUSYM" # key is present in both the landcoverfile and the land cover characteristics
+```
 
+## Note: 
+One of the key aspects of the map is to ensure that the soil characteristics
+can be cross referenced to an input data table.
+The three things that need to be present when adding soil characteristics.
+### 1) Land cover spatial file: .shp or .tif
+### 2) Land cover characteristics: excel file containing soil depth characteristics
+### 3) Key: a character string that is present in both the attribute table of the spatial file
+and the excel file.
+
+### Rainfall event elements
+```{r, event files, results='hide'}
+date <- "2018-07-13" # Optional - if dates present must be in YYYY-MM-DD format
 rainFile <- "USGS_Rain_2001_2021.xlsx"
-dischargeFile <- "example_discharge.csv"
-discharge <-  F # If TRUE, expects discharge present in file
+dischargeFile <- "observable-discharge.csv"
+discharge = T # If TRUE, expects discharge present in file
 
 # If rainfall method is synthetic - uses 1/2 inch - 15 minute storm
-
-length <- 5 # grid cell length - assumes uniform grid
-store = T
-time_step <- .1 # time step in minutes
-simulation_length <- 2 # time length in minutes
-impervious <- T # no infiltration
-overwrite <- F # overwrite previous inputs in both watershed elements and model folder
-write <- T # create graphs and write outputs to model folder
-restartModel <- T # If model is paused mid-run, can be restarted with same inputs
-gif <- F # If TRUE, gif's will be created automatically. Can be created at the end
+rainfall_method <- "synthetic" 
 ```
 
+### Model elements
+```{r, model checklist, results='hide'}
+
+length <- 10 # grid cell length - assumes uniform grid
+store = T
+time_step <- .1 # time step in minutes
+simulation_length <-  1 # time length in minutes
+impervious <- T  # no infiltration
+overwrite <- T # overwrite watershed elements and model folder
+write <- T # create graphs and write outputs to model folder
+restartModel <- F # If model is paused mid-run, can be restarted with same inputs
+gif <- F # If TRUE, gif's will be created automatically. Can be created at the end
+
+```
+
+### Check if necessary files are present
 ```{r, check files}
 # Check if the necessary folders are present
-foldersToCheck <- c(ModelFolder, WatershedElements)
+foldersToCheck <- c(WatershedElements)
 folders <- sapply(foldersToCheck, FUN = file.exists)
 if(!all(folders)){
-  print(paste0("All folders are not found. Here is a list of folders not found."))
+  print(paste0("All folders not found. List of folders not found."))
   print(folders)
 }
 # Check if the necessary files are present
-filesToCheck <- c(demFile, boundary, landCoverFile, LandCoverCharacteristics, rainFile, dischargeFile)
-filesCheck <- sapply(file.path(WatershedElements, filesToCheck), FUN = file.exists)
+filesToCheck <- c(demFile, boundary, landCoverFile, 
+                  LandCoverCharacteristics, rainFile, dischargeFile)
+filesCheck <- sapply(file.path(WatershedElements, filesToCheck), 
+                     FUN = file.exists)
 if(!all(filesCheck)){
   print("All files are not found. Here is a list of the files present.")
   print(filesCheck)
@@ -82,7 +149,9 @@ if(!all(filesCheck)){
 }
 ```
 
-```{r, model, cache=TRUE}
+## 2 Model Run - off and running
+```{r, model run, echo = T, results='hide', cache = T}
+
 a <- arid_model(ModelFolder,
                 WatershedElements,
                 date = date,
@@ -130,7 +199,7 @@ stream <- terra::vect(file.path(WatershedElements, "stream_path.shp"))
 # Load in created mainstem in QGIS
 # ms <- terra::vect(file.path(WatershedElements, "main-stem.shp"))
 # crsAssign(file.path(WatershedElements, "main-stem.shp"))
-stream <- ms
+stream <- 
 # dem <- terra::rast(breach_test)
 model_dem_rast <- terra::rast(file.path(ModelFolder, "model_dem.tif"))
 ogdem <- terra::rast(file.path(WatershedElements, "dem.tif"))
@@ -203,4 +272,3 @@ plot(main_stem)
 
 # Vectorize mainstem
 ```
-

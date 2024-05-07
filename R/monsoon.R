@@ -69,7 +69,6 @@ monsoon <- function(ModelFolder = NULL){
             write = write,
             restartModel = restartModel
   )
-  return(a)
   gifs <- desertHydro::gifCreation(ModelFolder, rainfall_method,
                                     discharge = discharge, saveGraph = T)
   return(ModelFolder)

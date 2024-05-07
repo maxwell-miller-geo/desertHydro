@@ -59,7 +59,7 @@ WatershedElements Folder -> folder containing the necessary inputs for the model
 ```{r, important folders, results='hide'}
 # Important steps
 
-ModelFolder <- "ModelFolder" # replace path to folder where model is saved
+#ModelFolder <- "ModelFolder" # replace path to folder where model is saved
 ModelFolder <- tempdir()
 #ModelFolder <- r"(C:\PackageDev\desertHydro\ModelElementsTest)" # <- Example
 
@@ -118,7 +118,7 @@ rainfall_method <- "synthetic"
 length <- 10 # grid cell length - assumes uniform grid
 store = T
 time_step <- .1 # time step in minutes
-simulation_length <-  1 # time length in minutes
+simulation_length <-  20 # time length in minutes
 impervious <- T  # no infiltration
 overwrite <- T # overwrite watershed elements and model folder
 write <- T # create graphs and write outputs to model folder
@@ -150,7 +150,7 @@ if(!all(filesCheck)){
 ```
 
 ## 2 Model Run - off and running
-```{r, model run, echo = T, results='hide', cache = F}
+```{r, model run, echo = T, results='hide', cache = T}
 
 a <- arid_model(ModelFolder,
                 WatershedElements,
