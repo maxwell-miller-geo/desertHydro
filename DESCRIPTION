@@ -20,7 +20,8 @@ RoxygenNote: 7.3.1
 Depends: 
     R (>= 2.10)
 LazyData: true
-Imports: 
+StagedInstall: false
+Imports:
     data.table,
     dplyr,
     gganimate,
