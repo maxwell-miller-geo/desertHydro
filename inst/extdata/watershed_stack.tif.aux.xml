@@ -32,16 +32,16 @@
   <PAMRasterBand band="11">
     <Description>MUSYM</Description>
     <CategoryNames>
+      <Category>12</Category>
+      <Category>29</Category>
       <Category>31</Category>
+      <Category>38</Category>
+      <Category>42</Category>
+      <Category>43</Category>
+      <Category>44</Category>
       <Category>52</Category>
       <Category>56</Category>
-      <Category></Category>
-      <Category></Category>
-      <Category></Category>
-      <Category></Category>
-      <Category></Category>
-      <Category></Category>
-      <Category></Category>
+      <Category>59</Category>
       <Category></Category>
       <Category></Category>
       <Category></Category>

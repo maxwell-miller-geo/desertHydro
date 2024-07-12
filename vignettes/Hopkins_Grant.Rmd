@@ -1,0 +1,70 @@
+---
+title: "Hopkins Grant"
+author: "Maxwell Miller"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+About Me:
+
+My name is Maxwell Miller and I am getting my Master's in Geology at NAU. I completed
+my Bachelor degree in Geology at NAU. I have lived in Flagstaff for most of my life
+and enjoy the amazing geology and nature present on the Colorado Plateau. I like
+using my knowledge of geology, hydrology, and software to model natural phenomena.
+
+
+
+Research Goals:
+
+The goal of the program desertHydro and my research is to create a spatially
+distributed hydrological model for watersheds for the greater 
+hydrological community and to study the tributary watersheds of the Grand
+Canyon. While many spatially distributed hydrological models exist, desertHydro
+is written with free well-documented and commonly used software packages. The
+code base for my research is written with R software because of its accessibility,
+scientific-community, and functionality. 
+
+The Grand Canyon provides an unique opportunity for hydrological research 
+because it is contains the rain and stream gauges to model and predict the flood
+response that is common within the Grand Canyon tributaries and other canyon environments.
+
+
+Abstract:
+
+Quantified hydrological response of arid region watersheds to convective storms is poorly constrained and needs to be addressed with implications for agriculture, land management, and hazard assessment. Modeling of arid and semi-arid watershed hydrology presents many challenges, including dynamic infiltration, widely distributed storm cells both spatially and temporally, and steep slopes. Novel techniques and remotely sensed data are necessary to model arid watersheds. The Waterhole’s watershed, located in northern Arizona, is representative of the challenges that face arid watersheds. This paper seeks to create a physically based, spatially distributed hydrology model to evaluate watershed hydrology under different land cover and climate scenarios in arid regions. The flow model desertHydro is built using R software and CRAN packages with widely used packages such as whitebox and terra. The desertHydro facilitates the creation and modification of hydrological simulations with GIS applications. The Waterhole's watershed is evaluated with common rainfall methods and compares the effects on the discharge within the watershed. The anticipated results for the study indicate that spatially distributed rainfall produces the most acccurate discharge hydrograph. Model improvements to surface water flow calculations and infiltration will increase the model's effectiveness. The utilization of free and readily available hydrological data can improve the understanding of these arid regions.
+
+Research Overview:
+
+The primary watershed study area, Waterholes, is a 25 sqaure mile tributary arid watershed to
+the Colorado river.
+
+```{r, echo = FALSE, fig.align='center'}
+folder <- r"(C:\Thesis\Arid-Land-Hydrology\R)"
+knitr::include_graphics(file.path(folder, "Waterholes-Watershed-Flow.png"))
+```
+
+The model will utilize soil, geology, and vegetation to categorize the hydrological
+characteristics of the watershed.
+
+```{r, echo = F, fig.align='center'}
+knitr::include_graphics(file.path(folder, "waterholes_geological_map.png"))
+```
+
+
+The results will include graphics that illustrate the movement of water during a rainfall event. 
+The figure below is an example of water surface depth during a rainfalle event.
+
+```{r, echo = F, fig.align='center'}
+knitr::include_graphics(file.path(folder, "surface_velocity_ex.gif"))
+```
+
+
+
+
+

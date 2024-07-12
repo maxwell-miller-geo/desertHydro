@@ -159,12 +159,12 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   reclassMatrix <- matrix(reclassTable, ncol = 3, byrow = T)
   depthModifier <- terra::classify(SoilStack$slope, reclassMatrix, include.lowest = T)
   #print("original mannigns n")
-  print(SoilStack$mannings_n)
+  #print(SoilStack$mannings_n)
   if(depthAdj){
     #print("Soil stack depth before")
-    print(SoilStack$soilDepthCM)
+    #print(SoilStack$soilDepthCM)
     SoilStack$soilDepthCM <- SoilStack$soilDepthCM *depthModifier
-    print(SoilStack$soilDepthCM)
+    #print(SoilStack$soilDepthCM)
     # Geo map adjustment
     geologic_map <- file.path(WatershedElements, "geo_soils.shp")
     if(file.exists(geologic_map)){

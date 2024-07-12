@@ -28,6 +28,7 @@ Imports:
     gridExtra,
     hms,
     lubridate,
+    methods,
     purrr,
     readr,
     readxl,

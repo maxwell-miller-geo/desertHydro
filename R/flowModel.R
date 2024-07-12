@@ -31,9 +31,6 @@
 ##  Model Script
 #LandCoverCharacteristics <- storage_amount(LandCoverCharacteristics) # adjusts the storage amount must reassign values for table
 
-
-
-
 flowModel <- function(SoilStack_file,
                       flowStack_file,
                       rain_file,

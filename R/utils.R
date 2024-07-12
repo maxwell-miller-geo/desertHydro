@@ -301,4 +301,20 @@ folderCheck <- function(folder, example_file = "dem.tif", demo = T){
 }
 
 # Create an object that contains all the information needed to perform a model run
+# TBD
+
+# Check that all files are present to run the model
+# Model dem, model soil stack, drainCells,
+file_check <- function(file_list){
+  filesCheck <- sapply(file_list, FUN = file.exists)
+  if(!all(filesCheck)){
+    print("All files are not found. Here is a list of the files present.")
+    print(filesCheck)
+    stop("Please check input files are present.")
+  }else{
+    return(NULL)
+  }
+}
+
+
 

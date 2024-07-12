@@ -193,7 +193,8 @@ WatershedStack <- watershedElementsCreate(WatershedElements = WatershedElements,
                                          landCoverFile = landCoverFile,
                                          ModelFolder = ModelFolder,
                                          LandCoverCharacteristics = LandCoverCharacteristics,
-                                         key = key)
+                                         key = key,
+                                         overwrite = overwrite)
 
 # Initial conditions
 ##--------------------------------
@@ -277,6 +278,7 @@ if(store & discharge){
 flowStack_file <- file.path(ModelFolder, "stack_flow.tif")
 SoilStack_file <- file.path(ModelFolder, "model_soil_stack.tif")
 rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
+
 #rain_file <- file.path(ModelFolder, "Model-Rainfall.csv") #Uncheck for troubleshooting
 # files_needed <- c(WatershedElements, ModelFolder, landCover_file, SoilStack_file, flowStack_file, rain_file, slope_file, rain_discharge_file)
 #
@@ -289,7 +291,7 @@ rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
 # print("All files checked.")
 
 #time_step <- .25
-if(is.na(simulation_length)){
+if(is.nan(simulation_length)){
   simulation_length <- max(rain_discharge$time) # Simulation length derived from the discharge data
 }
 
@@ -309,6 +311,8 @@ files_recommended <- c(time_step, simulation_length)
 #library(profvis)
 # profvis({
 # Soil Moisture Routing Model - writes
+print("Checking necessary files")
+file_check(c(SoilStack_file, flowStack_file, rain_file, file.path(ModelFolder, "drainCells.csv")))
 print("Beginning Model Run...")
 gc()
 # source("utils.R")
@@ -371,7 +375,7 @@ print("Retrieving rainfall data for simulation")
 rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method)
 if(gif){
   print("Creating gifs")
-  gifCreation(ModelFolder, rain_file, rainfall_method = rainfall_method, discharge = discharge, date = date)
+  gifCreation(ModelFolder, rainfall_method = rainfall_method, discharge = discharge, date = date)
 }
 
 

@@ -82,6 +82,8 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
   flow_accum <- file.path(ModelFolder, "flow_accumulation.tif")
   extracted_streams <- file.path(ModelFolder, "stream_extracted.tif")
   vect_stream <- file.path(ModelFolder, "vect_stream.shp")
+
+
   # Remove model dem if present
   if(file.exists(model_dem) & overwrite){
     print("Overwriting model dem")
@@ -118,7 +120,7 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
 
   # Vector stream network
   if(file.exists(vect_stream) & overwrite){
-    print("Overwriting stream netwowrk")
+    print("Overwriting stream network")
     file.remove(vect_stream)
   }
 
@@ -132,8 +134,12 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
   crsAssign(stream_network, coordinateSystem = crs_dem)
 
   # Create Long Profile hmtl files for visualization
-  profile <- file.path(ModelFolder, "profile.html")
-  whitebox::wbt_long_profile(d8_pntr, extracted_streams, model_dem, profile, verbose_mode = F)
+  if(FALSE){
+    profile <- file.path(ModelFolder, "profile.html")
+    whitebox::wbt_long_profile(d8_pntr, extracted_streams, model_dem, profile, verbose_mode = F)
+  }
+
+
   # Create vector stream network
   # whitebox::wbt_raster_to_vector_lines(extracted_streams, vect_stream)
   # crsAssign(vect_stream, coordinateSystem = crs_dem)
@@ -161,6 +167,7 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
     print("Smoothing stream network...")
     smoothStream(stream_network, model_dem, ModelFolder)
   }
+
   #carve_dem <- terra::rast(model_dem) + 0
   # Determine outflow points of model to prevent back filling
   drain <- firstSecond(carve_dem[[2]], carve_dem[[1]], Outfolder = ModelFolder, name = "drainCells")

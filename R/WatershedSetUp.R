@@ -14,7 +14,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
   if(file.exists(file.path(ModelFolder, "model_soil_stack.tif"))){
     return("Found model soil stack in model folder, using that file!")
   }
-  model_dem <- file.path(ModelFolder, "model_dem.tif")
+  model_dem <- file.path(WatershedElements, "model_dem.tif")
   print('Locating adjusted digital elevation model.')
   if(!file.exists(model_dem) | overwrite){
     print('Creating adjusted digital elevation model.')
@@ -27,6 +27,9 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
     print('Finished creating adjusted DEM.')
   } else{
     print("Located DEM")
+    print("Copying digital elevation model over to model folder.")
+    file.copy(model_dem, file.path(ModelFolder, "model_dem.tif"), overwrite = T)
+
   }
   # Slope creation
   slope <- file.path(ModelFolder, "model_slope.tif") # default name of slope file
@@ -57,14 +60,12 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
         land_cover <- terra::rast(landCoverFile)
       }
       dem_local <- terra::rast(model_dem)
-      print(land_cover)
       land_cover_raster <- resizeShape(spatialObject = land_cover,
                                        extent_raster = dem_local,
                                        watershedboundary = WatershedShape,
                                        key = key,
                                        save = F)
       terra::writeRaster(land_cover_raster, model_landcover, overwrite = TRUE)
-      print(land_cover_raster)
       print("Land Cover file clipped and resized.")
   } else{
     # Local land cover raster
@@ -100,7 +101,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
                       terra::rast(flow_file),
                       terra::rast(model_landcover))
 
-  terra::writeRaster(WatershedStack, file.path(WatershedElements, "watershed_stack.tif"), overwrite = overwrite)
+  terra::writeRaster(WatershedStack, file.path(WatershedElements, "watershed_stack.tif"), overwrite = T)
   print(paste0("Finished creating/checking files. Watershed elements files located in: ", WatershedElements))
   # Check files were written into folder
   #return(WatershedStack)
