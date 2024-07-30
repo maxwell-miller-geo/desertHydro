@@ -102,7 +102,7 @@ arid_model <- function(ModelFolder,
 # Adjust this folder of where to store the model run
 #ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Taylor_Model)" # folder to store modeled outputs
 #ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\Test_1)"
-gc()
+
 if(!file.exists(ModelFolder)){ # Create Model folder, if it doesn't exist
   dir.create(ModelFolder)
   print("Folder created...")
@@ -115,6 +115,7 @@ if(file.exists(model_complete) & !overwrite){ # check if model complete
   print("Next model...")
   return(0)
 }
+print(paste0("Folder path for model: ", file.path(ModelFolder)))
 # Preprocess - Create watershed
 ##------------------------------------
 

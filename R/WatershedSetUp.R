@@ -14,12 +14,11 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
   if(file.exists(file.path(ModelFolder, "model_soil_stack.tif"))){
     return("Found model soil stack in model folder, using that file!")
   }
-  model_dem <- file.path(WatershedElements, "model_dem.tif")
+  model_dem <- file.path(WatershedElements, "model_dem.tif") # hard coded - not great
   print('Locating adjusted digital elevation model.')
+
   if(!file.exists(model_dem) | overwrite){
     print('Creating adjusted digital elevation model.')
-    #library(whitebox)
-    #source("demProcessing.R", local = TRUE) # Custom function with whitebox scripts
     flow_accumlation_wb(dem_file_path = DEM,
                         ModelFolder = ModelFolder,
                         watershed_shape_path = WatershedShape,

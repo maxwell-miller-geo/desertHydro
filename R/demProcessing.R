@@ -73,7 +73,6 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
 # hydro_workflow <- flow_accumlation_wb(dem_path, ModelFolder, )
 
 flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA, smooth = T, max_dist = 1000, stream_threshold = 1200, carve = 1, overwrite = T){
-  gc()
   # List of created rasters
   crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
   units <- terra::res(terra::rast(dem_file_path))[1] # units of dem
@@ -89,15 +88,13 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
     print("Overwriting model dem")
     file.remove(model_dem)
   }
+
   if(!file.exists(model_dem)){
     #whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_change)
     whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_dist, flat_increment = .01)
     crsAssign(model_dem, coordinateSystem = crs_dem)
   }
 
-  # Calculate D8 points
-  d8_pntr <- file.path(ModelFolder, "fd8_pntr.tif")
-  whitebox::wbt_d8_pointer(model_dem, d8_pntr)
 
   # Remove flow accumulation if exists
   if(file.exists(flow_accum) & overwrite){
@@ -123,9 +120,12 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
     print("Overwriting stream network")
     file.remove(vect_stream)
   }
+  # Calculate D8 points
+  d8_pntr <- file.path(ModelFolder, "fd8_pntr.tif")
+  whitebox::wbt_d8_pointer(model_dem, d8_pntr)
 
   # RasterStreams to Vector
-  whitebox::wbt_raster_streams_to_vector(extracted_streams, d8_pntr, vect_stream)
+  whitebox::wbt_raster_streams_to_vector(extracted_streams, d8_pntr, vect_stream) # Needs version 2.4 of whitebox tools
   crsAssign(vect_stream, coordinateSystem = crs_dem)
 
   # Create stream netowrk analysis
