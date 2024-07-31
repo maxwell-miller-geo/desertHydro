@@ -75,6 +75,7 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
 flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA, smooth = T, max_dist = 1000, stream_threshold = 1200, carve = 1, overwrite = T){
   # List of created rasters
   crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
+  print(paste0("DEM Projection: ", crs_dem))
   units <- terra::res(terra::rast(dem_file_path))[1] # units of dem
   # crs_dem <- paste0("epsg:",terra::crs(terra::rast(file.path(WatershedElements, "dem.tif")), describe = T)[[3]])
   model_dem <- file.path(ModelFolder, "model_dem.tif")
@@ -125,12 +126,12 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
   whitebox::wbt_d8_pointer(model_dem, d8_pntr)
 
   # RasterStreams to Vector
-  whitebox::wbt_raster_streams_to_vector(extracted_streams, d8_pntr, vect_stream) # Needs version 2.4 of whitebox tools
+  whitebox::wbt_raster_streams_to_vector(extracted_streams, d8_pntr, vect_stream)
   crsAssign(vect_stream, coordinateSystem = crs_dem)
 
   # Create stream netowrk analysis
   stream_network <- file.path(ModelFolder, "stream_network.shp")
-  whitebox::wbt_vector_stream_network_analysis(vect_stream, model_dem, stream_network)
+  whitebox::wbt_vector_stream_network_analysis(vect_stream, stream_network)
   crsAssign(stream_network, coordinateSystem = crs_dem)
 
   # Create Long Profile hmtl files for visualization
