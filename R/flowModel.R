@@ -153,6 +153,7 @@ for(t in 1:(length(simulation_duration)-1)){
   end_time <- simulation_duration[t+1]
   timeElapsed <- end_time - beginning_time # time elapsed in minutes
   simulationTimeSecs <- timeElapsed * 60 # time elapse in minutes * seconds
+
   ## [1] Rainfall
   ## - Calculates the amount of rainfall in a given time step
   if(simulation_duration[t] < total_rain_duration){ # could cut off rainfall if not careful

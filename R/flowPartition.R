@@ -768,7 +768,8 @@ distanceCheck <- function(ModelFolder, velocity, depth, time_step, flowDirection
 ## ---------------------------- Carve channel function
 # Using a DEM and a flow accumulation map, reduce the elevation of the channel by
 # a linear amount
-carveDem <- function(dem, flow_accum, depth = 1, outline = NA){
+carveDem <- function(dem, flow_accum, depth = 1, outline = NA_character_){
+  print(outline)
   if(is.character(dem)){
     dem <- terra::rast(dem)
   }

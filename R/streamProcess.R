@@ -32,7 +32,7 @@ smoothStream <- function(stream, demPath, outpath = NULL){
 
   # Perform flow accumulation
   whitebox::wbt_breach_depressions_least_cost(demPath, mod_dem, dist = 100, flat_increment = .01)
-  crsAssign(mod_dem)
+  crsAssign(mod_dem, coordinateSystem = terra::crs(terra::rast(demPath)))
 
   # Load in stream vector
   if(is.character(stream)){
@@ -63,7 +63,7 @@ smoothStream <- function(stream, demPath, outpath = NULL){
   # Replace
   smoothDEM <- terra::ifel(!is.na(rasterized), rasterized, dem)
   if(!is.null(WatershedElements)){
-    terra::writeRaster(smoothDEM, file.path(WatershedElements, "smooth_dem.tif"))
+    terra::writeRaster(smoothDEM, file.path(WatershedElements, "smooth_dem.tif"), overwrite = T)
   }
 
   # selectSegment <- sapply(x = 1:nUnique, FUN = extractedDF[ID == x, mod_dem])

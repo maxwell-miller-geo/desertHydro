@@ -72,27 +72,30 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
 # dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") # pass dem as file path
 # hydro_workflow <- flow_accumlation_wb(dem_path, ModelFolder, )
 
-flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA, smooth = T, max_dist = 1000, stream_threshold = 1200, carve = 1, overwrite = T){
+flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA_character_, smooth = T, max_dist = 1000, stream_threshold = NULL, carve = 1, overwrite = T){
   # List of created rasters
   crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
   print(paste0("DEM Projection: ", crs_dem))
   units <- terra::res(terra::rast(dem_file_path))[1] # units of dem
   # crs_dem <- paste0("epsg:",terra::crs(terra::rast(file.path(WatershedElements, "dem.tif")), describe = T)[[3]])
   model_dem <- file.path(ModelFolder, "model_dem.tif")
+  fill_dem <- file.path(ModelFolder, "dem_fill.tif")
   flow_accum <- file.path(ModelFolder, "flow_accumulation.tif")
   extracted_streams <- file.path(ModelFolder, "stream_extracted.tif")
   vect_stream <- file.path(ModelFolder, "vect_stream.shp")
 
-
   # Remove model dem if present
-  if(file.exists(model_dem) & overwrite){
-    print("Overwriting model dem")
-    file.remove(model_dem)
-  }
+  file_removal(model_dem, overwrite)
+  file_removal(fill_dem, overwrite)
 
   if(!file.exists(model_dem)){
     #whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_change)
-    whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_dist, flat_increment = .01)
+    # Fill depressions
+    whitebox::wbt_fill_single_cell_pits(dem = dem_file_path, output = fill_dem)
+    crsAssign(fill_dem, coordinateSystem = crs_dem)
+
+    # Breach depressions
+    whitebox::wbt_breach_depressions_least_cost(dem = fill_dem, output = model_dem, dist = max_dist, flat_increment = .01)
     crsAssign(model_dem, coordinateSystem = crs_dem)
   }
 
@@ -106,12 +109,22 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
     whitebox::wbt_d8_flow_accumulation(input = model_dem, output = flow_accum)
     crsAssign(flow_accum, coordinateSystem = crs_dem)
   }
+
   # Extract streams
   if(file.exists(extracted_streams) & overwrite){
     print("Overwriting extracted streams")
     file.remove(extracted_streams)
   }
   if(!file.exists(extracted_streams)){
+    if(is.null(stream_threshold)){
+      dimensions <- dim(terra::rast(dem_file_path))
+      cells_est <- dimensions[1] * dimensions[2]
+      if(cells_est > 10000){
+        stream_threshold <- 1200
+      }else{
+        stream_threshold <- round(cells_est / 10)
+      }
+    }
     whitebox::wbt_extract_streams(flow_accum, extracted_streams, threshold = stream_threshold)
     crsAssign(extracted_streams, coordinateSystem = crs_dem)
   }

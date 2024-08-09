@@ -7,10 +7,10 @@
 flow_accumlation_wb(
   dem_file_path,
   ModelFolder,
-  watershed_shape_path = NA,
+  watershed_shape_path = NA_character_,
   smooth = T,
   max_dist = 1000,
-  stream_threshold = 1200,
+  stream_threshold = NULL,
   carve = 1,
   overwrite = T
 )

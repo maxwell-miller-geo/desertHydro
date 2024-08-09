@@ -317,4 +317,29 @@ file_check <- function(file_list){
 }
 
 
+## Polygonize using terra
+#' Wrapper function to dissolve and create vector of raster layer
+#'
+#' @param raster_name Raster name, e.i. "dem.tif"
+#' @param path file path to raster
+#'
+#' @return return vector string and saves output to raster path
+#' @export
+#'
+#'
+polygonize <- function(raster_name, path){
+  poly <- terra::aggregate(terra::as.polygons(terra::rast(file.path(path, raster_name))))
+  poly_name <- paste0(strsplit(raster_name, ".", fixed = TRUE)[[1]][[1]], "-poly.shp")
+  poly_path <- file.path(path, poly_name)
+  terra::writeVector(poly, poly_path, overwrite = T)
+  return(poly_name)
+}
+
+file_removal <- function(path, overwrite){
+  if(file.exists(path) & overwrite){
+    print(paste("Overwritting", path))
+    file.remove(path)
+  }
+}
+
 

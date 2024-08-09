@@ -75,4 +75,3 @@ model <- methods::setClass("model",
 
             validity = check_model)
 
-
