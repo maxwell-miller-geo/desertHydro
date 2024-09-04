@@ -11,6 +11,9 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
   # DEM adjustments
   # Adjust the input DEM with the watershed shapefile.
   # Creates the following maps using the Whitebox package <- https://github.com/cran/whitebox
+  if(!file.exists(ModelFolder)){
+    dir.create(ModelFolder)
+  }
   if(file.exists(file.path(ModelFolder, "model_soil_stack.tif"))){
     return("Found model soil stack in model folder, using that file!")
   }
@@ -28,7 +31,6 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
     print("Located DEM")
     print("Copying digital elevation model over to model folder.")
     file.copy(model_dem, file.path(ModelFolder, "model_dem.tif"), overwrite = T)
-
   }
   # Slope creation
   slope <- file.path(ModelFolder, "model_slope.tif") # default name of slope file

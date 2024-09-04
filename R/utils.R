@@ -343,3 +343,47 @@ file_removal <- function(path, overwrite){
 }
 
 
+# Fill a cell on the edge given cell number and raster
+fill_edge <- function(raster, cellsToFill, dontFillCells, fill_amount = .0002){
+  for(cellnumber in cellsToFill){
+    cellnumber <- as.numeric(cellnumber)
+    if(!(cellnumber %in% dontFillCells)){ # fill all cells but "dontFillCells"
+    # xy location
+    xy <- terra::xyFromCell(raster, cellnumber)
+    column <- terra::colFromCell(raster, cellnumber)
+    row <- terra::rowFromCell(raster, cellnumber)
+    dem_value <- raster[cellnumber]
+    x <- terra::res(raster)[1]
+    y <- terra::res(raster)[1]
+
+    # Find all values around cellnumber
+    flowKey <- list("N" = list(0, 1),
+                    "E" = list(1, 0),
+                    "S" = list(0, -1),
+                    "W" = list(-1, 0),
+                    "NW" = list(-1, 1),
+                    "NE" = list(1, 1),
+                    "SE" = list(1, -1),
+                    "SW" = list(-1, -1)
+    )
+    df <- data.frame(matrix(ncol=2,nrow=0, dimnames=list(NULL, c("cell", "value"))))
+    # Loop over values
+    for(z in flowKey){
+      # Subtract from one value
+      newCell <- matrix(c(xy[1] + x*z[[1]], xy[2] + y*z[[2]]), nrow = 1)
+      # Get cell
+      newCellNumber <- terra::cellFromXY(raster, newCell)
+      # Cell value
+      newRasterValue <- raster[newCellNumber]
+      if(!is.na(newCellNumber)){
+        newRow <- data.frame(cell = newCellNumber, value = newRasterValue[1])
+        df <- rbind(df, newRow)
+      }
+    }
+    new_elevation <- min(df[,2], na.rm = T) + fill_amount
+    raster[row, column] <- new_elevation
+      }
+    }
+  return(raster)
+}
+

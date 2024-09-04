@@ -4,15 +4,15 @@
 \alias{polygonize}
 \title{Wrapper function to dissolve and create vector of raster layer}
 \usage{
-polygonize(raster, path)
+polygonize(raster_name, path)
 }
 \arguments{
-\item{raster}{Raster name, e.i. "dem.tif"}
+\item{raster_name}{Raster name, e.i. "dem.tif"}
 
 \item{path}{file path to raster}
 }
 \value{
-returns vector of polygon
+return vector string and saves output to raster path
 }
 \description{
 Wrapper function to dissolve and create vector of raster layer

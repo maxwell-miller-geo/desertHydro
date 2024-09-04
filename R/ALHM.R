@@ -374,10 +374,10 @@ if(store){
 
 print("Retrieving rainfall data for simulation")
 rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method)
-if(gif){
-  print("Creating gifs")
-  gifCreation(ModelFolder, rainfall_method = rainfall_method, discharge = discharge, date = date)
-}
+# if(!gif){
+#   print("Creating gifs")
+#   gifCreation(ModelFolder, rainfall_method = rainfall_method, discharge = discharge, date = date)
+# }
 
 
 print(paste0("End of script, thank you. You stuff is saved in ", ModelFolder))

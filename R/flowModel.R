@@ -100,27 +100,33 @@ flowModel <- function(SoilStack_file,
     #velocityMax_df <- as.data.frame(terra::vect(file.path(ModelFolder, "max-velocity.shp")))
     #depthMaxDF <- as.data.frame(terra::vect(file.path(ModelFolder, "max-depth.shp")))
     timeVelocity <- data.table::data.table(data.table::fread(file.path(ModelFolder, "time-velocity.csv")))
-    volumeOut <- data.table::fread(file.path(ModelFolder, "volumeOut.csv"))
-    volumeIn <- data.table::fread(file.path(ModelFolder, "volumeIn.csv"))
+    volume <- data.table::fread(file.path(ModelFolder, "volume.csv"))
+    # volumeOut <- data.table::fread(file.path(ModelFolder, "volumeOut.csv"))
+    # volumeIn <- data.table::fread(file.path(ModelFolder, "volumeIn.csv"))
 
   }
   else{
-    volumeOut <- data.table::data.table(timestep = 0, volume = 0, discharge = 0)
-    data.table::fwrite(volumeOut, file.path(ModelFolder, "volumeOut.csv"))
-    volumeIn <- data.table::data.table(timestep = 0, total_rain_cm = 0) # Sum all of the rainfall during a rainfall event
-    data.table::fwrite(volumeIn, file.path(ModelFolder, "volumeIn.csv"))
+    volume <- data.table::data.table(Time_min = 0, volumeIn_m3 = 0, volumeOut_m3 = 0,
+                                     mean_rain_cm = 0, height_cm = 0, velocity_ms = 0,
+                                     discharge_m3 = 0, total_rain_m3 = 0, simulation_volume_m3 = 0)
+    # volumeOut <- data.table::data.table(timestep = 0, volume = 0, discharge = 0)
+    # data.table::fwrite(volumeOut, file.path(ModelFolder, "volumeOut.csv"))
+    # volumeIn <- data.table::data.table(timestep = 0, total_rain_cm = 0) # Sum all of the rainfall during a rainfall event
+    # data.table::fwrite(volumeIn, file.path(ModelFolder, "volumeIn.csv"))
     # Create initial rasters for outputs
-    subsurfacePath <- initializeRaster(SoilStack$currentSoilStorage, "soilStorage", ModelFolder)
-    surfacePath <- initializeRaster(SoilStack$currentSoilStorage*0, "surfaceStorage", ModelFolder)
-    velocityPath <- initializeRaster(SoilStack$currentSoilStorage*0, "velocityStorage", ModelFolder)
+    if(impervious == FALSE){
+      subsurfacePath <- initializeRaster(SoilStack$mannings_n, "soilStorage", ModelFolder)
+    }
+    surfacePath <- initializeRaster(SoilStack$mannings_n*0, "surfaceStorage", ModelFolder)
+    velocityPath <- initializeRaster(SoilStack$mannings_n*0, "velocityStorage", ModelFolder)
 
     # Create distance storage
-    SoilStack$distStorage <- SoilStack$currentSoilStorage * 0 # Creates new layer
+    SoilStack$distStorage <- SoilStack$mannings_n * 0 # Creates new layer
     distancePath <- initializeRaster(SoilStack$distStorage, "distanceStorage", ModelFolder)
 
     # Create runoff Depth before loop
     runoffDepth <- SoilStack$distStorage
-    runoffDepthPath <- initializeRaster(SoilStack$currentSoilStorage*0, "runoffDepth", ModelFolder)
+    runoffDepthPath <- initializeRaster(SoilStack$mannings_n*0, "runoffDepth", ModelFolder)
 
     # Empty flow map
     flowMapPath <- initializeRaster(SoilStack$distStorage, "flowMap", ModelFolder)
@@ -129,7 +135,7 @@ flowModel <- function(SoilStack_file,
     #SoilStack$flowMap <- SoilStack$currentSoilStorage * 0
 
     # Stores the Amount of time elapse for each iteration
-    timeVelocity <- data.frame(time = 0, velocity = 0)
+    timeVelocity <- data.table::data.table(time = 0, velocity = 0)
 
     # Stores shapefiles for velocities
     velocityMax_df <- dfMax(terra::rast(file.path(ModelFolder, "velocityStorage.tif")), rename = 0)
@@ -139,7 +145,9 @@ flowModel <- function(SoilStack_file,
 
   saveRate <- time_step
   counter <- saveRate # counter to save rasters on certain intervals
-
+  # Count number of cells
+  rain_values <- terra::values(SoilStack$mannings_n)
+  active_cells <- length(rain_values[!is.na(rain_values)]) # cells with values
   # Progress Bar
   progressBar <- utils::txtProgressBar(min = 0, max = length(simulation_duration), style = 3)
   start <- Sys.time()
@@ -177,12 +185,15 @@ for(t in 1:(length(simulation_duration)-1)){
   SoilStack$current_rainfall <- terra::ifel(is.finite(SoilStack$model_dem), total_rain_cm, NA) # rainfall distribution map
 
   # Volume calculations
-  totalDepthCM <- sum(terra::values(SoilStack$current_rainfall), na.rm = T)
-  area <- terra::expanse(SoilStack$current_rainfall, unit = "m")[[2]]
-  volumeM3 <- totalDepthCM/100 * area
-  volumeIn <- rbind(volumeIn,
-                    list(end_time, volumeM3))
-  data.table::fwrite(volumeIn, file.path(ModelFolder, "volumeIn.csv"))
+  totalDepthCM <- sum(terra::values(SoilStack$current_rainfall), na.rm = T) # Sum of all depths
+  area <- terra::expanse(SoilStack$current_rainfall, unit = "m")[[2]] # area with non-zeros
+  volumeM3 <- totalDepthCM/100 * area # cubic meters
+  averageDepthCM <- volumeM3 / (area * active_cells) * 100
+  # Saves later in script
+
+  # volumeIn <- rbind(volumeIn,
+  #                   list(end_time, volumeM3))
+  # data.table::fwrite(volumeIn, file.path(ModelFolder, "volumeIn.csv"))
   #print(SoilStack$current_rainfall)
   ## [2] Canopy
   # Evaluate canopy storage - (current-storage + rainfall)
@@ -234,16 +245,26 @@ for(t in 1:(length(simulation_duration)-1)){
   SoilStack$surfaceWater <- runoffList[[1]]
   #print(SoilStack$surfaceWater)
   velocity <- SoilStack$velocity <- runoffList[[2]]
-  #print(terra::minmax(velocity)[2])
-  #terra::plot(velocity)
-  SoilStack$slope <- runoffList[[3]]
+  # Flow direction stack
   flowStack <- runoffList[[4]]
-  #print(runoffList)
-  volumeDrained <- sum(unlist(runoffList[[5]]))
-  #print(volumeDrained)
-  dischargeCalc <- volumeDrained/simulationTimeSecs
-  volumeOut <- rbind(volumeOut, list(end_time, volumeDrained, dischargeCalc))
-  data.table::fwrite(volumeOut, file.path(ModelFolder, "volumeOut.csv"))
+  # Get velocity of drain cell
+  outflowCell <- drainCells$cell[[1]]
+  # New slope
+  SoilStack$slope <- runoffList[[3]]
+  # Get the height of the drain cell
+  heightDrain_cm <- SoilStack$surfaceWater[outflowCell][[1]]
+  velocityDrain_ms <- velocity[outflowCell][[1]]
+  volumeDrainedM3 <- sum(unlist(runoffList[[5]])) # all volumes drained
+  dischargeCalc <- volumeDrainedM3/simulationTimeSecs
+  total_rain_m3 <- volume[,sum(volumeIn_m3)] + volumeM3 # sum of previous rainfall and this step
+  simulation_volume_m3 <- volume[, sum(volumeOut_m3)] + sum(terra::values(SoilStack$surfaceWater), na.rm = T)
+  # Statistics for water volumes
+  volume <- rbind(volume, list(end_time, volumeM3, volumeDrainedM3, averageDepthCM,
+                               velocityDrain_ms, heightDrain_cm, dischargeCalc,
+                               total_rain_m3, simulation_volume_m3))
+  data.table::fwrite(volume, file.path(ModelFolder, "volume.csv"))
+  # volumeOut <- rbind(volumeOut, list(end_time, volumeDrained, dischargeCalc))
+  # data.table::fwrite(volumeOut, file.path(ModelFolder, "volumeOut.csv"))
   #terra::plot(velocity)
   # maxVelocity <- terra::minmax(velocity)[2] # max discharge for base time-step (m/s)
   #

@@ -39,7 +39,15 @@ createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
   }
   # Categories <- terra::catalyze(ClassMap)
   # Categories <- terra::as.factor(ClassMap)
-  if(key != "GEOFNT24K"){
+  if(key == "ID"){
+    joinDF <- soilTable
+    # getID <- terra::unique(ClassMap)[[1]]
+    # joinDF <- dplyr::left_join(getID, soilTable, by = key)
+  }
+  else if(key == "GEOFNT24K"){
+    getLevels <- terra::levels(ClassMap)[[1]]
+    joinDF <- dplyr::left_join(getLevels, soilTable, by = key) # join by matching key
+  }else{
     # Convert the levels of the categorical map to match the key
     selectColumn <- terra::levels(ClassMap)[[1]][key]
     selectColumn[,1] <- as.numeric(selectColumn[,1])
@@ -48,9 +56,6 @@ createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
     #print(getLevels)
     joinDF <- dplyr::left_join(selectColumn, soilTable, by = key)
     ClassMap <- terra::catalyze(ClassMap)
-  }else{
-    getLevels <- terra::levels(ClassMap)[[1]]
-    joinDF <- dplyr::left_join(getLevels, soilTable, by = key) # join by matching key
   }
   outStack <- c() # creates empty vector
   for(x in 1:length(joinDF)){
@@ -89,7 +94,9 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   if(file.exists(soilstack_file)){
     return("Found model soil file..")
   }
+
   LCC <- readxl::read_xlsx(LandCoverCharacteristics) # reads excel file with soil characteristics
+  if(key != "ID"){ # ID is the key for nlcd only maps - runoff only no soil char.{
 
   #day_to_min <- 1 * 24 * 60 # adjust day to minutes
   hour_to_sec <- 1 * 60 * 60 # adjust conductivity rates to cm/second
@@ -129,22 +136,23 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   # print(ClassificationMap)
   # print(LCC)
   # print(key)
+  }
   SoilStack <- createSoilRasters(ClassMapFile = ClassificationMap, soilTable = LCC, key = key)
   # Don't combine flow stacks
   SoilStack <- c(SoilStack, WatershedStack) # combine watershed and flow stacks
 
   # Adjust slope based on elevation differences
   SoilStack$slope <- terra::ifel(SoilStack$slope < 0.01, 0.01, SoilStack$slope)
-  #terra::plot(SoilStack$slope)
   slopeName <- file.path(ModelFolder, "model_slope.tif")
   terra::writeRaster(SoilStack$slope, slopeName, overwrite = T)
 
+  # Create surface water layer
   SoilStack$surfaceWater <- SoilStack$slope * 0
   names(SoilStack$surfaceWater) <- "surfaceWater"
-
+  # Create velocity layer
   SoilStack$velocity <- SoilStack$slope * 0
   names(SoilStack$velocity) <- "velocity"
-
+  # Create throughfall layer
   SoilStack$throughfall <- SoilStack$slope * 0
   names(SoilStack$throughfall) <- "throughfall"
 
@@ -158,9 +166,9 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
 
   reclassMatrix <- matrix(reclassTable, ncol = 3, byrow = T)
   depthModifier <- terra::classify(SoilStack$slope, reclassMatrix, include.lowest = T)
-  #print("original mannigns n")
-  #print(SoilStack$mannings_n)
-  if(depthAdj){
+
+  # Adjust certain characteristics base upon slope
+  if(depthAdj && key != "ID"){
     #print("Soil stack depth before")
     #print(SoilStack$soilDepthCM)
     SoilStack$soilDepthCM <- SoilStack$soilDepthCM *depthModifier
@@ -182,11 +190,8 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
       SoilStack$saturatedHydraulicMatrix <- SoilStack$saturatedHydraulicMatrix *
                                             adjustmentMaps$saturatedHydraulicMatrix
     }
-
-    # Adjust certain characteristics base upon slope
-
     # Calculate Field capacity amount
-    SoilStack$fieldCapacityAmount <- SoilStack$soilDepthCM * (SoilStack$fieldCapacityMoistureContent - SoilStack$residualMoistureContent)
+    SoilStack$fieldCapacityAmount <- SoilStack$soilDepthCM * (SoilStack$fieldCapacityMoistureContent -   SoilStack$residualMoistureContent)
     # Field Capacity Conductivity = Ksat * exp((-13.0/Sat_mc)*(sat_mc_1 -fieldcapt_amt/soilDepth))
     SoilStack$conductivityAtFieldCapacity <- hydraulicFieldConductivity(
       SoilStack$saturatedHydraulicMatrix,

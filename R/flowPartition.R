@@ -3,11 +3,34 @@
 # Necessary Packages
 #install.packages("terra")
 #library(terra)
+flow_window <- function(x){
+  store <- 0
+  adjustment <- 1 / sqrt(2)
+  for(index in seq_along(x)){
+    diff <- x[5] - x[index]
+    if(is.na(diff)){
+      next
+    }
+    if(diff > 0){
+      if(index %% 2 == 0){
+        store <- store + diff
+      }else{
+        store <- store + diff * adjustment
+      }
+    }
+  }
+  return(store)
+}
 
+
+# x <- c(1,2,3,4,5,6,7,8,9)
+# flow_window(x)
 # Direction = vector value, direction scalar
 ## Function -------------------------------------
 # Calculates the percentage of flow out or in from a given cell
 # Utilizes terra adjacent files
+
+# Cpp flow out sum
 
 ## Define a custom function to calculate the difference from the center - essentially flow accumulation within a neighborhood
 flowOutSum <- function(x) { # Vector of values
@@ -33,7 +56,6 @@ flowOutSum <- function(x) { # Vector of values
   # If the center is higher than a direction, it is not gaining flow from that particular direction
   flowOutElevDifference <- sum(card_difference[card_difference > 0], na.rm = TRUE) +
                 sum(diag_difference[diag_difference > 0], na.rm = TRUE)
-
   return(flowOutElevDifference)
 }
 # # Test flow out sum
@@ -42,6 +64,44 @@ flowOutSum <- function(x) { # Vector of values
 # outFlow <- flowOutSum(testV)
 ## Define a custom function to calculate the difference from the center - essentially flow accumulation within a neighborhood
 
+# C++ function to speed up water distribution
+Rcpp::cppFunction(
+  'NumericVector flow_sum(NumericVector x, size_t ni, size_t nw) {
+    NumericVector out(ni);
+    size_t start = 0; // starting point
+    double adj = 1 / std::sqrt(2);
+    int num = 1; // switch that keeps position arguments in order
+    for (size_t i=0; i<ni; i++) {
+      size_t end = start + nw;
+      // Create midpoint for vector of length 9
+      int mid = end - 5;
+      // Adjust the position changes
+      if (mid % 2 == 0){
+        num = 1;
+      } else {
+        num = 0;
+      }
+      double v = 0; // sum values
+      // loop over the values of a window
+      for (size_t j=start; j<end; j++) {
+        double diff = x[mid] - x[j];
+        if (std::isnan(diff)){
+          continue;
+            }
+        if (diff > 0) {
+          if ( (j + num) % 2 == 0) {
+            v += diff;
+          } else {
+            v += (diff * adj);
+          }
+        }
+      }
+      out[i] = v;
+      start = end;
+    }
+    return out;
+  }'
+)
 ## ----------------------------- Flow Map
 # New better way to make flow function map!
 flowMap <- function(dem, outFolder = NA, name = "stack_flow.tif"){
@@ -52,8 +112,11 @@ flowMap <- function(dem, outFolder = NA, name = "stack_flow.tif"){
   # Create flow map based on elevation differences
   # Create Flow sum map
   kernel <- array(1, dim = c(3,3,1)) # Create '3D' matrix 3x3x1 with only 1's
-  dem_flow <- terra::focal3D(dem, w = kernel, fun = flowOutSum, pad = TRUE) # calculate the 'flow accumulation'
+  #kernel <-
+  #dem_flow <- terra::focal3D(dem, w = kernel, fun = flowOutSum, pad = TRUE) # calculate the 'flow accumulation'
+  #dem_flow <- terra::focal3D(dem, w = kernel, fun = flow_window, pad = TRUE) # calculate the 'flow accumulation'
 
+  dem_flow <- terra::focalCpp(dem, w = 3, fun = flow_sum, fillvalue = NaN)
   # Shift and create dem maps
   flowMaps <- createFlowMaps(dem, dem_flow)
   if(is.character(outFolder)){
@@ -137,52 +200,52 @@ outputFlow <- function(values, dir){
 
 ## Function that takes the DEM input and brings it all together
 # DEM -> Flow Sum Map (x1) -> Flow Partitioned Map(s) (x8) -> Stacked-Output
-flow_Partition <- function(dem, file_name_and_path = NA){
-  # Create Flow sum map
-  if(is.character(dem)){
-    dem <- terra::rast(dem)
-  }
-  kernel <- array(1, dim = c(3,3,1)) # Create '3D' matrix 3x3x1 with only 1's
-  dem_flow_units <- terra::focal3D(dem, w = kernel, fun = flowOutSum, pad = TRUE) # calculate the 'flow accumulation'
-
-  # Create Flow Partition maps
-  dem_flow_stack <- c(dem_flow_units, dem, dem_flow_units*NA) # stack the two rasters + empty raster
-  kernel3D <- array(1, dim = c(3,3,3))  # Create a new kernel for 3x3x3 matrix.
-
-  # Calculate the flow from each direction
-  north_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "N", fillvalue = 0)
-  names(north_flow) <- c("north_flow")
-  east_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "E", fillvalue = 0)
-  names(east_flow) <- c("east_flow")
-  west_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "W", fillvalue = 0)
-  names(west_flow) <- c("west_flow")
-  south_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "S", fillvalue = 0)
-  names(south_flow) <- c("south_flow")
-  northeast_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "NE", fillvalue = 0)
-  names(northeast_flow) <- c("northeast_flow")
-  northwest_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "NW", fillvalue = 0)
-  names(northwest_flow) <- c("northwest_flow")
-  southeast_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "SE", fillvalue = 0)
-  names(southeast_flow) <- c("southeast_flow")
-  southwest_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "SW", fillvalue = 0)
-  names(southwest_flow) <- c("southwest_flow")
-
-  flowStacked <- c(northwest_flow, north_flow, northeast_flow,
-                   west_flow, east_flow, southwest_flow, southeast_flow, south_flow)
-
-  names(flowStacked) <- names(flowStacked)
-
-  # A more concise version, needs a few adjustments
-  # flow_direction <- c("N", "E", "W", "S", "NW", "NE", "SE", "SW")
-  #
-  # for(x in flow_direction){
-  #   terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = x, fillvalue = 0)
-  # }
-  if(!is.na(file_name_and_path)){
-    terra::writeRaster(flowStacked, file_name_and_path, overwrite = TRUE)
-  }
-  return(flowStacked)
-}
+# flow_Partition <- function(dem, file_name_and_path = NA){
+#   # Create Flow sum map
+#   if(is.character(dem)){
+#     dem <- terra::rast(dem)
+#   }
+#   kernel <- array(1, dim = c(3,3,1)) # Create '3D' matrix 3x3x1 with only 1's
+#   dem_flow_units <- terra::focal3D(dem, w = kernel, fun = flowOutSum, pad = TRUE) # calculate the 'flow accumulation'
+#
+#   # Create Flow Partition maps
+#   dem_flow_stack <- c(dem_flow_units, dem, dem_flow_units*NA) # stack the two rasters + empty raster
+#   kernel3D <- array(1, dim = c(3,3,3))  # Create a new kernel for 3x3x3 matrix.
+#
+#   # Calculate the flow from each direction
+#   north_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "N", fillvalue = 0)
+#   names(north_flow) <- c("north_flow")
+#   east_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "E", fillvalue = 0)
+#   names(east_flow) <- c("east_flow")
+#   west_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "W", fillvalue = 0)
+#   names(west_flow) <- c("west_flow")
+#   south_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "S", fillvalue = 0)
+#   names(south_flow) <- c("south_flow")
+#   northeast_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "NE", fillvalue = 0)
+#   names(northeast_flow) <- c("northeast_flow")
+#   northwest_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "NW", fillvalue = 0)
+#   names(northwest_flow) <- c("northwest_flow")
+#   southeast_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "SE", fillvalue = 0)
+#   names(southeast_flow) <- c("southeast_flow")
+#   southwest_flow <- terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = "SW", fillvalue = 0)
+#   names(southwest_flow) <- c("southwest_flow")
+#
+#   flowStacked <- c(northwest_flow, north_flow, northeast_flow,
+#                    west_flow, east_flow, southwest_flow, southeast_flow, south_flow)
+#
+#   names(flowStacked) <- names(flowStacked)
+#
+#   # A more concise version, needs a few adjustments
+#   # flow_direction <- c("N", "E", "W", "S", "NW", "NE", "SE", "SW")
+#   #
+#   # for(x in flow_direction){
+#   #   terra::focal3D(dem_flow_stack, w = kernel3D, fun = outputFlow, dir = x, fillvalue = 0)
+#   # }
+#   if(!is.na(file_name_and_path)){
+#     terra::writeRaster(flowStacked, file_name_and_path, overwrite = TRUE)
+#   }
+#   return(flowStacked)
+# }
 # Test for flow direction maps
 #flow_Partition(dem_raster, file_name_and_path = flow_file)
 
@@ -214,7 +277,7 @@ initializeRaster <- function(firstLayer, name, outFolder, zero = F){
 
 # Function to route water through the subsurface from lateral flow values and flow direction stack
 
-flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
+flowRouting <- function(flowToRoute, flowDirectionMap, time = F, parallel = T){
   # Load in flow to route - not done
   if(is.character(flowToRoute)){
     flowToRoute <- terra::rast(flowToRoute)
@@ -278,7 +341,9 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F){
     #storage_adjusted <- c(storage_adjusted, flowAccumDirection)
     return(flowAccumDirection)
   }
+
   storage <- lapply(names(flowKey), FUN = routeFlow, flowToRoute, flowDirectionMap, xDim, yDim, flowKey)
+
   storageRaster <- terra::rast(storage)
   #checkSum <- sum(terra::values(storageRaster))
 
@@ -615,11 +680,13 @@ manningsVelocity <- function(n, depth, slope, length){
 ## ---------------------------- Flow Routing fixed
 # Flow routing that has a semi fixed spacing and save rate
 routeWater2 <- function(ModelFolder, SoilStack, flowDirectionMap, time_step = 5, length = 10, timeVelocity = list(0,0), drainCells = NA, ...){
+
   if(is.character(flowDirectionMap)){
     flowDirectionMap <- terra::rast(flowDirectionMap)
   }
+
   # Initial variables
-  maxTravel <- length # 5m per time step
+  maxTravel <- length # 5-10 m per time step
   n <- SoilStack$mannings_n
   surface <- SoilStack$surfaceWater # cm of current surface depth
   throughfall <- SoilStack$throughfall
@@ -798,8 +865,8 @@ carveDem <- function(dem, flow_accum, depth = 1, outline = NA_character_){
 # Adjustment of mannings surface roughness depending on depth of water
 roughnessAdjust <- function(depth, roughness){
   # Given two rasters with predefined conditions for roughness
-  adjustD <- terra::ifel(depth < 1, depth/1, 1) # 1 cm
-  adjustN <- (2 - 1*adjustD) * roughness
+  adjustD <- terra::ifel(depth < 1, depth, 1) # for depths less than 1 cm
+  adjustN <- (1.5 - 0.5*adjustD) * roughness
   return(adjustN)
 }
 # ## Volume change based on velocity - time step

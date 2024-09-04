@@ -9,9 +9,16 @@ monsoon <- function(ModelFolder = NULL){
   # Model Class
   model1 <- model(ModelFolder = ModelFolder) # default model characteristics
   model1@date <- "2022-07-24"
-  model1@simulation_length <- 5
-  model1@demFile <-  "test-dem.tif"
+  #model1@simulation_length <- 10
+  model1@demFile <-  "dem-test.tif"
   model1@boundary <- desertHydro::polygonize(model1@demFile, model1@watershedPath)
+
+  # Model variation - NLCD
+  model1@demFile <-  "dem-test.tif"
+  model1@boundary <- desertHydro::polygonize(model1@demFile, model1@watershedPath)
+  model1@LandCoverCharacteristics <- "nlcd_characteristics.xlsx"
+  model1@landCoverFile <- "waterholes_LC.tif"
+  model1@key <- "ID"
 
   a <- arid_model(model1@ModelFolder,
                   model1@watershedPath,

@@ -24,6 +24,8 @@ StagedInstall: false
 Imports:
     data.table,
     dplyr,
+    future,
+    future.apply,
     gganimate,
     ggplot2,
     gridExtra,
@@ -31,6 +33,7 @@ Imports:
     lubridate,
     methods,
     purrr,
+    Rcpp,
     readr,
     readxl,
     reshape2,
