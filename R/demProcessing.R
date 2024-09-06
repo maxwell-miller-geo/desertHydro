@@ -72,7 +72,7 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
 # dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") # pass dem as file path
 # hydro_workflow <- flow_accumlation_wb(dem_path, ModelFolder, )
 
-flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA_character_, smooth = T, max_dist = 1000, stream_threshold = NULL, carve = 1, overwrite = T){
+flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA_character_, smooth = T, max_dist = 100, stream_threshold = NULL, carve = 0, overwrite = T){
   # Need this level of precision when filling - to work with whitebox tools
   terra::terraOptions(datatype="FLT8S")
   # List of created rasters
@@ -94,13 +94,14 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
   if(!file.exists(model_dem)){
     #whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_change)
 
-    # Fill depressions
-    whitebox::wbt_fill_depressions(dem = dem_file_path, output = fill_dem)
-    crsAssign(fill_dem, coordinateSystem = crs_dem)
-
     # Breach depressions
-    # whitebox::wbt_breach_depressions_least_cost(dem = fill_dem, output = model_dem, dist = max_dist, flat_increment = .01)
-    # crsAssign(model_dem, coordinateSystem = crs_dem)
+    whitebox::wbt_breach_depressions_least_cost(dem = dem_file_path, output = model_dem, dist = max_dist, flat_increment = .01)
+    crsAssign(model_dem, coordinateSystem = crs_dem)
+
+    # Fill depressions
+    whitebox::wbt_fill_depressions(dem = model_dem, output = fill_dem)
+    crsAssign(fill_dem, coordinateSystem = crs_dem)
+    #plot(terra::rast(fill_dem))
 
     # Find No Flow Cells
     whitebox::wbt_find_no_flow_cells(dem = fill_dem, output = no_flow)
@@ -110,9 +111,11 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
     # temporary flow accumulation
     whitebox::wbt_d8_flow_accumulation(input = fill_dem, output = flow_accum)
     crsAssign(flow_accum, crs_dem)
+    #plot(terra::rast(flow_accum))
 
     # Determine maximum flow accum cell
     maxCell <- dfMax(terra::rast(flow_accum), "max") # the one not to fill
+
     # Get cell numbers
     no_flow_rast <- terra::rast(no_flow)
     # read in raster
@@ -123,34 +126,15 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
     #plot(dem-new_dem)
     # Overwrite the current dem raster
     terra::writeRaster(new_dem, model_dem, overwrite = T)
-    #rm(new_dem)
-    # no_flow_new <- file.path(ModelFolder, "no-flow-2.tif")
-    # whitebox::wbt_find_no_flow_cells(dem = model_dem, output = no_flow_new)
-    # crsAssign(no_flow_new, crs_dem)
-    # plot(rast(no_flow_new))
-    # temp_rast <- "temp_rast.tif"
-    # # write temporary raster
-    # terra::writeRaster(new_dem, temp_rast, overwrite = T)
-    # # Load in temporary raster
-    # temp_rast_loaded <- terra::rast(temp_rast)
-    # # Remove/delete old raster
-    # file.remove(model_dem)
-    # # Rewrite raster with new coordinate system
-    # terra::writeRaster(temp_rast_loaded, model_dem, overwrite = T)
-    # # Remove temporary raster
-    # file.remove(temp_rast)
-    # rm(dem)
-    # rm(new_dem)
   }
 
   file_removal(flow_accum, overwrite)
-
   if(!file.exists(flow_accum)){
     whitebox::wbt_d8_flow_accumulation(input = model_dem, output = flow_accum)
     crsAssign(flow_accum, coordinateSystem = crs_dem)
   }
-  file_removal(extracted_streams, overwrite)
 
+  file_removal(extracted_streams, overwrite)
   if(!file.exists(extracted_streams)){
     if(is.null(stream_threshold)){
       dimensions <- dim(terra::rast(dem_file_path))
@@ -173,37 +157,24 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
 
   # RasterStreams to Vector
   file_removal(vect_stream, overwrite)
-  whitebox::wbt_raster_streams_to_vector(extracted_streams, d8_pntr, vect_stream)
-  crsAssign(vect_stream, coordinateSystem = crs_dem)
-
-  # Create stream network analysis
-  stream_network <- file.path(ModelFolder, "stream_network.shp")
-  whitebox::wbt_vector_stream_network_analysis(vect_stream, stream_network)
-  crsAssign(stream_network, coordinateSystem = crs_dem)
+  tryCatch({
+    whitebox::wbt_raster_streams_to_vector(extracted_streams, d8_pntr, vect_stream)
+    crsAssign(vect_stream, coordinateSystem = crs_dem)
+    # Create stream network analysis
+    stream_network <- file.path(ModelFolder, "stream_network.shp")
+    whitebox::wbt_vector_stream_network_analysis(vect_stream, stream_network)
+    crsAssign(stream_network, coordinateSystem = crs_dem)
+  }, error = function(e) {
+    print("An error occurred in whitebox tools:", e$message)
+  })
 
   # Create Long Profile hmtl files for visualization
   if(FALSE){
     profile <- file.path(ModelFolder, "profile.html")
     whitebox::wbt_long_profile(d8_pntr, extracted_streams, model_dem, profile, verbose_mode = F)
   }
-  # Create vector stream network
-  # whitebox::wbt_raster_to_vector_lines(extracted_streams, vect_stream)
-  # crsAssign(vect_stream, coordinateSystem = crs_dem)
-
-  # Repair stream vectors - should not run on digital created networks
-  # repair_streams <- file.path(ModelFolder, "stream_repair.shp")
-  # if(file.exists(repair_streams) & overwrite){
-  #   print("Overwriting repaired streams")
-  #   file.remove(repair_streams)
-  # }
-  #
-  # if(!file.exists(repair_streams)){
-  #   whitebox::wbt_repair_stream_vector_topology(vect_stream, repair_streams, dist = 1*units) # sqrt(2) length away
-  #   crsAssign(repair_streams, coordinateSystem = crs_dem)
-  # }
-
   # Carve dem
-  if(carve > 0){
+  if(carve > 0 & file.exists(stream_network)){
     carve_dem <- carveDem(model_dem, flow_accum, outline = watershed_shape_path, depth = carve)
     #carve_dem <- carveDem(dem, flow_accum, depth = 1)
     terra::writeRaster(carve_dem[[1]], model_dem, overwrite = T)
@@ -213,11 +184,9 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
     print("Smoothing stream network...")
     smoothStream(stream_network, model_dem, ModelFolder)
   }
-
   #carve_dem <- terra::rast(model_dem) + 0
   # Determine outflow points of model to prevent back filling
-  drain <- firstSecond(carve_dem[[2]], carve_dem[[1]], Outfolder = ModelFolder, name = "drainCells")
-
+  drain <- outFlowCells(model_dem, flow_accum, Outfolder = ModelFolder, name = "drainCells")
   xy <- data.frame(x = drain$x, y = drain$y)
   v <- terra::vect(xy, geom = c("x","y"), crs = crs_dem)
   terra::writeVector(v, file.path(ModelFolder, "drainPoints.shp"), overwrite = T)

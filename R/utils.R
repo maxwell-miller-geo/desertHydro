@@ -72,23 +72,23 @@ dfMax <- function(raster, rename = NA, max = T, rank = 2){
 # ---------------------------- Function to find 1st and 2nd values
 # and output table
 
-firstSecond <- function(spatraster, dem, Outfolder = NA, name = ""){
-  if(is.character(spatraster)){
-    spatraster <- terra::rast(spatraster)
+outFlowCells <- function(dem, flow_accum, Outfolder = NA, name = ""){
+  if(is.character(flow_accum)){
+    flow_accum <- terra::rast(flow_accum)
   }
   if(is.character(dem)){
     dem <- terra::rast(dem)
   }
-  maxCell <- dfMax(spatraster, rename = "max")
-  secondCell <- dfMax(spatraster, rename = "second", max = F, rank = 2)
+  maxCell <- dfMax(flow_accum, rename = "max")
+  secondCell <- dfMax(flow_accum, rename = "second", max = F, rank = 2)
   combinedObject <- rbind(maxCell, secondCell)
 
   # Get the maximum elevation for each cell
   maxElevations <- terra::extract(dem, combinedObject[,2:3])
   outputDF <- cbind(combinedObject, maxElevations)
-  # secondValue <- sort(terra::values(spatraster), decreasing = T, na.last = T)[2]
-  # secondCellLocation <- terra::cells(spatraster, secondValue)[[1]] # should only be one flow accumulation
-  # secondXYLocation <- terra::xyFromCell(spatraster, secondCellLocation)
+  # secondValue <- sort(terra::values(flow_accum), decreasing = T, na.last = T)[2]
+  # secondCellLocation <- terra::cells(flow_accum, secondValue)[[1]] # should only be one flow accumulation
+  # secondXYLocation <- terra::xyFromCell(flow_accum, secondCellLocation)
   # second <- c("second", secondXYLocation[1], secondXYLocation[2], secondValue)
 
   #xy <- cbind(as.numeric(combinedObject[1,2:3]))

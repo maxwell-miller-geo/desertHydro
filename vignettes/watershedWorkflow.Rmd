@@ -106,7 +106,7 @@ and the excel file.
 date <- "2018-07-13" # Optional - if dates present must be in YYYY-MM-DD format
 rainFile <- "USGS_Rain_2001_2021.xlsx"
 dischargeFile <- "observable-discharge.csv"
-discharge = T # If TRUE, expects discharge present in file
+discharge <-  T # If TRUE, expects discharge present in file
 
 # If rainfall method is synthetic - uses 1/2 inch - 15 minute storm
 rainfall_method <- "synthetic" 
@@ -118,7 +118,7 @@ rainfall_method <- "synthetic"
 length <- 10 # grid cell length - assumes uniform grid
 store = T
 time_step <- .1 # time step in minutes
-simulation_length <-  20 # time length in minutes
+simulation_length <-  10 # time length in minutes
 impervious <- T  # no infiltration
 overwrite <- T # overwrite watershed elements and model folder
 write <- T # create graphs and write outputs to model folder
@@ -150,7 +150,7 @@ if(!all(filesCheck)){
 ```
 
 ## 2 Model Run - off and running
-```{r, model run, echo = T, results='hide', cache = T}
+```{r, model run, echo = T, results='hide', cache = F}
 
 a <- arid_model(ModelFolder,
                 WatershedElements,

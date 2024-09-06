@@ -9,9 +9,9 @@ flow_accumlation_wb(
   ModelFolder,
   watershed_shape_path = NA_character_,
   smooth = T,
-  max_dist = 1000,
+  max_dist = 100,
   stream_threshold = NULL,
-  carve = 1,
+  carve = 0,
   overwrite = T
 )
 }

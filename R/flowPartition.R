@@ -836,7 +836,6 @@ distanceCheck <- function(ModelFolder, velocity, depth, time_step, flowDirection
 # Using a DEM and a flow accumulation map, reduce the elevation of the channel by
 # a linear amount
 carveDem <- function(dem, flow_accum, depth = 1, outline = NA_character_){
-  print(outline)
   if(is.character(dem)){
     dem <- terra::rast(dem)
   }
@@ -856,7 +855,7 @@ carveDem <- function(dem, flow_accum, depth = 1, outline = NA_character_){
     flow_accum_adj <- flow_accum + 0
   }
   maxAccumulation <- terra::minmax(flow_accum_adj)[2] # Maximum flow accumulation
-  stepCarve <- depth/maxAccumulation # fraction to carve
+  stepCarve <- depth / maxAccumulation # fraction to carve
   demCarve <- dem - stepCarve*flow_accum_adj # adjust dem
   return(list(demCarve, flow_accum_adj))
 }

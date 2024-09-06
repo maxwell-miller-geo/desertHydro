@@ -9,7 +9,7 @@ monsoon <- function(ModelFolder = NULL){
   # Model Class
   model1 <- model(ModelFolder = ModelFolder) # default model characteristics
   model1@date <- "2022-07-24"
-  #model1@simulation_length <- 10
+  model1@simulation_length <- 10
   model1@demFile <-  "dem-test.tif"
   model1@boundary <- desertHydro::polygonize(model1@demFile, model1@watershedPath)
 

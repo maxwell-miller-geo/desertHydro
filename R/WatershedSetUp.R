@@ -6,7 +6,7 @@
 # 4 - Voronoi polygons
 # Some of the scripts are created in external functions
 
-watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, WatershedShape, LandCoverCharacteristics, landCoverFile, landcovername = "landcover_soil.tif", key = "MUSYM", overwrite = T){ # DEM should be unaltered
+watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watershed_shape_path, LandCoverCharacteristics, landCoverFile, landcovername = "landcover_soil.tif", key = "MUSYM", overwrite = T){ # DEM should be unaltered
   #requireNamespace("terra")
   # DEM adjustments
   # Adjust the input DEM with the watershed shapefile.
@@ -24,7 +24,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
     print('Creating adjusted digital elevation model.')
     flow_accumlation_wb(dem_file_path = DEM,
                         ModelFolder = ModelFolder,
-                        watershed_shape_path = WatershedShape,
+                        watershed_shape_path = watershed_shape_path,
                         overwrite = overwrite) # Does not overwrite - creates many rasters
     print('Finished creating adjusted DEM.')
   } else{
@@ -54,19 +54,25 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
       #source("createWatershedModel.R", local = TRUE) # Land Cover script
       print("Processing land cover...")
       #landCoverFile <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # school desktop
-      extension <- sub(".*\\.", "", landCoverFile) # use regular expression to get file extension
-      if(extension == "shp"){
-        land_cover <- terra::vect(landCoverFile)
-      }else{
-        land_cover <- terra::rast(landCoverFile)
+
+      land_cover_process <- function(landCoverFile, model_dem, watershed_shape_path, key, save = F, overwrite = T){
+        extension <- sub(".*\\.", "", landCoverFile) # use regular expression to get file extension
+        if(extension == "shp"){
+          land_cover <- terra::vect(landCoverFile)
+        }else{
+          land_cover <- terra::rast(landCoverFile)
+        }
+        dem_local <- terra::rast(model_dem)
+        land_cover_raster <- resizeShape(spatialObject = land_cover,
+                                         extent_raster = dem_local,
+                                         watershedboundary = watershed_shape_path,
+                                         key = key,
+                                         save = save)
+        terra::writeRaster(land_cover_raster, model_landcover, overwrite = overwrite)
+        return(land_cover_raster)
       }
-      dem_local <- terra::rast(model_dem)
-      land_cover_raster <- resizeShape(spatialObject = land_cover,
-                                       extent_raster = dem_local,
-                                       watershedboundary = WatershedShape,
-                                       key = key,
-                                       save = F)
-      terra::writeRaster(land_cover_raster, model_landcover, overwrite = TRUE)
+
+      land_cover_raster <- land_cover_process(landCoverFile, model_dem, watershed_shape_path, key = key)
       print("Land Cover file clipped and resized.")
   } else{
     # Local land cover raster
@@ -108,17 +114,19 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
   #return(WatershedStack)
 
   ClassificationMap <- model_landcover # adjusted/cropped classification map - must be named correctly
-
+  # Overwrites Soil Stack
   initial_soil_conditions(LandCoverCharacteristics = LandCoverCharacteristics,
                           ClassificationMap = ClassificationMap,
                           WatershedStack = WatershedStack,
-                          outline = WatershedShape,
+                          outline = watershed_shape_path,
                           ModelFolder = ModelFolder,
                           WatershedElements = WatershedElements,
                           key = key,
                           overwrite = overwrite
                           )
+  # Doesn't return anything...
   SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
+  return(SoilStack)
 }
 
 # Test
@@ -127,7 +135,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, Watersh
 # land_cover_path <-  r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # school desktop
 # watershed_shape_path <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\QGIS\waterholes_shape.shp)"
 #
-# watershedElements(WatershedElements = fileWatershedElements, DEM = dem_path, LandCover = land_cover_path, WatershedShape = watershed_shape_path)
+# watershedElements(WatershedElements = fileWatershedElements, DEM = dem_path, LandCover = land_cover_path, watershed_shape_path = watershed_shape_path)
 
 ## Create voronoi polygons - not run
 createVoronoi <- function(coords, combined, shapefile, write = F){ # Not run

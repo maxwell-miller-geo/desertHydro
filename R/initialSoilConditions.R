@@ -39,6 +39,7 @@ createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
   }
   # Categories <- terra::catalyze(ClassMap)
   # Categories <- terra::as.factor(ClassMap)
+  # Simplest form where only manning's n is present
   if(key == "ID"){
     joinDF <- soilTable
     # getID <- terra::unique(ClassMap)[[1]]
@@ -47,7 +48,7 @@ createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
   else if(key == "GEOFNT24K"){
     getLevels <- terra::levels(ClassMap)[[1]]
     joinDF <- dplyr::left_join(getLevels, soilTable, by = key) # join by matching key
-  }else{
+  } else{
     # Convert the levels of the categorical map to match the key
     selectColumn <- terra::levels(ClassMap)[[1]][key]
     selectColumn[,1] <- as.numeric(selectColumn[,1])
@@ -72,7 +73,6 @@ createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
     }else{
       temp <- terra::classify(x = ClassMap, rcl = c_matrix) # classify ClassMap based on matrix
     }
-
     #temp <- terra::subst(ClassMap, as.numeric(soilTable[[key]]), round(as.numeric(soilTable[[x]]),3)) # classify ClassMap based on matrix
     names(temp) <- names(joinDF[x]) # Assign a name to the Raster Layer
     outStack <- append(outStack, temp) # Append raster layer to raster 'brick'
@@ -213,14 +213,14 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   }
   # Stream extraction - adjust Manning's n in stream channel by 0.01
   streamPath <- file.path(WatershedElements, "stream_extracted.tif")
+  # Increase the speed of water within stream network
   if(file.exists(streamPath)){
     print("Stream adjustments")
-    stream_extracted <- terra::rast(file.path(WatershedElements, "stream_extracted.tif"))
+    stream_extracted <- terra::rast(streamPath)
     if(terra::ext(stream_extracted) != terra::ext(SoilStack$slope)){
       stream_extracted <- terra::crop(stream_extracted, SoilStack$slope)
     }
     extracted <- terra::ifel(is.nan(stream_extracted), 0, stream_extracted)
-    print(extracted)
     SoilStack$mannings_n <- abs(SoilStack$mannings_n - .0025*extracted)
   }
 
@@ -228,8 +228,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   readr::write_csv(LCC, file.path(ModelFolder, "Starting_Soil_Characteristics.csv"))
   # # startingSoil <- write.csv(LCC, file.path(DataStorage, "Starting_LandCover.csv"), overwrite = TRUE)
 
-  terra::writeRaster(SoilStack
-                     , soilstack_file, overwrite = overwrite)
+  terra::writeRaster(SoilStack, soilstack_file, overwrite = overwrite)
   print("Model soil stack created...")
 }
 
