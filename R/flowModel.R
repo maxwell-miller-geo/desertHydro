@@ -232,7 +232,7 @@ for(t in 1:(length(simulation_duration)-1)){
  #becomes surface water
 
   ## [4] Surface Runoff
-  print(names(SoilStack))
+  #print(names(SoilStack))
   # Create surface stack to pass only the important surface variables
   # surfaceStack <- c(SoilStack$surfaceWater,
   #                   SoilStack$mannings_n,

@@ -157,16 +157,21 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
 
   # RasterStreams to Vector
   file_removal(vect_stream, overwrite)
-  tryCatch({
-    whitebox::wbt_raster_streams_to_vector(extracted_streams, d8_pntr, vect_stream)
-    crsAssign(vect_stream, coordinateSystem = crs_dem)
-    # Create stream network analysis
-    stream_network <- file.path(ModelFolder, "stream_network.shp")
-    whitebox::wbt_vector_stream_network_analysis(vect_stream, stream_network)
-    crsAssign(stream_network, coordinateSystem = crs_dem)
-  }, error = function(e) {
-    print("An error occurred in whitebox tools:", e$message)
-  })
+
+  # Create stream network analysis - Optional
+  stream_network <- file.path(ModelFolder, "stream_network.shp")
+  if(carve > 0){
+    tryCatch({
+      whitebox::wbt_raster_streams_to_vector(extracted_streams, d8_pntr, vect_stream)
+      crsAssign(vect_stream, coordinateSystem = crs_dem)
+
+      whitebox::wbt_vector_stream_network_analysis(vect_stream, stream_network)
+      crsAssign(stream_network, coordinateSystem = crs_dem)
+    }, error = function(e) {
+      print("An error occurred in whitebox tools:", e$message)
+    })
+  }
+
 
   # Create Long Profile hmtl files for visualization
   if(FALSE){
