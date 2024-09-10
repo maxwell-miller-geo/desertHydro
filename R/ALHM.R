@@ -190,7 +190,7 @@ if(key %in% colnames(keyCheck)){
 gc()
 WatershedStack <- watershedElementsCreate(WatershedElements = WatershedElements,
                                          DEM = dem_path,
-                                         WatershedShape = watershed_shape_path,
+                                         watershed_shape_path = watershed_shape_path,
                                          landCoverFile = landCoverFile,
                                          ModelFolder = ModelFolder,
                                          LandCoverCharacteristics = LandCoverCharacteristics,

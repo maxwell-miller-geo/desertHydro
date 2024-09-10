@@ -676,7 +676,22 @@ manningsVelocity <- function(n, depth, slope, length){
 #
 #   }
 # }
+surfaceRouting <- function(surfaceStack, ModelFolder, time_interval_secs = 5, maxTravel = 10, timeVelocity = list(0,0), drainCells = NA, ...){
+  rainfallRate <- surfaceStack$throughfall / time_interval_secs
+  rainSurface <- surfaceStack$surface + surfaceStack$throughfall
 
+  # Adjust manning's n based upon the depth of rainfall after
+  # n <- roughnessAdjust(rainSurface, SoilStack$mannings_n)
+
+  # Add of all the water as depth - determine if it can flow with no complications
+  initialDepth <- rainSurface
+  velocityIntermediate <- manningsVelocity(n, initialDepth, slope, length = length)
+  velocityStorage <- velocityIntermediate # store this maximum velocity
+  # Time step check - returns max distance traveled and adjusted depth
+  distanceDepth <- distanceCheck(ModelFolder, velocityIntermediate, rainSurface, time_interval_secs,
+                                 surfaceStack, timeVelocity = timeVelocity,
+                                 drainCells = drainCells, check = T)
+}
 ## ---------------------------- Flow Routing fixed
 # Flow routing that has a semi fixed spacing and save rate
 routeWater2 <- function(ModelFolder, SoilStack, flowDirectionMap, time_step = 5, length = 10, timeVelocity = list(0,0), drainCells = NA, ...){
@@ -684,7 +699,7 @@ routeWater2 <- function(ModelFolder, SoilStack, flowDirectionMap, time_step = 5,
   if(is.character(flowDirectionMap)){
     flowDirectionMap <- terra::rast(flowDirectionMap)
   }
-
+  #
   # Initial variables
   maxTravel <- length # 5-10 m per time step
   n <- SoilStack$mannings_n
@@ -692,12 +707,11 @@ routeWater2 <- function(ModelFolder, SoilStack, flowDirectionMap, time_step = 5,
   throughfall <- SoilStack$throughfall
   rainfallRate <- throughfall/time_step # rainfall rate per second
   rainSurface <- surface + throughfall # cm
-  # Adjust manning's n based upon the depth of rainfall after
-  n <- roughnessAdjust(rainSurface, n)
+
   #print(n)
   slope <- SoilStack$slope
   dem <- SoilStack$model_dem # m
-  # Manning's n adjustment - dynamically adjust manning's n, if the depth is very low
+ # Manning's n adjustment - dynamically adjust manning's n, if the depth is very low
 
   # Initial velocity
   #velocityInitial <- manningsVelocity(n, surface, slope, length = length)
@@ -965,3 +979,51 @@ froudeNumber <- function(velocity, height){
 #
 # })
 
+# Create flow network - find lowest cell - assign value of cell to location
+
+node_raster <- function(dem_path){
+  dem_crs <- terra::crs(terra::rast(dem_path))
+  flow_dir <- file.path(tempdir(), "temp-flow.tif")
+  whitebox::wbt_d8_pointer(dem_path, flow_dir)
+  crsAssign(flow_dir, dem_crs)
+  # Load in raster
+  flow <- terra::rast(flow_dir)
+  # Calculate Outflow cells #
+  #direction # name, coordinate offset, distance
+  flow_dict <- list("0" = list("no-flow", c(0,0), 0),
+                    "1" = list("north-east", c(1,-1), sqrt(2)),
+                    "2" = list("east", c(1,0), 1),
+                    "4" = list("south-east", c(1, 1), sqrt(2)),
+                    "8" = list("south", c(0, 1), 1),
+                    "16" = list("south-west", c(-1,1), sqrt(2)),
+                    "32" = list("west", c(-1, 0), 1),
+                    "64" = list("north-west", c(-1, -1), sqrt(2)),
+                    "128" = list("north", c(0, -1), 1))
+  # read as character for dictionary
+  # flow_dict[as.character(flow[1][[1]])]
+  rows <- nrow(flow)
+  cols <- ncol(flow)
+  outflowRaster <- terra::rast(, nrows = rows, ncols = cols, extent = ext(flow), nlyrs = 2)
+  #df <-  data.frame(matrix(ncol=2, nrow=0, dimnames=list(NULL, c("cell", "distance"))))
+  # networkRaster <- file.path(tempdir(), "network-raster.tif")
+  for(x in 1:ncell(flow)){
+    if(is.na(flow[x])){
+      next
+    }
+    # Determine flow location of cell
+    flow_char <- flow_dict[as.character(flow[x][[1]])]
+    colAdj <- flow_char[[1]][2][[1]][1]
+    rowAdj <- flow_char[[1]][2][[1]][2]
+    distance <- flow_char[[1]][3][[1]]
+    # Adjust column and row
+    current_cell <- rowColFromCell(flow, x)
+    new_df <- data.frame("row" = current_cell[1] + rowAdj, "col" = current_cell[2] + colAdj)
+    cell_number <- cellFromRowColCombine(flow, new_df$row, new_df$col)
+    #print(paste0("Current cell: ", x, " Flow cell:", cell_number))
+    newRow <- data.frame(cell = cell_number, distance = distance)
+    #df <- rbind(df, newRow)
+    terra::values(outflowRaster)[x, 1] <- cell_number
+    terra::values(outflowRaster)[x, 2] <- distance
+  }
+  return(outflowRaster)
+}

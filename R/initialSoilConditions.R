@@ -39,9 +39,9 @@ createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
   }
   # Categories <- terra::catalyze(ClassMap)
   # Categories <- terra::as.factor(ClassMap)
-  # Simplest form where only manning's n is present
+  # Simplest form where only manning's n is present - 2nd column is ID values
   if(key == "ID"){
-    joinDF <- soilTable
+    joinDF <- soilTable # Ignore first column; use second column as ID
     # getID <- terra::unique(ClassMap)[[1]]
     # joinDF <- dplyr::left_join(getID, soilTable, by = key)
   }
@@ -64,12 +64,18 @@ createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
       next # Breaks if the value in the table is a character (names)
     }
     #c_matrix <- matrix(cbind(soilTable[[key]], as.numeric(soilTable[[x]])), ncol = 2) # Create classification matrix
-    c_matrix <- matrix(cbind(joinDF[[1]], as.numeric(joinDF[[x]])), ncol = 2) # Create classification matrix
+    c_matrix <- matrix(cbind(joinDF[[1]], as.numeric(joinDF[[x]])), ncol = 2) # Create classification matrix - assumes key is in first column header...
     if(key != "GEOFNT24K"){
       if(x == 1){
         next
       }
-      temp <- terra::subst(ClassMap, as.numeric(soilTable[[key]]), round(as.numeric(soilTable[[x]]),3)) # classify ClassMap based on matrix
+      temp <- terra::subst(ClassMap, as.numeric(soilTable[[key]]), round(as.numeric(soilTable[[x]]),3))# classify ClassMap based on matrix
+      if(key == "ID"){
+        # Classification matrix
+        c_matrix <- matrix(cbind(soilTable[[key]], as.numeric(joinDF[[x]])), ncol = 2)
+        # Assign values
+        temp <- terra::subst(ClassMap, as.integer(soilTable[[key]]), round(as.numeric(soilTable[[x]]),3))
+      }
     }else{
       temp <- terra::classify(x = ClassMap, rcl = c_matrix) # classify ClassMap based on matrix
     }
@@ -91,8 +97,9 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
                                     depthAdj = T, saturatedPercentage = 0.2, overwrite = T){
 
   soilstack_file <- file.path(ModelFolder, "model_soil_stack.tif")
-  if(file.exists(soilstack_file)){
-    return("Found model soil file..")
+  if(file.exists(soilstack_file) & overwrite == F){
+    print("Found model soil file..")
+    return(0)
   }
 
   LCC <- readxl::read_xlsx(LandCoverCharacteristics) # reads excel file with soil characteristics
@@ -227,9 +234,9 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   # Save the starting soil characteristic layers
   readr::write_csv(LCC, file.path(ModelFolder, "Starting_Soil_Characteristics.csv"))
   # # startingSoil <- write.csv(LCC, file.path(DataStorage, "Starting_LandCover.csv"), overwrite = TRUE)
-
   terra::writeRaster(SoilStack, soilstack_file, overwrite = overwrite)
   print("Model soil stack created...")
+  return(SoilStack)
 }
 
 # Test - Initial soil conditions

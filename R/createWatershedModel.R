@@ -23,7 +23,7 @@
 # Function to read in the land cover map - assumes NLCD - crops and resamples
 # to computational watershed
 resizeShape <- function(spatialObject, extent_raster, watershedboundary, key = "MUSYM", save = FALSE, save_name = "", save_location = ""){
-  land_cover_proj <- terra::project(spatialObject, extent_raster)
+  land_cover_proj <- terra::project(spatialObject, extent_raster, method = "near") # for categorical data only
   # crop the landcover to the extend boundary
   if(!is.na(watershedboundary)){
     print("Clipping to watershed boundary.")

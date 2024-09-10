@@ -188,7 +188,8 @@ for(t in 1:(length(simulation_duration)-1)){
   totalDepthCM <- sum(terra::values(SoilStack$current_rainfall), na.rm = T) # Sum of all depths
   area <- terra::expanse(SoilStack$current_rainfall, unit = "m")[[2]] # area with non-zeros
   volumeM3 <- totalDepthCM/100 * area # cubic meters
-  averageDepthCM <- volumeM3 / (area * active_cells) * 100
+  averageDepthCM <- volumeM3 / (area) * 100 # average depth cm
+  #averageDepthCM <- volumeM3 / (area * active_cells) * 100 # average depth cm
   # Saves later in script
 
   # volumeIn <- rbind(volumeIn,
@@ -231,6 +232,16 @@ for(t in 1:(length(simulation_duration)-1)){
  #becomes surface water
 
   ## [4] Surface Runoff
+  print(names(SoilStack))
+  # Create surface stack to pass only the important surface variables
+  # surfaceStack <- c(SoilStack$surfaceWater,
+  #                   SoilStack$mannings_n,
+  #                   SoilStack$throughfall,
+  #                   SoilStack$slope,
+  #                   SoilStack$model_dem,
+  #                   flowDirectionMap
+  #                   )
+  #runoffList <- surfaceRouting()
   # Calculate the surface runoff for the water present at the surface.
   runoffList <- routeWater2(ModelFolder,
                             SoilStack,
@@ -258,6 +269,7 @@ for(t in 1:(length(simulation_duration)-1)){
   dischargeCalc <- volumeDrainedM3/simulationTimeSecs
   total_rain_m3 <- volume[,sum(volumeIn_m3)] + volumeM3 # sum of previous rainfall and this step
   simulation_volume_m3 <- volume[, sum(volumeOut_m3)] + sum(terra::values(SoilStack$surfaceWater), na.rm = T)
+
   # Statistics for water volumes
   volume <- rbind(volume, list(end_time, volumeM3, volumeDrainedM3, averageDepthCM,
                                velocityDrain_ms, heightDrain_cm, dischargeCalc,

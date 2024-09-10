@@ -54,25 +54,12 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
       #source("createWatershedModel.R", local = TRUE) # Land Cover script
       print("Processing land cover...")
       #landCoverFile <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # school desktop
+      land_cover_raster <- land_cover_process(landCoverFile,
+                                              model_dem,
+                                              watershed_shape_path,
+                                              model_landcover = model_landcover,
+                                              key = key, save = T)
 
-      land_cover_process <- function(landCoverFile, model_dem, watershed_shape_path, key, save = F, overwrite = T){
-        extension <- sub(".*\\.", "", landCoverFile) # use regular expression to get file extension
-        if(extension == "shp"){
-          land_cover <- terra::vect(landCoverFile)
-        }else{
-          land_cover <- terra::rast(landCoverFile)
-        }
-        dem_local <- terra::rast(model_dem)
-        land_cover_raster <- resizeShape(spatialObject = land_cover,
-                                         extent_raster = dem_local,
-                                         watershedboundary = watershed_shape_path,
-                                         key = key,
-                                         save = save)
-        terra::writeRaster(land_cover_raster, model_landcover, overwrite = overwrite)
-        return(land_cover_raster)
-      }
-
-      land_cover_raster <- land_cover_process(landCoverFile, model_dem, watershed_shape_path, key = key)
       print("Land Cover file clipped and resized.")
   } else{
     # Local land cover raster
@@ -94,7 +81,6 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
     print('Found flow partition map.')
     flowStack <- terra::rast(flow_file) + 0
   }
-
   print("Checking created flow calculations extent.")
   # Crop the flow calculations raster to the extent of the land cover. If needed, overwrite previous data
   if(!(dim(flowStack)[1] == dim(land_cover_raster)[1] & dim(flowStack)[2] == dim(land_cover_raster)[2])){
@@ -108,8 +94,8 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
                       terra::rast(flow_file),
                       terra::rast(model_landcover))
 
-  terra::writeRaster(WatershedStack, file.path(WatershedElements, "watershed_stack.tif"), overwrite = T)
-  print(paste0("Finished creating/checking files. Watershed elements files located in: ", WatershedElements))
+  terra::writeRaster(WatershedStack, file.path(ModelFolder, "watershed_stack.tif"), overwrite = T)
+  print(paste0("Finished creating/checking files. Watershed elements files located in: ", ModelFolder))
   # Check files were written into folder
   #return(WatershedStack)
 
@@ -209,6 +195,28 @@ geologyProcess <- function(landCoverShape, SoilStack, WatershedElements, ModelFo
   # Load in land cover excel sheet - hard coded
   #LandCoverCharacteristics <- readxl::read_xlsx(r"(C:\Thesis\Arid-Land-Hydrology\R\WatershedElements\LandCoverCharacteristics_Soils.xlsx)")
   # hard coded flow
+}
 
-
+land_cover_process <- function(landCoverPath, model_dem, watershed_shape_path, key, model_landcover = NULL, save = T, overwrite = T,...){
+  # Output model land-cover
+  if(is.null(model_landcover)){
+    model_landcover <- file.path(ModelFolder, "model_landcover.tif") # must pass ModelFolder
+  }
+  extension <- sub(".*\\.", "", landCoverPath) # use regular expression to get file extension
+  if(extension == "shp"){
+    land_cover <- terra::vect(landCoverPath)
+  }else{
+    land_cover <- terra::rast(landCoverPath)
+  }
+  dem_local <- terra::rast(model_dem)
+  land_cover_raster <- resizeShape(spatialObject = land_cover,
+                                   extent_raster = dem_local,
+                                   watershedboundary = watershed_shape_path,
+                                   key = key,
+                                   save = F)
+  # Create model land cover raster
+  if(save){
+    terra::writeRaster(land_cover_raster, model_landcover, overwrite = overwrite)
+  }
+  return(land_cover_raster)
 }
