@@ -1027,3 +1027,10 @@ node_raster <- function(dem_path){
   }
   return(outflowRaster)
 }
+
+# Function for courant number - returns # of seconds
+
+courant_time <- function(velocity, distance, courant_number = 1){
+  return(round(courant_number*(distance/velocity) / 60, 2))
+}
+

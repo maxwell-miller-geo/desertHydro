@@ -105,12 +105,13 @@ totalVolume <- function(time, discharge){
 #' dischargeAnalysis(ModelFolder, WatershedElements, time_step, simulation_length) #See vignette
 #' }
 #'
-dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length, discharge = F, store = T, date = NULL){
+dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length,  discharge = F, store = T, date = NULL, gauge_locations = file.path(WatershedElements, "stream_gauge.shp")){
   time <- Total_in <- xsection_next <- NULL # keep the global variables at bay
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
   velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
   #subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
-  x_sections_path <- file.path(WatershedElements, "gauges.shp")
+  gauge_locations = file.path(WatershedElements, "stream_gauge.shp")
+  x_sections_path <- gauge_locations
   if(file.exists(x_sections_path) & discharge){
     print(paste("Creating discharge figures..."))
     rain_discharge <- readr::read_csv(file.path(ModelFolder, "rain-discharge.csv"), show_col_types = F)

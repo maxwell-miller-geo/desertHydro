@@ -344,7 +344,7 @@ file_removal <- function(path, overwrite){
 
 
 # Fill a cell on the edge given cell number and raster
-fill_edge <- function(raster, cellsToFill, dontFillCells, fill_amount = .0002){
+fill_edge <- function(raster, cellsToFill, dontFillCells, fill_amount = .0001){
   for(cellnumber in cellsToFill){
     cellnumber <- as.numeric(cellnumber)
     if(!(cellnumber %in% dontFillCells)){ # fill all cells but "dontFillCells"

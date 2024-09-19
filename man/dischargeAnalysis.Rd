@@ -11,7 +11,8 @@ dischargeAnalysis(
   simulation_length,
   discharge = F,
   store = T,
-  date = NULL
+  date = NULL,
+  gauge_locations = file.path(WatershedElements, "stream_gauge.shp")
 )
 }
 \arguments{
