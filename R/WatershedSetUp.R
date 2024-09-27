@@ -58,7 +58,9 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
                                               model_dem,
                                               watershed_shape_path,
                                               model_landcover = model_landcover,
-                                              key = key, save = T)
+                                              key = key,
+                                              save = T,
+                                              ModelFolder = ModelFolder)
 
       print("Land Cover file clipped and resized.")
   } else{
@@ -197,7 +199,7 @@ geologyProcess <- function(landCoverShape, SoilStack, WatershedElements, ModelFo
   # hard coded flow
 }
 
-land_cover_process <- function(landCoverPath, model_dem, watershed_shape_path, key, model_landcover = NULL, save = T, overwrite = T,...){
+land_cover_process <- function(landCoverPath, model_dem, watershed_shape_path, key, ModelFolder, model_landcover = NULL, save = T, overwrite = T, ...){
   # Output model land-cover
   if(is.null(model_landcover)){
     model_landcover <- file.path(ModelFolder, "model_landcover.tif") # must pass ModelFolder

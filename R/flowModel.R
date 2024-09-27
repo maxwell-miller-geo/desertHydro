@@ -47,7 +47,7 @@ flowModel <- function(SoilStack_file,
   print(paste("Time step:", time_step))
   print(paste("Simulation length:", simulation_length))
   print(paste("Estimated run time:", round(simulation_length/ time_step * 25/60), " minutes."))
-
+  volumeIn_m3 <- volumeOut_m3 <- NULL
   start_time <- Sys.time()
   # Load soil stack
   SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))

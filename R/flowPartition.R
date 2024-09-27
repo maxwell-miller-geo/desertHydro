@@ -64,9 +64,24 @@ flowOutSum <- function(x) { # Vector of values
 # outFlow <- flowOutSum(testV)
 ## Define a custom function to calculate the difference from the center - essentially flow accumulation within a neighborhood
 
-# C++ function to speed up water distribution
-Rcpp::cppFunction(
-  'NumericVector flow_sum(NumericVector x, size_t ni, size_t nw) {
+
+## ----------------------------- Flow Map
+# New better way to make flow function map!
+flowMap <- function(dem, outFolder = NA, name = "stack_flow.tif"){
+  flow_sum <- NULL
+  # Load in DEM
+  if(is.character(dem)){
+    dem <- terra::rast(dem)
+  }
+  # Create flow map based on elevation differences
+  # Create Flow sum map
+  kernel <- array(1, dim = c(3,3,1)) # Create '3D' matrix 3x3x1 with only 1's
+  #kernel <-
+  #dem_flow <- terra::focal3D(dem, w = kernel, fun = flowOutSum, pad = TRUE) # calculate the 'flow accumulation'
+  #dem_flow <- terra::focal3D(dem, w = kernel, fun = flow_window, pad = TRUE) # calculate the 'flow accumulation'
+  # C++ function to speed up water distribution
+  Rcpp::cppFunction(
+    'NumericVector flow_sum(NumericVector x, size_t ni, size_t nw) {
     NumericVector out(ni);
     size_t start = 0; // starting point
     double adj = 1 / std::sqrt(2);
@@ -101,21 +116,7 @@ Rcpp::cppFunction(
     }
     return out;
   }'
-)
-## ----------------------------- Flow Map
-# New better way to make flow function map!
-flowMap <- function(dem, outFolder = NA, name = "stack_flow.tif"){
-  # Load in DEM
-  if(is.character(dem)){
-    dem <- terra::rast(dem)
-  }
-  # Create flow map based on elevation differences
-  # Create Flow sum map
-  kernel <- array(1, dim = c(3,3,1)) # Create '3D' matrix 3x3x1 with only 1's
-  #kernel <-
-  #dem_flow <- terra::focal3D(dem, w = kernel, fun = flowOutSum, pad = TRUE) # calculate the 'flow accumulation'
-  #dem_flow <- terra::focal3D(dem, w = kernel, fun = flow_window, pad = TRUE) # calculate the 'flow accumulation'
-
+  )
   dem_flow <- terra::focalCpp(dem, w = 3, fun = flow_sum, fillvalue = NaN)
   # Shift and create dem maps
   flowMaps <- createFlowMaps(dem, dem_flow)
@@ -677,6 +678,7 @@ manningsVelocity <- function(n, depth, slope, length){
 #   }
 # }
 surfaceRouting <- function(surfaceStack, ModelFolder, time_interval_secs = 5, maxTravel = 10, timeVelocity = list(0,0), drainCells = NA, ...){
+  n <- slope <- NULL
   rainfallRate <- surfaceStack$throughfall / time_interval_secs
   rainSurface <- surfaceStack$surface + surfaceStack$throughfall
 
@@ -1001,12 +1003,12 @@ node_raster <- function(dem_path){
                     "128" = list("north", c(0, -1), 1))
   # read as character for dictionary
   # flow_dict[as.character(flow[1][[1]])]
-  rows <- nrow(flow)
-  cols <- ncol(flow)
-  outflowRaster <- terra::rast(, nrows = rows, ncols = cols, extent = ext(flow), nlyrs = 2)
+  rows <- terra::nrow(flow)
+  cols <- terra::ncol(flow)
+  outflowRaster <- terra::rast(, nrows = rows, ncols = cols, extent = terra::ext(flow), nlyrs = 2)
   #df <-  data.frame(matrix(ncol=2, nrow=0, dimnames=list(NULL, c("cell", "distance"))))
   # networkRaster <- file.path(tempdir(), "network-raster.tif")
-  for(x in 1:ncell(flow)){
+  for(x in 1:terra::ncell(flow)){
     if(is.na(flow[x])){
       next
     }
@@ -1016,9 +1018,9 @@ node_raster <- function(dem_path){
     rowAdj <- flow_char[[1]][2][[1]][2]
     distance <- flow_char[[1]][3][[1]]
     # Adjust column and row
-    current_cell <- rowColFromCell(flow, x)
+    current_cell <- terra::rowColFromCell(flow, x)
     new_df <- data.frame("row" = current_cell[1] + rowAdj, "col" = current_cell[2] + colAdj)
-    cell_number <- cellFromRowColCombine(flow, new_df$row, new_df$col)
+    cell_number <- terra::cellFromRowColCombine(flow, new_df$row, new_df$col)
     #print(paste0("Current cell: ", x, " Flow cell:", cell_number))
     newRow <- data.frame(cell = cell_number, distance = distance)
     #df <- rbind(df, newRow)

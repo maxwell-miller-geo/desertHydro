@@ -1,12 +1,11 @@
-# # Run monsoon
+# Run monsoon
 # require(desertHydro)
 #
-# #desertHydro:::monsoon("first_test")
-# # #
-# out_path <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs)"
-# out_folder <- "mini-test"
-# if(file.exists(out_path)){
-#   out_folder <- file.path(out_path, out_folder)
-# }
-# # Mini model version
+# date <- "2021-07-22"
+# time <- NaN
+# #dem <- "dem-test.tif"
+# folderName <- paste0(date,"-", dem)
+# desertHydro:::monsoon(folderName, time = time, date = date, dem = dem)
+
+# Mini model version
 # desertHydro:::monsoon(out_folder)

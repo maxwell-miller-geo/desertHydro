@@ -32,6 +32,10 @@ ModelFolder}
 
 \item{date}{string. Optional plotting setting to add date to title and output
 file.}
+
+\item{gauge_locations}{path to shapefile that contains gauge locations for
+discharge comparisons. Default location checks Watershed Elements folder for
+"stream_gauge.shp"}
 }
 \value{
 Returns discharge excel table and plots from model simulation

@@ -55,7 +55,7 @@ meltStack <- function(rasterStack, resample = 1, timevalues){ # assumes terra ra
 
 # Create an animation stack
 animateStack <- function(meltedDF, title = "", units = "", caption = ""){
-  requireNamespace("ggplot2")
+  #requireNamespace("ggplot2")
   x <- y <- value <- Time <- NULL # binding local variables
   options(repr.plot.width = 9, repr.plot.height = 9)
   gg <- ggplot2::ggplot(meltedDF, ggplot2::aes(x = x, y = y, fill = value, frame = Time)) +

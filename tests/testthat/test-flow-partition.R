@@ -22,8 +22,8 @@ test_that("Land Cover reads in: ", {
 })
 
 test_that("Create node network", {
-  require(terra)
-  require(whitebox)
+  #require(terra)
+  #require(whitebox)
 
 
   mat <- matrix(c(1,1,1,1,0,1,1,1,1), nrow = 3)
@@ -32,8 +32,8 @@ test_that("Create node network", {
   terra::writeRaster(r, temp_file, overwrite = T)
   small_test <- node_raster(temp_file)
   # Synthetic data
-  expect_equal(all(values(small_test$lyr.1) == 5), TRUE)
-  expect_equal(sum(values(small_test$lyr.2)), 9.6568542)
+  expect_equal(all(terra::values(small_test$lyr.1) == 5), TRUE)
+  expect_equal(sum(terra::values(small_test$lyr.2)), 9.6568542)
 
   # Another small test
   mat <- matrix(1:25, nrow = 5)
@@ -50,9 +50,9 @@ test_that("Create node network", {
   file.exists(dem_path)
   med_test <- node_raster(dem_path)
 
-  dem_values <- length(values(dem, na.rm = T))
-  node_values <- length(values(med_test$lyr.1, na.rm = T))
-  distance_values <- length(values(med_test$lyr.2, na.rm = T))
+  dem_values <- length(terra::values(dem, na.rm = T))
+  node_values <- length(terra::values(med_test$lyr.1, na.rm = T))
+  distance_values <- length(terra::values(med_test$lyr.2, na.rm = T))
   expect_equal(dem_values, node_values)
   expect_equal(dem_values, distance_values)
 

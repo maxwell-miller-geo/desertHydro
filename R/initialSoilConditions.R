@@ -30,7 +30,7 @@ storage_amount <- function(landCoverTable){
 # Create the land cover stacked map with soil characteristics
 
 createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
-  requireNamespace("terra")
+  #requireNamespace("terra")
   # Load in the class map
   if(is.character(ClassMapFile)){
     ClassMap <- terra::rast(ClassMapFile)

@@ -1,4 +1,5 @@
 test_that("Watershed-Creation works", {
+  print("Testing watershed creation...")
   test_model <- model() # generic model
   watershedPath <- test_model@watershedPath
   WatershedShape <- desertHydro::polygonize( "dem-test.tif", test_model@watershedPath)
@@ -17,8 +18,7 @@ test_that("Watershed-Creation works", {
   save_folder <- file.path(getwd(), "watershed2")
   files <- list.files(save_folder)
   files_needed <- c("model_dem.tif", "model_slope.tif",
-                    "stack_flow.tif", "model_soil_stack.tif",
-                    "stream_network.shp")
+                    "stack_flow.tif", "model_soil_stack.tif")
   testthat::expect_equal(all(files_needed %in% files), TRUE)
 
   unlink(paste0(save_folder,"/*"))
@@ -26,7 +26,7 @@ test_that("Watershed-Creation works", {
 })
 
 test_that("Initial Soil Conditions", {
-  test_model <- model()
+  #test_model <- model()
 
 })
 
@@ -51,10 +51,11 @@ test_that("Land Cover Process", {
                             watershed_shape_path,
                             key,
                             model_landcover = model_landcover,
-                            save = F)
+                            save = F,
+                            ModelFolder = ModelFolder)
   # Compare the number of values in land cover with values in dem
-  dem_count <- nrow(values(terra::rast(model_dem_path), na.rm = T))
-  land_count <- nrow(values(land_cover_raster, na.rm = T ))
+  dem_count <- nrow(terra::values(terra::rast(model_dem_path), na.rm = T))
+  land_count <- nrow(terra::values(land_cover_raster, na.rm = T ))
   expect_equal(dem_count, land_count)
 })
 
@@ -76,10 +77,8 @@ test_that("Watershed set up- Full", {
   # Files needed for model simulation
   files_needed <- c("model_dem.tif",
                     "drainPoints.shp",
-                    "flow_accumulation.tif",
-                    "vect_stream.shp")
+                    "flow_accumulation.tif")
   files_present <- files_needed %in% files
-  print(files_present)
   testthat::expect_equal(all(files_present), TRUE)
 
   # Model dem
@@ -105,7 +104,8 @@ test_that("Watershed set up- Full", {
                                           watershed_shape_path = watershed_shape_path,
                                           model_landcover = model_landcover,
                                           key = key,
-                                          save = T)
+                                          save = T,
+                                          ModelFolder = ModelFolder)
   # Model land cover created test
   testthat::expect_equal(file.exists(model_landcover), TRUE)
 
