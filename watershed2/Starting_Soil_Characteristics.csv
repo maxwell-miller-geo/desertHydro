@@ -1,0 +1,8 @@
+LandCoverType,ID,mannings_n
+"Developed, Open Space",21,0.04
+"Developed, Low Intensity",22,0.1
+"Developed, Medium Intensity",23,0.08
+Barren Land (Rock/Sand/Clay),31,0.025
+Evergreen Forest,42,0.16
+Shrub/Scrub,52,0.1
+Grassland/Herbaceous,71,0.035

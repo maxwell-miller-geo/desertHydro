@@ -75,9 +75,14 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
   if(!file.exists(flow_file) | overwrite){ # Can take a few minutes if not already created
     print("No flow partition map found.")
     print("Creating flow partition map.")
-    #source("setup_FlowPartition.R", local = TRUE) # functions necessary
-    #flowStack <- flow_Partition(clipped_adj_dem = model_dem, file_name_and_path = flow_file)
-    flowStack <- flowMap(dem = model_dem, outFolder = ModelFolder)
+    method <- "flowMap1D"
+    if(method == "flowMap1D"){
+      discharge <- terra::rast(model_dem)/ terra::rast(model_dem)
+      flowStack <- flowMap1D(discharge, dem_path = model_dem)
+      terra::writeRaster(flowStack, flow_file)
+    }else{
+      flowStack <- flowMap(dem = model_dem, outFolder = ModelFolder)
+    }
     print("Flow partition map created.")
   }else{
     print('Found flow partition map.')

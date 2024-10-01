@@ -22,10 +22,7 @@ test_that("Land Cover reads in: ", {
 })
 
 test_that("Create node network", {
-  #require(terra)
-  #require(whitebox)
-
-
+  # Mini test
   mat <- matrix(c(1,1,1,1,0,1,1,1,1), nrow = 3)
   r <- terra::rast(mat, crs = "EPSG:4269")
   temp_file <- file.path(tempdir(), "temp-rast.tif")
@@ -55,6 +52,31 @@ test_that("Create node network", {
   distance_values <- length(terra::values(med_test$lyr.2, na.rm = T))
   expect_equal(dem_values, node_values)
   expect_equal(dem_values, distance_values)
-
 })
 
+test_that("Surface water routing procedure", {
+  # Mini test
+  mat <- matrix(c(1,1,1,1,0,1,1,1,1), nrow = 3)
+  r <- terra::rast(mat, crs = "EPSG:4269")
+  temp_file <- file.path(tempdir(), "temp-rast.tif")
+  terra::writeRaster(r, temp_file, overwrite = T)
+  small_test <- node_raster(temp_file)
+
+  loop_flow <- function(flowMap, flowHeight){
+    q_sum <- flowHeight *0
+    q_initial <- (flowHeight + 2)/ (flowHeight+2) # initial height
+    cells <- terra::cells(flowHeight)
+    for(x in cells){
+      flowCell <- flowMap$lyr.1[x][[1]]
+      flowValue <- q_initial$lyr.1[x][[1]]
+      q_sum[flowCell] <- q_sum[flowCell][[1]] + flowValue
+    }
+    return(q_sum)
+  }
+  # larger test
+  a <- model()
+  dem_path <- file.path(a@watershedPath, "dem-test.tif")
+  dem <- terra::rast(dem_path)
+  file.exists(dem_path)
+  med_test <- node_raster(dem_path)
+})

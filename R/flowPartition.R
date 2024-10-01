@@ -67,7 +67,7 @@ flowOutSum <- function(x) { # Vector of values
 
 ## ----------------------------- Flow Map
 # New better way to make flow function map!
-flowMap <- function(dem, outFolder = NA, name = "stack_flow.tif"){
+flowMap2D <- function(dem, outFolder = NA, name = "stack_flow.tif"){
   flow_sum <- NULL
   # Load in DEM
   if(is.character(dem)){
@@ -127,6 +127,54 @@ flowMap <- function(dem, outFolder = NA, name = "stack_flow.tif"){
 }
 # Test
 #flowMapTest <- flowMap(dem)
+# Flow Map 1D
+# Create a 1D flow map that outputs the flow direction of a cell
+flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL){
+  if(!is.null(dem_path) & is.null(flow_d8)){
+    crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_path), describe = T)[[3]])
+    flow <- file.path(tempdir(), "d8flow.tif")
+    whitebox::wbt_d8_pointer(dem_path, flow)
+    crsAssign(flow, crs_dem)
+    flow_d8 <- terra::rast(flow)
+  }
+  # Numeric values of flow direction, shift directions, and distance adjustment
+  flowKey <- list("1" = list("north-east", c(1,1), sqrt(2)),
+                    "2" = list("east", c(1,0), 1),
+                    "4" = list("south-east", c(1, -1), sqrt(2)),
+                    "8" = list("south", c(0, -1), 1),
+                    "16" = list("south-west", c(-1,-1), sqrt(2)),
+                    "32" = list("west", c(-1, 0), 1),
+                    "64" = list("north-west", c(-1, 1), sqrt(2)),
+                    "128" = list("north", c(0, 1), 1))
+
+  flow_directions <- names(flowKey)
+  xDim <- terra::res(discharge)[1]
+  yDim <- terra::res(discharge)[2]
+
+  mapCalculations <- function(flow_direction, dem_flow, discharge, xDim, yDim, flowKey, grid_cell_length_cm = 1000){
+    # Select cells in particular direction
+    cells_to_flow <- terra::ifel(dem_flow == as.numeric(flow_direction), 1, 0)
+    #flow_distance <- flowKey[[x]][[3]]*grid_cell_length_cm
+    discharge_of_cell <- cells_to_flow*discharge#/flow_distance
+
+    # Apply the shift to the dimensions of the raster
+    xshift <- flowKey[[flow_direction]][[2]][[1]]*xDim
+    yshift <- flowKey[[flow_direction]][[2]][[2]]*yDim
+    # Stack dem and flow direction map
+    #stack <- c(dem, dem_flow)
+    # Shift the raster
+    shiftMap <- terra::shift(discharge_of_cell, dx = xshift, dy = yshift)
+    # Crop the raster
+    dischargeShifted <- terra::crop(shiftMap, cells_to_flow, snap = "near", extend = TRUE)
+
+    names(dischargeShifted) <- flowKey[[flow_direction]][[1]] # direction of flow
+    return(dischargeShifted)
+  }
+
+  flowList <- lapply(flow_directions, FUN = mapCalculations, flow_d8, discharge, xDim, yDim, flowKey)
+  flowMaps <- terra::rast(flowList)
+  return(flowMaps)
+}
 ## ---------------------------
 # Create flow maps 2.0
 createFlowMaps <- function(dem, dem_flow){
@@ -164,6 +212,7 @@ createFlowMaps <- function(dem, dem_flow){
   }
   flowList <- lapply(names(flowKey), FUN = mapCalculations, dem, dem_flow, xDim, yDim, flowKey)
   flowMaps <- terra::rast(flowList)
+  flowMaps <- flow
   return(flowMaps)
 }
 ## Flow Partitioning function- Percent flow
@@ -679,6 +728,7 @@ manningsVelocity <- function(n, depth, slope, length){
 # }
 surfaceRouting <- function(surfaceStack, ModelFolder, time_interval_secs = 5, maxTravel = 10, timeVelocity = list(0,0), drainCells = NA, ...){
   n <- slope <- NULL
+
   rainfallRate <- surfaceStack$throughfall / time_interval_secs
   rainSurface <- surfaceStack$surface + surfaceStack$throughfall
 
