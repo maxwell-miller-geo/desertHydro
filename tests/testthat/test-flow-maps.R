@@ -32,3 +32,22 @@ test_that("1D flow is accounted for", {
   # Compare flow values
   expect_equal(h_count + flow_sum, d_sum)
 })
+
+test_that("Water is flowing in all directions ,"{
+  a <- model()
+  ModelFolder <- tempdir()
+  dem_path <- file.path(a@watershedPath,"dem-test.tif")
+  model_dem <- file.path(ModelFolder, "model_dem.tif")
+  # Adjust the dem
+  dem_adjustment(dem_path, model_dem)
+  flow_d8 <- file.path(tempdir(), "fd8.tif")
+  whitebox::wbt_d8_pointer(model_dem, flow_d8)
+  crsAssign(flow_d8, get_crs(model_dem))
+  flow <- terra::rast(flow_d8)
+  example_discharge <- terra::rast(model_dem) / terra::rast(model_dem)
+  flowMaps <- flowMap1D(example_discharge, dem_path = model_dem)
+  s <- sum(flowMaps, na.rm = T)
+
+  problems <- terra::ifel(s == 0, 1, 0)
+  d <- problems * flow
+})

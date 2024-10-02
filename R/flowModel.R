@@ -35,7 +35,7 @@ flowModel <- function(SoilStack_file,
                       flowStack_file,
                       rain_file,
                       ModelFolder,
-                      time_step = 0.5,
+                      time_step = 1,
                       simulation_length = 120,
                       store = TRUE,
                       rainfall_method = "gauges",
@@ -63,6 +63,7 @@ flowModel <- function(SoilStack_file,
   rainList <- loadRain(rain_file, rainfall_method = rainfall_method)
   rain <- rainList[[1]]
   total_rain_duration <- rainList[[2]]
+  #time_step <- 1 # set timestep to one minute for each rainfall period
   # Important set-up variables
   simulation_duration <- seq(0, simulation_length, by = time_step) # minute duration of simulation
 
@@ -174,8 +175,6 @@ for(t in 1:(length(simulation_duration)-1)){
   }else{
     rainfall_for_timestep <- 0
   }
-
-
   # Calculate rainfall for time-step
   in_to_cm <- 2.54
   total_rain_cm <- rainfall_for_timestep * in_to_cm
@@ -234,14 +233,14 @@ for(t in 1:(length(simulation_duration)-1)){
   ## [4] Surface Runoff
   #print(names(SoilStack))
   # Create surface stack to pass only the important surface variables
-  # surfaceStack <- c(SoilStack$surfaceWater,
-  #                   SoilStack$mannings_n,
-  #                   SoilStack$throughfall,
-  #                   SoilStack$slope,
-  #                   SoilStack$model_dem,
-  #                   flowDirectionMap
-  #                   )
-  #runoffList <- surfaceRouting()
+  surfaceStack <- c(SoilStack$surfaceWater,
+                    SoilStack$mannings_n,
+                    SoilStack$throughfall,
+                    SoilStack$slope,
+                    SoilStack$model_dem,
+                    SoilStack$flow_direction
+                    )
+  runoffList <- surfaceRouting()
   # Calculate the surface runoff for the water present at the surface.
   runoffList <- routeWater2(ModelFolder,
                             SoilStack,

@@ -71,6 +71,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
   # Flow Calculations
   flow_filename <- "stack_flow.tif" # must be created with names of layers
   flow_file <- file.path(ModelFolder, flow_filename)
+
   print('Locating flow partition map.')
   if(!file.exists(flow_file) | overwrite){ # Can take a few minutes if not already created
     print("No flow partition map found.")
@@ -95,11 +96,16 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
     terra::writeRaster(copyflowStack, flow_file, overwrite = T)
   }
 
+  # Create flow direction map to add to watershed stack
+  flow_direction <- file.path(ModelFolder, "flow_direction.tif")
+  whitebox::wbt_d8_pointer(model_dem, flow_direction)
+  crsAssign(flow_direction, get_crs(model_dem))
   # Stack them all up
   WatershedStack <- c(terra::rast(model_dem),
                       terra::rast(slope),
                       terra::rast(flow_file),
-                      terra::rast(model_landcover))
+                      terra::rast(model_landcover),
+                      terra::rast(flow_direction))
 
   terra::writeRaster(WatershedStack, file.path(ModelFolder, "watershed_stack.tif"), overwrite = T)
   print(paste0("Finished creating/checking files. Watershed elements files located in: ", ModelFolder))

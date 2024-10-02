@@ -387,3 +387,7 @@ fill_edge <- function(raster, cellsToFill, dontFillCells, fill_amount = .0001){
   return(raster)
 }
 
+# Determine the coordinate system of a tif file
+get_crs <- function(raster_path){
+  return(paste0("epsg:",terra::crs(terra::rast(raster_path), describe = T)[[3]]))
+}
