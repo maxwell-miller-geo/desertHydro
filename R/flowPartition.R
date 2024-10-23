@@ -129,7 +129,7 @@ flowMap2D <- function(dem, outFolder = NA, name = "stack_flow.tif"){
 #flowMapTest <- flowMap(dem)
 # Flow Map 1D
 # Create a 1D flow map that outputs the flow direction of a cell
-flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out = FALSE, gridSize = 10){
+flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out = FALSE){
   if(!is.null(dem_path) & is.null(flow_d8)){
     crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_path), describe = T)[[3]])
     flow <- file.path(tempdir(), "d8flow.tif")
@@ -154,7 +154,7 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
   mapCalculations <- function(flow_direction, dem_flow, discharge, xDim, yDim, flowKey, discharge_out = FALSE){
     # Select cells in particular direction
     cells_to_flow <- terra::ifel(dem_flow == as.numeric(flow_direction), 1, 0)
-    flow_distance <- 1
+    flow_distance <- 1 # hard coded for calculating discharge directions
     if(discharge_out){ # when routing flow change the distance for diagonal cells
       flow_distance <- flowKey[[flow_direction]][[3]]
     }
@@ -217,6 +217,24 @@ createFlowMaps <- function(dem, dem_flow){
   flowMaps <- terra::rast(flowList)
   flowMaps <- flow
   return(flowMaps)
+}
+## Determine flow lengths of space increments based on flow direction map
+flowLength <- function(d8_flow){
+  if(is.character(d8_flow)){
+    d8_flow <- terra::rast(d8_flow)
+  }
+  flow_reclass <- c(1, sqrt(2),
+                    2, 1,
+                    4, sqrt(2),
+                    8, 1,
+                    16, sqrt(2),
+                    32, 1,
+                    64, sqrt(2),
+                    128, 1)
+  flow_matrix <- matrix(flow_reclass, ncol = 2, byrow = T)
+
+  flow_units <- terra::classify(d8_flow, rcl = flow_matrix)
+  return(flow_units)
 }
 ## Flow Partitioning function- Percent flow
 outputFlow <- function(values, dir){
@@ -732,75 +750,119 @@ manningsVelocity <- function(n, depth, slope, length, units = "cm/s"){
 #
 #   }
 # }
-surfaceRouting <- function(surfaceStack, ModelFolder, time_step_min = 1, gridSize = 10, courant_condition = 0.9, timeVelocity = list(0,0), drainCells = NA, ...){
-  n <- slope <- NULL
-
-  infiltration_rate <- 0
-  rainfall_time_step <- time_step # minutes of rainfall - should be determined from rainfall data - ideally
-  min_to_hour <- 60
-  time_adjustment <- rainfall_time_step/ min_to_hour
-  # Ensure throughfall is in cm
+surfaceRouting <- function(surfaceStack, time_delta_s, ModelFolder, gridSize = 10, rain_step_min = 1){
+  # Check the source term
+  time_adjustment <- rain_step_min/ 60 # time per hour - h^-1
+  # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand for
+  # other rainfall methods
   rainfall_rate_cm_hr <- surfaceStack$throughfall/ time_adjustment
-  # Add infiltration rate here
+  # Add infiltration rate here ---
+  infiltration_rate_cm_hr <- 0 # to be adjusted - part of surface stack
+  # Calculate source water term
+  source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
+  #n <- slope <- NULL
+  # Calculate total water infiltrated per time step
+  hr_to_s <- 1 / 3600
+  # Calculate for infiltrated water
+  infiltrated_water_cm <-  infiltration_rate_cm_hr * hr_to_s * time_delta_s
+  # Calculate the source term: (rainfall rate - infiltration rate) * time elapsed
+  # the rainfall period. For each time step
+  source_water_cm <- source_water_cm_hr * hr_to_s * time_delta_s
+  h_current <- surfaceStack$surfaceWater
+  # Calculate flow lengths
+  flow_units <- flowLength(surfaceStack$flow_direction)
+  pit_cells <- as.numeric(terra::cells(flow_units, 0))
+  # If flow lengths equal 0 for the outflow cell, set equal to 1
+  # Makes the assumption that discharge in the outflow cell is in a cardinal direction
+  flow_units <- terra::ifel(flow_units == 0, 1, flow_units)
+  flow_length <- flow_units * gridSize * 100 # grid size (m) * (cm/m)
+  # Unit discharge calculation
+  discharge_out <- surfaceStack$surfaceWater * velocity # cm2/s
+  discharge_out <- discharge_out / (gridSize*100)
+  #discharge_out[pit_cells] <- 0
+  discharge_sum <- sum(values(discharge_out, na.rm = T))
+  deltaX <- function(discharge_in_sep){
+    key <- c("north", 1,
+              "east", 1,
+             "south", 1,
+             "west", 1,
+             "north-east", sqrt(2),
+             "north-west", sqrt(2),
+             "south-east", sqrt(2),
+             "south-west", sqrt(2))
+    key <- matrix(key, ncol = 2, byrow = 2)
+    flow_present <- discharge_in_sep > 0
+    for(x in names(discharge_in_sep)){
+      print(x)
 
-  vertical_water_magnitude_cm_hr <- rainfall_rate_cm_hr - infiltration_rate
+    }
+  }
+  # Route the discharge in different directions
+  discharge_in_sep <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
+  discharge_in <- sum(discharge_in_sep, na.rm = T)
+  discharge_in_sum <- sum(values(discharge_in, na.rm=T))
 
+  # Calculate new height
+  h_new <- h_current - (time_delta_s) * (discharge_out/flow_length - discharge_in/(gridSize*100)) + source_water_cm
+  # Check this makes sense
+  check <- sum(values(h_current, na.rm = T))
+  checkold <- sum(values(h_new, na.rm = T))
+  check2 <- sum(values((time_delta_s) * (discharge_out/flow_length - discharge_in/(gridSize*100)), na.rm = T))
+  no_flow_cell <- time_delta_s  * (discharge_out[377]/1000 - discharge_in[377]/1414)
+  surfaceStack$surfaceWater <- h_new
+  return(h_new)
+}
+
+  # Adjust manning's n based upon the depth of rainfall after
+  # n <- roughnessAdjust(rainSurface, SoilStack$mannings_n)
+#
+#   # Add of all the water as depth - determine if it can flow with no complications
+#   initialDepth <- rainSurface
+#   velocityIntermediate <- manningsVelocity(n, initialDepth, slope, length = length)
+#   velocityStorage <- velocityIntermediate # store this maximum velocity
+#   # Time step check - returns max distance traveled and adjusted depth
+#   distanceDepth <- distanceCheck(ModelFolder, velocityIntermediate, rainSurface, time_interval_secs,
+#                                  surfaceStack, timeVelocity = timeVelocity,
+#                                  drainCells = drainCells, check = T)
+# }
+## ---------------------------- Flow Routing fixed
+# Check the limiting conditions of flow
+time_check <- function(surfaceStack, time_step_min = 1, gridSize = 10, courant_condition = 0.9){
+  # Check the source term
+  min_to_hour <- 60
+  time_adjustment <- time_step_min/ min_to_hour # time per hour - h^-1
+  # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand for
+  # other rainfall methods
+  rainfall_rate_cm_hr <- surfaceStack$throughfall/ time_adjustment
+  # Add infiltration rate here ---
+  infiltration_rate_cm_hr <- 0 # to be adjusted - part of surface stack
+  # Calculate source water term
+  source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
   ### Stability check on rainfall magnitude
   # Find the maximum rainfall intensity
-  time_step_hr <- courant_condition / max(terra::values(vertical_water_magnitude_cm_hr, na.rm = T))
+  time_step_hr <- courant_condition / max(terra::values(source_water_cm_hr, na.rm = T))
   time_step_sec <- floor(time_step_hr * 3600) # convert hours to seconds
-
-
-  if(time_step_sec < time_step * 60){
-    time_delta <- time_step_sec
+  # Calculate time delta or the time-step for this step in seconds
+  if(time_step_sec < time_step_min * 60){
+    time_delta_s <- time_step_sec
   }else{
-    time_delta <- time_step_min * 60
+    time_delta_s <- time_step_min * 60
   }
-  ### Calculate infiltration -- expand upon - check later
-  # Should account for infiltration - or the magnitude term
-  infiltrated_water <- vertical_water_magnitude_cm_hr / time_delta * infiltration_rate
   # Calculate velocity for current surface
-  source_water <- surfaceStack$throughfall - infiltrated_water
   # Velocity calculation
   velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater, surfaceStack$slope, length = gridSize, units = "cm/s")
   ## Courant stability of flow
   # velocity * time / distance < 1 or
   # dt = C(courant number) * distance traveled (cm) / velocity (cm/s)
   dt <- floor(min(terra::values(courant_condition * gridSize *100 / velocity, na.rm = T)))
-
   # Change the time step, if the conditions require it
   if(dt < time_delta){
-    time_delta <- dt
+    time_delta_s <- dt
   }
-  # Now, we have the necessary time delta, we need to split up the rainfall over
-  # the rainfall period
-  simulation_steps <- seq(1, time_step_min * 60 / time_delta)
-  h_current <- surfaceStack$surfaceWater
-  # loop over steps? or apply
-  for(x in simulation_steps){
-    # Unit discharge calculation
-    out_discharge <- surfaceStack$surfaceWater * velocity # cm2/s
-    # Route the discharge in different directions
-    discharge_in_sep <- flowMap1D(out_discharge, surfaceStack$flow_direction, discharge_out = F) * 1000
-    discharge_in <- sum(discharge_in_sep, na.rm = T)
-    # Calculate new height
-    h_new <- h_current - time_delta /0
-  }
-
-
-  # Adjust manning's n based upon the depth of rainfall after
-  # n <- roughnessAdjust(rainSurface, SoilStack$mannings_n)
-
-  # Add of all the water as depth - determine if it can flow with no complications
-  initialDepth <- rainSurface
-  velocityIntermediate <- manningsVelocity(n, initialDepth, slope, length = length)
-  velocityStorage <- velocityIntermediate # store this maximum velocity
-  # Time step check - returns max distance traveled and adjusted depth
-  distanceDepth <- distanceCheck(ModelFolder, velocityIntermediate, rainSurface, time_interval_secs,
-                                 surfaceStack, timeVelocity = timeVelocity,
-                                 drainCells = drainCells, check = T)
+  # Time delta rounded
+  time_delta_s <- floor(time_delta_s) # round down to nearest second
+  return(time_delta_s)
 }
-## ---------------------------- Flow Routing fixed
 # Flow routing that has a semi fixed spacing and save rate
 routeWater2 <- function(ModelFolder, SoilStack, flowDirectionMap, time_step = 5, length = 10, timeVelocity = list(0,0), drainCells = NA, ...){
 
@@ -1141,4 +1203,20 @@ node_raster <- function(dem_path){
 courant_time <- function(velocity, distance, courant_number = 1){
   return(round(courant_number*(distance/velocity) / 60, 2))
 }
+# Find the outflow cell - with adjusted dem
+get_out_cell <- function(dem_path){
+  # Find not flow cells
+  no_flow <- file.path(tempdir(), "no-flow.tif")
+  whitebox::wbt_find_no_flow_cells(dem_path, no_flow)
+  crsAssign(no_flow, get_crs(dem_path))
+  nf <- terra::rast(no_flow)
+  cell_number <- terra::cells(nf == 1)
+  if(length(cell_number) > 1){
+    print("Multiple no flow cells detected")
+  }
+  # delete temporary file
+  file.remove(no_flow)
+  return(cell_number)
+}
+
 

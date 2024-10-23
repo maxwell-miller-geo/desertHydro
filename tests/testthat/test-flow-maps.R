@@ -40,14 +40,22 @@ test_that("Water is flowing in all directions ,"{
   model_dem <- file.path(ModelFolder, "model_dem.tif")
   # Adjust the dem
   dem_adjustment(dem_path, model_dem)
+
   flow_d8 <- file.path(tempdir(), "fd8.tif")
   whitebox::wbt_d8_pointer(model_dem, flow_d8)
   crsAssign(flow_d8, get_crs(model_dem))
   flow <- terra::rast(flow_d8)
   example_discharge <- terra::rast(model_dem) / terra::rast(model_dem)
+  sum_discharge <- sum(terra::values(example_discharge, na.rm = T))
+
+  # Create flow maps
   flowMaps <- flowMap1D(example_discharge, dem_path = model_dem)
   s <- sum(flowMaps, na.rm = T)
-
-  problems <- terra::ifel(s == 0, 1, 0)
-  d <- problems * flow
+  # Get value of the outflow cell in map
+  sum_out <- as.numeric(example_discharge[get_out_cell(dem_path = model_dem)])
+  flow_sum <- sum(terra::values(s, na.rm = T))
+  # problems <- terra::ifel(s == 0, 1, 0)
+  # d <- problems * flow
+  # Check if all discharge is accounted for
+  expect_equal(sum_out + flow_sum, sum_discharge)
 })
