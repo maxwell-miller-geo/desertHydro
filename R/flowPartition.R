@@ -750,7 +750,7 @@ manningsVelocity <- function(n, depth, slope, length, units = "cm/s"){
 #
 #   }
 # }
-surfaceRouting <- function(surfaceStack, time_delta_s, ModelFolder, gridSize = 10, rain_step_min = 1){
+surfaceRouting <- function(surfaceStack, time_delta_s, gridSize = 10, rain_step_min = 1){
   # Check the source term
   time_adjustment <- rain_step_min/ 60 # time per hour - h^-1
   # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand for
@@ -770,49 +770,62 @@ surfaceRouting <- function(surfaceStack, time_delta_s, ModelFolder, gridSize = 1
   source_water_cm <- source_water_cm_hr * hr_to_s * time_delta_s
   h_current <- surfaceStack$surfaceWater
   # Calculate flow lengths
-  flow_units <- flowLength(surfaceStack$flow_direction)
+  flow_units <- flowLength(surfaceStack$flow_direction) * gridSize * 100
   pit_cells <- as.numeric(terra::cells(flow_units, 0))
   # If flow lengths equal 0 for the outflow cell, set equal to 1
-  # Makes the assumption that discharge in the outflow cell is in a cardinal direction
-  flow_units <- terra::ifel(flow_units == 0, 1, flow_units)
-  flow_length <- flow_units * gridSize * 100 # grid size (m) * (cm/m)
+  # # Makes the assumption that discharge in the outflow cell is in a cardinal direction
+  # flow_units <- terra::ifel(flow_units == 0, 1, flow_units)
+  # flow_length <- flow_units * gridSize * 100 # grid size (m) * (cm/m)
+  velocity <- manningsVelocity(surfaceStack$mannings_n, h_current, surfaceStack$slope, length = gridSize, units = "cm/s")
   # Unit discharge calculation
-  discharge_out <- surfaceStack$surfaceWater * velocity # cm2/s
-  discharge_out <- discharge_out / (gridSize*100)
+  discharge_out <- h_current * velocity # cm2/s
   #discharge_out[pit_cells] <- 0
   discharge_sum <- sum(values(discharge_out, na.rm = T))
-  deltaX <- function(discharge_in_sep){
-    key <- c("north", 1,
-              "east", 1,
-             "south", 1,
-             "west", 1,
-             "north-east", sqrt(2),
-             "north-west", sqrt(2),
-             "south-east", sqrt(2),
-             "south-west", sqrt(2))
-    key <- matrix(key, ncol = 2, byrow = 2)
-    flow_present <- discharge_in_sep > 0
-    for(x in names(discharge_in_sep)){
-      print(x)
-
-    }
-  }
   # Route the discharge in different directions
   discharge_in_sep <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
   discharge_in <- sum(discharge_in_sep, na.rm = T)
   discharge_in_sum <- sum(values(discharge_in, na.rm=T))
-
+  discharge_sinks <- discharge_out[pit_cells]
+  #expect_equal(as.numeric(discharge_sinks + discharge_in_sum), discharge_sum)
+  # Determine distance between nodes or delta x
+  distance_delta_cm <- deltaX(discharge_in_sep) * gridSize * 100
+  # If delta_x == 0
+  # Calculate the movement of water
+  water_distribute_out <- (time_delta_s)/(distance_delta_cm+flow_units) * (discharge_out)
+  water_distribute_out <- terra::ifel(water_distribute_out == -Inf, 0, water_distribute_out)
+  water_distribute_in <- -(time_delta_s/distance_delta_cm+flow_units) * (discharge_in)
+  water_distribute_in <- terra::ifel(is.na(water_distribute_in), 0, water_distribute_in)
+  water_distribute <- water_distribute_in + water_distribute_out
+  #water_distribute <- terra::ifel(water_distribute == Inf, 0, water_distribute)
+  #water_distribute <- terra::ifel(is.na(water_distribute), 0, water_distribute)
   # Calculate new height
-  h_new <- h_current - (time_delta_s) * (discharge_out/flow_length - discharge_in/(gridSize*100)) + source_water_cm
+  h_new <- h_current - water_distribute + source_water_cm
+  h_check <- sum(values(h_new, na.rm = T))
+  input_stuff <- sum(values(h_current + source_water_cm, na.rm = T))
+  water_sum <- sum(values(water_distribute, na.rm= T))
   # Check this makes sense
-  check <- sum(values(h_current, na.rm = T))
-  checkold <- sum(values(h_new, na.rm = T))
-  check2 <- sum(values((time_delta_s) * (discharge_out/flow_length - discharge_in/(gridSize*100)), na.rm = T))
-  no_flow_cell <- time_delta_s  * (discharge_out[377]/1000 - discharge_in[377]/1414)
+  expect_equal(sum(values(water_distribute, na.rm = T)), sum(values(h_current, na.rm = T)))
   surfaceStack$surfaceWater <- h_new
-  return(h_new)
+  # New surface depth
+  return(list(h_new, velocity))
+  #return(h_new)
 }
-
+# return mean distance that flows into a given cell
+deltaX <- function(discharge_in_sep){
+  diagonal <- c("north-east", "north-west", "south-east", "south-west")
+  cardinal <- c("north", "east", "south", "west")
+  flow_present <- discharge_in_sep > 0 # set positive discharges = T
+  count_layers <- sum(flow_present, na.rm = T) # count nlyr of discharge
+  flow_card <- terra::ifel(flow_present[[cardinal]], 1, 0) # assign diagonal
+  flow_diag <- terra::ifel(flow_present[[diagonal]], sqrt(2), 0) # assign card
+  flow_lengths <- c(flow_card, flow_diag)
+  sum_flow <- sum(flow_lengths, na.rm = T) # sum total inflow
+  mean_distance <- sum_flow/count_layers # calculate average distance flowing
+  #makes assumption that multiple inflow points can be calculate with the average
+  # distance of those points
+  mean_adj <- terra::ifel(is.na(mean_distance), 0, mean_distance) # fill in NAs
+  return(mean_adj)
+}
   # Adjust manning's n based upon the depth of rainfall after
   # n <- roughnessAdjust(rainSurface, SoilStack$mannings_n)
 #
@@ -827,7 +840,7 @@ surfaceRouting <- function(surfaceStack, time_delta_s, ModelFolder, gridSize = 1
 # }
 ## ---------------------------- Flow Routing fixed
 # Check the limiting conditions of flow
-time_check <- function(surfaceStack, time_step_min = 1, gridSize = 10, courant_condition = 0.9){
+time_delta <- function(surfaceStack, time_step_min = 1, gridSize = 10, courant_condition = 0.9){
   # Check the source term
   min_to_hour <- 60
   time_adjustment <- time_step_min/ min_to_hour # time per hour - h^-1
@@ -856,7 +869,7 @@ time_check <- function(surfaceStack, time_step_min = 1, gridSize = 10, courant_c
   # dt = C(courant number) * distance traveled (cm) / velocity (cm/s)
   dt <- floor(min(terra::values(courant_condition * gridSize *100 / velocity, na.rm = T)))
   # Change the time step, if the conditions require it
-  if(dt < time_delta){
+  if(dt < time_delta_s){
     time_delta_s <- dt
   }
   # Time delta rounded

@@ -240,40 +240,36 @@ for(t in 1:(length(simulation_duration)-1)){
                     SoilStack$model_dem,
                     SoilStack$flow_direction
                     )
-  runoffList <- surfaceRouting()
-  # Calculate the surface runoff for the water present at the surface.
-  runoffList <- routeWater2(ModelFolder,
-                            SoilStack,
-                           flowDirectionMap = flowStack_file,
-                           time_step = simulationTimeSecs,
-                           length = gridsize,
-                           timeVelocity = timeVelocity,
-                           drainCells = drainCells,
-                           end_time = end_time)
-  #print(runoffList)
-  #print(paste0("runoff",runoffList))
+  # Calculate the time delta
+  time_delta_s <- time_delta(surfaceStack)
+
+  # Loop until 1 minute is done
+  runoffList <- surfaceRouting(surfaceStack = surfaceStack,
+                                time_delta_s = time_delta_s)
+  # calculate the time delta
+  ## Loop end
   SoilStack$surfaceWater <- runoffList[[1]]
   #print(SoilStack$surfaceWater)
   velocity <- SoilStack$velocity <- runoffList[[2]]
   # Flow direction stack
-  flowStack <- runoffList[[4]]
+  #flowStack <- runoffList[[4]]
   # Get velocity of drain cell
-  outflowCell <- drainCells$cell[[1]]
+  # outflowCell <- drainCells$cell[[1]]
   # New slope
-  SoilStack$slope <- runoffList[[3]]
+  #SoilStack$slope <- runoffList[[3]]
   # Get the height of the drain cell
-  heightDrain_cm <- SoilStack$surfaceWater[outflowCell][[1]]
-  velocityDrain_ms <- velocity[outflowCell][[1]]
-  volumeDrainedM3 <- sum(unlist(runoffList[[5]])) # all volumes drained
-  dischargeCalc <- volumeDrainedM3/simulationTimeSecs
-  total_rain_m3 <- volume[,sum(volumeIn_m3)] + volumeM3 # sum of previous rainfall and this step
-  simulation_volume_m3 <- volume[, sum(volumeOut_m3)] + sum(terra::values(SoilStack$surfaceWater), na.rm = T)
-
-  # Statistics for water volumes
-  volume <- rbind(volume, list(end_time, volumeM3, volumeDrainedM3, averageDepthCM,
-                               velocityDrain_ms, heightDrain_cm, dischargeCalc,
-                               total_rain_m3, simulation_volume_m3))
-  data.table::fwrite(volume, file.path(ModelFolder, "volume.csv"))
+  # height_drain_cm <- SoilStack$surfaceWater[outflowCell][[1]]
+  # velocity_drain_cm_s <- velocity[outflowCell][[1]]
+  # volumeDrainedM3 <- sum(unlist(runoffList[[5]])) # all volumes drained
+  # dischargeCalc <- volumeDrainedM3/simulationTimeSecs
+  # total_rain_m3 <- volume[,sum(volumeIn_m3)] + volumeM3 # sum of previous rainfall and this step
+  # simulation_volume_m3 <- volume[, sum(volumeOut_m3)] + sum(terra::values(SoilStack$surfaceWater), na.rm = T)
+  #
+  # # Statistics for water volumes
+  # volume <- rbind(volume, list(end_time, volumeM3, volumeDrainedM3, averageDepthCM,
+  #                              velocityDrain_ms, heightDrain_cm, dischargeCalc,
+  #                              total_rain_m3, simulation_volume_m3))
+  # data.table::fwrite(volume, file.path(ModelFolder, "volume.csv"))
   # volumeOut <- rbind(volumeOut, list(end_time, volumeDrained, dischargeCalc))
   # data.table::fwrite(volumeOut, file.path(ModelFolder, "volumeOut.csv"))
   #terra::plot(velocity)
