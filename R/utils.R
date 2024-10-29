@@ -391,3 +391,8 @@ fill_edge <- function(raster, cellsToFill, dontFillCells, fill_amount = .0001){
 get_crs <- function(raster_path){
   return(paste0("epsg:",terra::crs(terra::rast(raster_path), describe = T)[[3]]))
 }
+
+# Estimate slope based on elevation and pre-existing slope map
+slope_edge <- function(dem, slope){
+
+}

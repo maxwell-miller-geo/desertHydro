@@ -45,3 +45,25 @@ test_that("Fill edge test", {
   expect_gt(new_dem[terra::cells(nf)[2]][[1]], dem[terra::cells(nf)[2]][[1]])
 }
 )
+
+test_that("Slope edge test", {
+  # Load dem
+  a <- model()
+  dem_path <- file.path(a@watershedPath, "dem-test.tif")
+  dem <- terra::rast(dem_path)
+  # Crop out a smaller extent
+  ex <- c(-111.538866666852, -111.538, 36.84861481484815, 36.84905)
+  mini_dem <- terra::crop(dem, ex)
+  #plot(dem)
+  # Create slope
+  slope <- slopeCalculate(mini_dem)
+  plot(slope)
+
+  slope_edge <- terra::focal(mini_dem, fun = minor_slope, fillvalue = NA)
+  slope_edge <- terra::focal(mini_dem, fillvalue = NA, fun = minor_slope)
+  # Use focal mechanism
+  minor_slope <- function(x){
+    # passes 9 numbers from top left to bottom right
+    return(x[5] - mean[x[-5]])
+  }
+})
