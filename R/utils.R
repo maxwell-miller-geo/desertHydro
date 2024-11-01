@@ -143,7 +143,7 @@ writeLayer <- function(rasterStackPath, layer, layername){
 
 ## # ------------------ Layer write
 # Take a single layer - save with time variable in name
-# Chunks the writing process of outputs - recompiles with another function
+# Chunks the writing process of outputs - recompile with another function
 rasterWrite <- function(raster, ModelFolder, end_time, layername = "surface"){
   # raster layer
   time <- gsub("[.]", "-", c(end_time))
@@ -176,7 +176,6 @@ rasterCompile <- function(ModelFolder, layername, remove = F, time = T){ # layer
 
   # Converts strings into ordered dataframe
   orderedDF <- convert_string(layerFiles)
-  #
   #print(orderedDF)
   # combine layers and save as combined stack
   layerStack <- terra::rast(file.path(ModelFolder, names(orderedDF)[1]))
@@ -393,6 +392,55 @@ get_crs <- function(raster_path){
 }
 
 # Estimate slope based on elevation and pre-existing slope map
-slope_edge <- function(dem, slope){
+slope_edge <- function(dem, slope, cellsize){
+  if(is.character(dem)){
+    dem <- terra::rast(dem)
+  }
+  set.seed(1)
+  gradient_edge <- terra::focal(dem, fun = gradient, fillvalue = NA)
+  slope_edges <- atan(gradient_edge/cellsize) * 180/pi
+  slope_total <- terra::merge(slope, slope_edges, first = T)
+  return(slope_total)
+}
 
+# function to calculate the unitless gradient from minimum direction
+gradient <- function(x){
+  if(is.na(x[5])){
+    return(NA)
+  }
+  # passes 9 numbers from top left to bottom right
+  minimum <- min(x, na.rm = T)
+  if(minimum == x[5]){
+    minimum <- max(x, na.rm = T)
+    dh <- minimum - x[5]
+  }else{
+    dh <- x[5] - minimum
+  }
+  if(is.infinite(dh) | is.na(dh)){
+    return(NA)
+  }
+  if(length(which(x %in% minimum)) > 1){
+    # sample on direction for slope if two minimums found
+    index <- sample(minimum, 1)
+  }else{
+    index <- which(x %in% minimum)
+  }
+  if(index %% 2 == 0){
+    gradient <- dh / 1
+  }else{
+    gradient <- dh / sqrt(2)
+  }
+  return(gradient)
+}
+
+# Sum the values of all of the cells within a raster layer
+sumCells <- function(raster){
+  return(sum(terra::values(raster, na.rm = T)))
+}
+
+# Determine the number of cells with values
+cellsWithValues <- function(raster){
+  n <- terra::ncell(raster)
+  na <- sum(terra::values(anyNA(raster)))
+  return(n - na)
 }

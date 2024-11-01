@@ -138,7 +138,8 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
     flow_d8 <- terra::rast(flow)
   }
   # Numeric values of flow direction, shift directions, and distance adjustment
-  flowKey <- list("1" = list("north-east", c(1,1), sqrt(2)),
+  flowKey <- list("0" = list("no-flow", c(0,0), 1),
+                    "1" = list("north-east", c(1,1), sqrt(2)),
                     "2" = list("east", c(1,0), 1),
                     "4" = list("south-east", c(1, -1), sqrt(2)),
                     "8" = list("south", c(0, -1), 1),
@@ -223,7 +224,8 @@ flowLength <- function(d8_flow){
   if(is.character(d8_flow)){
     d8_flow <- terra::rast(d8_flow)
   }
-  flow_reclass <- c(1, sqrt(2),
+  flow_reclass <- c(0, 1,
+                    1, sqrt(2),
                     2, 1,
                     4, sqrt(2),
                     8, 1,
@@ -771,45 +773,50 @@ surfaceRouting <- function(surfaceStack, time_delta_s, gridSize = 10, rain_step_
   h_current <- surfaceStack$surfaceWater
   # Calculate flow lengths
   flow_units <- flowLength(surfaceStack$flow_direction) * gridSize * 100
-  pit_cells <- as.numeric(terra::cells(flow_units, 0))
+  # pit_cells <- as.numeric(terra::cells(flow_units, 0))
   # If flow lengths equal 0 for the outflow cell, set equal to 1
   # # Makes the assumption that discharge in the outflow cell is in a cardinal direction
   # flow_units <- terra::ifel(flow_units == 0, 1, flow_units)
   # flow_length <- flow_units * gridSize * 100 # grid size (m) * (cm/m)
   velocity <- manningsVelocity(surfaceStack$mannings_n, h_current, surfaceStack$slope, length = gridSize, units = "cm/s")
   # Unit discharge calculation
-  discharge_out <- h_current * velocity # cm2/s
+  discharge_out <- h_current * velocity / flow_units # unit cm2/s
   #discharge_out[pit_cells] <- 0
-  discharge_sum <- sum(values(discharge_out, na.rm = T))
+  #discharge_out <- discharge_out / flow_units # scale the discharge by the distance out
+  discharge_sum <- sumCells(discharge_out)
   # Route the discharge in different directions
   discharge_in_sep <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
   discharge_in <- sum(discharge_in_sep, na.rm = T)
-  discharge_in_sum <- sum(values(discharge_in, na.rm=T))
-  discharge_sinks <- discharge_out[pit_cells]
+  discharge_in_sum <- sumCells(discharge_in)
+  #discharge_sinks <- discharge_out[pit_cells]
+  expect_equal(discharge_in_sum, discharge_sum)
   #expect_equal(as.numeric(discharge_sinks + discharge_in_sum), discharge_sum)
   # Determine distance between nodes or delta x
-  distance_delta_cm <- deltaX(discharge_in_sep) * gridSize * 100
-  # If delta_x == 0
+  # NEeds to be adjusted
+  # distance_delta_cm <- deltaX(discharge_in_sep) * gridSize * 100
+  # # If delta_x == 0
+  # # Recalculate the distance the water traveled based on the average distance of
+  # # inflow cells
+  # delta_x <- (distance_delta_cm + flow_units) # Could just do it for flow units
+  # delta_x <- (flow_units)
+  # # Modify distance out
+  # # cm2/s / cm
+  # # Using a longer distance -
+  # discharge_out <- discharge_out/delta_x
+  # # modify discharge in
+  # discharge_in_sep <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
+  # discharge_in <- sum(discharge_in_sep, na.rm = T)
+
   # Calculate the movement of water
-  water_distribute_out <- (time_delta_s)/(distance_delta_cm+flow_units) * (discharge_out)
-  water_distribute_out <- terra::ifel(water_distribute_out == -Inf, 0, water_distribute_out)
-  water_distribute_in <- -(time_delta_s/distance_delta_cm+flow_units) * (discharge_in)
-  water_distribute_in <- terra::ifel(is.na(water_distribute_in), 0, water_distribute_in)
-  water_distribute <- water_distribute_in + water_distribute_out
-  #water_distribute <- terra::ifel(water_distribute == Inf, 0, water_distribute)
-  #water_distribute <- terra::ifel(is.na(water_distribute), 0, water_distribute)
+  water_move <- time_delta_s * (discharge_out - discharge_in)
+  expect_lt(sumCells(water_move), 1e-9)
   # Calculate new height
-  h_new <- h_current - water_distribute + source_water_cm
-  h_check <- sum(values(h_new, na.rm = T))
-  input_stuff <- sum(values(h_current + source_water_cm, na.rm = T))
-  water_sum <- sum(values(water_distribute, na.rm= T))
+  h_new <- h_current - water_move + source_water_cm
   # Check this makes sense
-  expect_equal(sum(values(water_distribute, na.rm = T)), sum(values(h_current, na.rm = T)))
-  surfaceStack$surfaceWater <- h_new
   # New surface depth
-  return(list(h_new, velocity))
-  #return(h_new)
+  return(h_new)
 }
+
 # return mean distance that flows into a given cell
 deltaX <- function(discharge_in_sep){
   diagonal <- c("north-east", "north-west", "south-east", "south-west")
@@ -854,7 +861,7 @@ time_delta <- function(surfaceStack, time_step_min = 1, gridSize = 10, courant_c
   ### Stability check on rainfall magnitude
   # Find the maximum rainfall intensity
   time_step_hr <- courant_condition / max(terra::values(source_water_cm_hr, na.rm = T))
-  time_step_sec <- floor(time_step_hr * 3600) # convert hours to seconds
+  time_step_sec <- floor(time_step_hr * 3600) # convert hours to seconds - needs to be changed
   # Calculate time delta or the time-step for this step in seconds
   if(time_step_sec < time_step_min * 60){
     time_delta_s <- time_step_sec
@@ -994,8 +1001,8 @@ depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 1
 
 
 slopeCalculate <- function(dem){
-  slopeInitial <- terra::terrain(dem)
-  slopeAdj <- terra::focal(slopeInitial, w = 3, "modal", na.policy = "only", na.rm = F)
+  slopeAdj <- slopeInitial <- terra::terrain(dem, neighbors = 4)
+  #slopeAdj <- terra::focal(slopeInitial, w = 3, "modal", na.policy = "only", na.rm = F)
   return(slopeAdj)
 }
 

@@ -153,7 +153,7 @@ flowModel <- function(SoilStack_file,
   progressBar <- utils::txtProgressBar(min = 0, max = length(simulation_duration), style = 3)
   start <- Sys.time()
 
-
+# Loop through time
 for(t in 1:(length(simulation_duration)-1)){
 
   utils::setTxtProgressBar(progressBar, t)
@@ -177,6 +177,7 @@ for(t in 1:(length(simulation_duration)-1)){
   }
   # Calculate rainfall for time-step
   in_to_cm <- 2.54
+  # rainfall in cm / time step - which the time-step should be in minutes
   total_rain_cm <- rainfall_for_timestep * in_to_cm
   # # Same amount of rain per time step
   # Check rainfall extent
@@ -225,11 +226,9 @@ for(t in 1:(length(simulation_duration)-1)){
 
   } else{
     #SoilStack$surfaceWater <- SoilStack$surfaceWater + SoilStack$throughfall # water not infiltrated
-  }
 
   # Calculates the current storage of the throughfall and current soil storage - adjust for rate of infiltration?
  #becomes surface water
-
   ## [4] Surface Runoff
   #print(names(SoilStack))
   # Create surface stack to pass only the important surface variables
@@ -240,17 +239,46 @@ for(t in 1:(length(simulation_duration)-1)){
                     SoilStack$model_dem,
                     SoilStack$flow_direction
                     )
-  # Calculate the time delta
-  time_delta_s <- time_delta(surfaceStack)
 
-  # Loop until 1 minute is done
-  runoffList <- surfaceRouting(surfaceStack = surfaceStack,
-                                time_delta_s = time_delta_s)
-  # calculate the time delta
-  ## Loop end
-  SoilStack$surfaceWater <- runoffList[[1]]
+  runoff_counter <- 0
+  time_remaining <- simulationTimeSecs
+  while(runoff_counter != simulationTimeSecs){
+    # Calculate the time delta
+    time_delta_s <- time_delta(surfaceStack, gridSize = gridsize, time_step_min = 1, courant_condition = .5)
+    time_remaining <- time_remaining - time_delta_s
+    if(time_remaining < 0){
+      time_delta_s <- time_remaining + time_delta_s
+    }
+    # Calculate the velocity over the timestep
+    velocity <- manningsVelocity(surfaceStack$mannings_n, SoilStack$surfaceWater,
+                                 surfaceStack$slope, length = gridsize,
+                                 units = "cm/s")
+
+    # Calculate new surface (cm)
+    surfaceStack$surfaceWater <- surfaceRouting(surfaceStack = surfaceStack,
+                                 time_delta_s = time_delta_s,
+                                 gridSize = gridsize,
+                                 rain_step_min = 1)
+
+    # Infiltrated water goes here
+    infiltration <- 0
+    # Adjust the outflow height -- here
+    outflow <- 0
+    # Calculate the time in minutes after each time-step
+    end_time <- beginning_time + round((runoff_counter + time_delta_s) / 60, 5)
+    print(end_time)
+    if(!impervious){
+      rasterWrite(round(SoilStack$currentSoilStorage,3), ModelFolder, end_time, layername = "soil")
+    }
+      rasterWrite(round(surfaceStack$surfaceWater,3), ModelFolder, end_time, layername = "surface")
+      rasterWrite(round(velocity,3), ModelFolder, end_time, layername = "velocity")
+    #   # Increment the runoff counter be elapsed time (s)
+     runoff_counter <- runoff_counter + time_delta_s
+    }
   #print(SoilStack$surfaceWater)
-  velocity <- SoilStack$velocity <- runoffList[[2]]
+  # velocity <- SoilStack$velocity <- runoffList[[2]]
+
+  #
   # Flow direction stack
   #flowStack <- runoffList[[4]]
   # Get velocity of drain cell
@@ -316,20 +344,18 @@ for(t in 1:(length(simulation_duration)-1)){
     # writeLayer(surfacePath, round(SoilStack$surfaceWater, 3), layername = end_time)
     # writeLayer(velocityPath, round(velocity, 3), layername = end_time)
 
-
-
     # Write single rasters for important features
-    if(t == 1 | end_time %% 0.5 == 0){
-    if(!impervious){
-      soil <- "soil"
-      rasterWrite(round(SoilStack$currentSoilStorage,3), ModelFolder, end_time, layername = soil)
-    }
-    #plot(SoilStack$surfaceWater)
-    surface <- "surface"
-    rasterWrite(round(SoilStack$surfaceWater,3), ModelFolder, end_time, layername = surface)
-    velocityName <- "velocity"
-    rasterWrite(round(velocity,3), ModelFolder, end_time, layername = velocityName)
-    }
+    # if(t == 1 | end_time %% 0.5 == 0){
+    # if(!impervious){
+    #   soil <- "soil"
+    #   rasterWrite(round(SoilStack$currentSoilStorage,3), ModelFolder, end_time, layername = soil)
+    # }
+    # #plot(SoilStack$surfaceWater)
+    # surface <- "surface"
+    # rasterWrite(round(SoilStack$surfaceWater,3), ModelFolder, end_time, layername = surface)
+    # velocityName <- "velocity"
+    # rasterWrite(round(velocity,3), ModelFolder, end_time, layername = velocityName)
+    # }
     # Shapefile saves
     # vectCreation(velocityMax_df, saveLoc = ModelFolder, name = "max-velocity.shp", coords = terra::crs(SoilStack))
     # vectCreation(depthMaxDF, saveLoc = ModelFolder, name = "max-depth.shp", coords = terra::crs(SoilStack))
@@ -344,7 +370,7 @@ for(t in 1:(length(simulation_duration)-1)){
     temporary <- SoilStack + 0 # create temporary Soil Stack
 
     terra::writeRaster(temporary, filename = tempStorage, overwrite = T)
-    terra::writeRaster(flowStack, file.path(ModelFolder, "AdjustedFlowMaps.tif"), overwrite = T)
+    #terra::writeRaster(flowStack, file.path(ModelFolder, "AdjustedFlowMaps.tif"), overwrite = T)
 
   }
  ##------------------------------------##
@@ -381,4 +407,5 @@ out_duration <- paste("Simulation took", round(duration[[1]], 2),  units(duratio
 writeLines(out_duration, file.path(ModelFolder, "simulation_time.txt"))
 # print("Got through it!")
 #return(surfaceStorage)
+}
 }

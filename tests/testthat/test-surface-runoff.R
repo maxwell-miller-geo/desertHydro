@@ -18,18 +18,21 @@ test_that("surfaceRunoff function", {
     key = test_model@key
   )
   # Create elements necessary for surface water stack
-  surfaceStack <- c(
-    SoilStack$model_dem,
+  surfaceStack <- c(SoilStack$model_dem,
     SoilStack$flow_direction,
     SoilStack$slope,
     SoilStack$mannings_n,
     SoilStack$throughfall,
-    SoilStack$surfaceWater
-                    )
+    SoilStack$surfaceWater)
 
+  # Make a smaller version of the surface stack
+  extent <- terra::ext(-111.539166666852, -111.538, 36.8495, 36.850)
+  surfaceStack <- crop(surfaceStack, extent)
   # Create .01 inches of rainfall
-  surfaceStack$throughfall <- SoilStack$model_dem/SoilStack$model_dem * .0254
+  surfaceStack$throughfall <- surfaceStack$model_dem/surfaceStack$model_dem * .0254
   # Pass elements to surface routing
-  surfaceRouting(surfaceStack, ModelFolder = ModelFolder)
+  surface <- surfaceRouting(surfaceStack, time_delta_s = 60, gridSize = 10)
+  SoilStack$surfaceWater <- surface[[1]]
+
 
 })

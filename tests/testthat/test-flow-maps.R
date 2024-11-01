@@ -59,3 +59,49 @@ test_that("Water is flowing in all directions ,"{
   # Check if all discharge is accounted for
   expect_equal(sum_out + flow_sum, sum_discharge)
 })
+
+test_that("Mini-flow map works ," {
+  #v <- c(2,3,4,1,3,5,2,3,5)
+  v <- c(1,2,2,2)
+  dem <- terra::rast(matrix(v, nrow = 2), crs = "epsg:26911")
+  names(dem) <- "model_dem"
+  dem_path <- file.path(tempdir(), "dem.tif")
+  writeRaster(dem, dem_path, overwrite=T)
+  # D8 flow direction
+  d8_flow <- file.path(tempdir(), "d8_flow.tif")
+  whitebox::wbt_d8_pointer(dem_path, d8_flow)
+  crsAssign(d8_flow, "epsg:26911")
+  flow <- terra::rast(d8_flow)
+  names(flow) <- "flow_direction"
+  # Calculate slope
+  slope_og <- terra::terrain(dem)
+  cellsize <- 1
+  slope <- slope_edge(dem, slope_og, cellsize = cellsize)
+  # Mannings n
+  mannings <- slope/slope * .1
+  names(mannings) <- "mannings_n"
+  throughfall <- slope/slope * .0254
+  names(throughfall) <- "throughfall"
+  surface <- slope/slope * 0
+  names(surface) <- "surfaceWater"
+  surfaceStack <- c(dem, flow, slope, mannings, throughfall, surface)
+  time_delta_s <- time_delta(surfaceStack, gridSize = cellsize, courant_condition = .9)
+  runoffList <- surfaceRouting(surfaceStack, time_delta_s = time_delta_s, gridSize = cellsize)
+  surfaceStack$surfaceWater <- runoffList
+  ## Remove water
+  # Remove water from most downstream cell - how much water?
+  outFlowCell <- 1 # needs to be adjusted for real simulation
+  qOut <- manningsVelocity(surfaceStack$mannings_n[outFlowCell], surfaceStack$surfaceWater[outFlowCell],slope = surfaceStack$slope[1], length = cellsize) * surfaceStack$surfaceWater[outFlowCell]
+  hOut <- qOut * time_delta_s / (cellsize *100)
+  # Assign new height to outflow cell
+  surfaceStack$surfaceWater[outFlowCell] <- surfaceStack$surfaceWater[outFlowCell] - hOut
+
+  # Run 1 more time to check
+  time_delta_s <- time_delta(surfaceStack, gridSize = cellsize, courant_condition = .9)
+  runoffList <- surfaceRouting(surfaceStack, time_delta_s = time_delta_s, gridSize = cellsize)
+  #surfaceStack$surfaceWater <- runoffList[[1]]
+  rain_added <- throughfall/60 *time_delta_s
+  # Where is the water missing from?
+  missing_water <- surfaceStack$surfaceWater + rain_added - runoffList
+  expect_equal(sumCells(surfaceStack$surfaceWater + rain_added), sumCells(runoffList))
+})

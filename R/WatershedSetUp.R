@@ -6,7 +6,7 @@
 # 4 - Voronoi polygons
 # Some of the scripts are created in external functions
 
-watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watershed_shape_path, LandCoverCharacteristics, landCoverFile, landcovername = "landcover_soil.tif", key = "MUSYM", overwrite = T){ # DEM should be unaltered
+watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watershed_shape_path, LandCoverCharacteristics, landCoverFile, landcovername = "landcover_soil.tif", key = "MUSYM", overwrite = T, cellsize = 10){ # DEM should be unaltered
   #requireNamespace("terra")
   # DEM adjustments
   # Adjust the input DEM with the watershed shapefile.
@@ -15,7 +15,8 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
     dir.create(ModelFolder)
   }
   if(file.exists(file.path(ModelFolder, "model_soil_stack.tif"))){
-    return("Found model soil stack in model folder, using that file!")
+    print("Found model soil stack in model folder, using that file!")
+    return(file.path(ModelFolder, "model_soil_stack.tif"))
   }
   model_dem <- file.path(ModelFolder, "model_dem.tif") # hard coded - not great Watershed ELements previously
   print('Locating adjusted digital elevation model.')
@@ -39,10 +40,10 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
     # Expects one of the outputs from previous function to produce "cropped_dem.tif"
     #cropped_dem <- file.path(WatershedElements, "cropped_dem.tif")
     slope_temp <- terra::terrain(terra::rast(model_dem), v = "slope", neighbors = 8, unit = "degrees")
-    edges <- terra::focal(slope_temp, w = 3, "modal", na.policy = "only", na.rm = F)
-    names(edges) <- "slope"
-    # NOTE - slope does not compute for boundary cells
-    terra::writeRaster(edges, filename = slope, overwrite = T)
+    slope_total <- slope_edge(model_dem, slope_temp, cellsize = cellsize)
+    names(slope_total) <- "slope"
+    # NOTE - slope does compute for boundary cells - see slope_edge()
+    terra::writeRaster(slope_total, filename = slope, overwrite = T)
   }
   # Land Cover
   # Project the land cover data into same coordinate system of the DEM

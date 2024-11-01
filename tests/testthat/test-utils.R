@@ -54,16 +54,15 @@ test_that("Slope edge test", {
   # Crop out a smaller extent
   ex <- c(-111.538866666852, -111.538, 36.84861481484815, 36.84905)
   mini_dem <- terra::crop(dem, ex)
-  #plot(dem)
   # Create slope
-  slope <- slopeCalculate(mini_dem)
-  plot(slope)
-
-  slope_edge <- terra::focal(mini_dem, fun = minor_slope, fillvalue = NA)
-  slope_edge <- terra::focal(mini_dem, fillvalue = NA, fun = minor_slope)
-  # Use focal mechanism
-  minor_slope <- function(x){
-    # passes 9 numbers from top left to bottom right
-    return(x[5] - mean[x[-5]])
-  }
+  #slope <- terra::terrain(mini_dem,v = "slope", neighbors = 8, unit = "degrees")
+  slope_c <- slopeCalculate(mini_dem)
+  gradient_edge <- terra::focal(mini_dem, fun = gradient, fillvalue = NA)
+  # Convert to slope
+  cellsize <- 10 # 10 m cell size
+  # Calculate slope adjusted for all cells with values
+  slope_total <- slope_edge(mini_dem, slope_c, cellsize = cellsize)
+  dem_cells_sum <- sum(values(anyNA(mini_dem)))
+  slope_cells_sum <- sum(values(anyNA(slope_total)))
+  expect_equal(dem_cells_sum, slope_cells_sum)
 })

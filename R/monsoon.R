@@ -1,13 +1,14 @@
 # Script to run via Monsoon
 # Blank function that will just be run once inside of monsoon
 
-monsoon <- function(ModelFolder = NULL, time = NaN, date = "2021-07-22", dem = "dem-test.tif"){
+monsoon <- function(ModelFolder = NULL, time = NaN, date = "2021-07-22", dem = "dem-test.tif", overwrite = T){
 
   if(is.null(ModelFolder)){
     ModelFolder <- tempdir()
   }
   # Model Class
   model1 <- model(ModelFolder = ModelFolder) # default model characteristics
+  model1@overwrite <- overwrite
   model1@date <- date
   model1@simulation_length <- time
   model1@demFile <-  dem
