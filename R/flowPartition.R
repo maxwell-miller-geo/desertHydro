@@ -789,7 +789,7 @@ surfaceRouting <- function(surfaceStack, time_delta_s, gridSize = 10, rain_step_
   discharge_in <- sum(discharge_in_sep, na.rm = T)
   discharge_in_sum <- sumCells(discharge_in)
   #discharge_sinks <- discharge_out[pit_cells]
-  expect_equal(discharge_in_sum, discharge_sum)
+  testthat::expect_equal(discharge_in_sum, discharge_sum)
   #expect_equal(as.numeric(discharge_sinks + discharge_in_sum), discharge_sum)
   # Determine distance between nodes or delta x
   # NEeds to be adjusted
@@ -809,7 +809,7 @@ surfaceRouting <- function(surfaceStack, time_delta_s, gridSize = 10, rain_step_
 
   # Calculate the movement of water
   water_move <- time_delta_s * (discharge_out - discharge_in)
-  expect_lt(sumCells(water_move), 1e-9)
+  testthat::expect_lt(sumCells(water_move), 1e-9)
   # Calculate new height
   h_new <- h_current - water_move + source_water_cm
   # Check this makes sense

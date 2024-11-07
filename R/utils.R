@@ -173,7 +173,9 @@ rasterCompile <- function(ModelFolder, layername, remove = F, time = T){ # layer
   }else{
     layerFiles <- grep(paste0(layername,"-"), tifFiles, value = T)
   }
-
+  if(length(layerFiles) == 1){
+    stop("Only 1 layer file found. Please check the duration of the simulation.")
+  }
   # Converts strings into ordered dataframe
   orderedDF <- convert_string(layerFiles)
   #print(orderedDF)
@@ -443,4 +445,12 @@ cellsWithValues <- function(raster){
   n <- terra::ncell(raster)
   na <- sum(terra::values(anyNA(raster)))
   return(n - na)
+}
+# Extracts the time from a raster stack names - assumes minutes
+extract_time <- function(rasterStack, time = "mins"){
+  numeric_vector <- as.numeric(names(surfaceStorage))
+  # Calculate difference
+  time_difference <- diff(numeric_vector)*60 # minutes to seconds
+  first_time <- time_difference[1] # makes the assumption 1st time-step = 2nd
+  return(c(first_time, time_difference))
 }

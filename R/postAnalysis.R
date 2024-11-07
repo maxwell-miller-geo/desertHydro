@@ -124,12 +124,15 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
     # # Extract the height from the surface stack
     surface_Height <- terra::extract(surfaceStorage, cross_section, method = "simple") # surface height in cm
     surface_velocity <- terra::extract(velocityStorage, cross_section) # velocity at given time (m/s)
+    time_elapsed <- extract_time(surfaceStorage) # time elapsed - seconds
+
     cm_to_m2 <- .01 * 10 # conversion factor - Conversion to m time grid size
-    m3_to_ft3 <- 35.3147
+    m3_to_ft3 <- 35.3147 # convert meters3 to feet3
     discharge_save <- data.table::data.table() # save empty data table because of loop scope
     for(x in 1:nrow(surface_Height)){
-      surface_discharge <- as.numeric(surface_Height[x,3:ncol(surface_Height)]* cm_to_m2 * surface_velocity[x,3:ncol(surface_velocity)] * m3_to_ft3)
-      xvalues <- as.numeric(colnames(surface_Height[x,3:ncol(surface_Height)]))
+      # Calculate discharge
+      surface_discharge <- as.numeric(surface_Height[x,2:ncol(surface_Height)]* cm_to_m2 * m3_to_ft3 / time_elapsed)
+      xvalues <- as.numeric(colnames(surface_Height[x,2:ncol(surface_Height)]))
       estimated <- data.frame(time = xvalues, predDis = surface_discharge)
       # Combined discharges for comparisons
       compareDis <- compareDischarge(rain_discharge, estimated) # outputs: time|recDis|predDis
@@ -204,7 +207,7 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
 #' the input rainfall method
 #' @param date String: Optional, will display the rainfall totals in GIF
 #' @param discharge T/F: If T, will incorporate discharge data
-#' @param saveGraph T/F: If T, will save graph to ModelFOlder
+#' @param saveGraph T/F: If T, will save graph to ModelFolder
 #'
 #' @return Returns list containing surface and velocity GIFS.
 #' @export
