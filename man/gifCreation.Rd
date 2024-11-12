@@ -22,7 +22,7 @@ the input rainfall method}
 
 \item{discharge}{T/F: If T, will incorporate discharge data}
 
-\item{saveGraph}{T/F: If T, will save graph to ModelFOlder}
+\item{saveGraph}{T/F: If T, will save graph to ModelFolder}
 }
 \value{
 Returns list containing surface and velocity GIFS.

@@ -130,6 +130,7 @@ flowMap2D <- function(dem, outFolder = NA, name = "stack_flow.tif"){
 # Flow Map 1D
 # Create a 1D flow map that outputs the flow direction of a cell
 flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out = FALSE){
+
   if(!is.null(dem_path) & is.null(flow_d8)){
     crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_path), describe = T)[[3]])
     flow <- file.path(tempdir(), "d8flow.tif")
@@ -137,6 +138,7 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
     crsAssign(flow, crs_dem)
     flow_d8 <- terra::rast(flow)
   }
+
   # Numeric values of flow direction, shift directions, and distance adjustment
   flowKey <- list("0" = list("no-flow", c(0,0), 1),
                     "1" = list("north-east", c(1,1), sqrt(2)),
@@ -163,7 +165,6 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
     xshift <- flowKey[[flow_direction]][[2]][[1]]*xDim
     yshift <- flowKey[[flow_direction]][[2]][[2]]*yDim
     # Stack dem and flow direction map
-    #stack <- c(dem, dem_flow)
     discharge_of_cell <- cells_to_flow*discharge/flow_distance
     # Shift the raster
     shiftMap <- terra::shift(discharge_of_cell, dx = xshift, dy = yshift)
@@ -753,6 +754,7 @@ manningsVelocity <- function(n, depth, slope, length, units = "cm/s"){
 #   }
 # }
 surfaceRouting <- function(surfaceStack, time_delta_s, gridSize = 10, rain_step_min = 1){
+  # Cannot be negative depths
   # Check the source term
   time_adjustment <- rain_step_min/ 60 # time per hour - h^-1
   # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand for
@@ -788,25 +790,7 @@ surfaceRouting <- function(surfaceStack, time_delta_s, gridSize = 10, rain_step_
   discharge_in_sep <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
   discharge_in <- sum(discharge_in_sep, na.rm = T)
   discharge_in_sum <- sumCells(discharge_in)
-  #discharge_sinks <- discharge_out[pit_cells]
   testthat::expect_equal(discharge_in_sum, discharge_sum)
-  #expect_equal(as.numeric(discharge_sinks + discharge_in_sum), discharge_sum)
-  # Determine distance between nodes or delta x
-  # NEeds to be adjusted
-  # distance_delta_cm <- deltaX(discharge_in_sep) * gridSize * 100
-  # # If delta_x == 0
-  # # Recalculate the distance the water traveled based on the average distance of
-  # # inflow cells
-  # delta_x <- (distance_delta_cm + flow_units) # Could just do it for flow units
-  # delta_x <- (flow_units)
-  # # Modify distance out
-  # # cm2/s / cm
-  # # Using a longer distance -
-  # discharge_out <- discharge_out/delta_x
-  # # modify discharge in
-  # discharge_in_sep <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
-  # discharge_in <- sum(discharge_in_sep, na.rm = T)
-
   # Calculate the movement of water
   water_move <- time_delta_s * (discharge_out - discharge_in)
   testthat::expect_lt(sumCells(water_move), 1e-9)
