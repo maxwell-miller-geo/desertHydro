@@ -2,6 +2,11 @@ test_that("surfaceRunoff function", {
   # Create necessary files
   test_model <- model() # generic model
   ModelFolder <- "test-ws"
+  if(file.exists(ModelFolder)){
+    all_files <- list.files(ModelFolder)
+    file.remove(file.path(ModelFolder, all_files))
+    unlink(ModelFolder)
+  }
   watershedPath <- test_model@watershedPath
   WatershedShape <- desertHydro::polygonize( "dem-test.tif", test_model@watershedPath)
   test_model@LandCoverCharacteristics <- "nlcd_characteristics.xlsx"
@@ -27,12 +32,19 @@ test_that("surfaceRunoff function", {
 
   # Make a smaller version of the surface stack
   extent <- terra::ext(-111.539166666852, -111.538, 36.8495, 36.850)
-  surfaceStack <- crop(surfaceStack, extent)
+  surfaceStack <- terra::crop(surfaceStack, extent)
   # Create .01 inches of rainfall
   surfaceStack$throughfall <- surfaceStack$model_dem/surfaceStack$model_dem * .0254
   # Pass elements to surface routing
   surface <- surfaceRouting(surfaceStack, time_delta_s = 60, gridSize = 10)
-  SoilStack$surfaceWater <- surface[[1]]
+  # SoilStack$surfaceWater <- surface[[1]]
 
+  expect_equal(sumCells(surface), sumCells(surfaceStack$throughfall))
 
+  ModelFolder <- "test-ws"
+  if(file.exists(ModelFolder)){
+    all_files <- list.files(ModelFolder)
+    file.remove(file.path(ModelFolder, all_files))
+    unlink(ModelFolder, recursive = T)
+  }
 })

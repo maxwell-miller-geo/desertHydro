@@ -113,13 +113,14 @@ test_that("Watershed set up- Full", {
   # Flow Calculations
   flow_filename <- "stack_flow.tif" # must be created with names of layers
   flow_file <- file.path(ModelFolder, flow_filename)
-  flowStack <- flowMap(dem = model_dem, outFolder = ModelFolder)
-  testthat::expect_equal(file.exists(flow_file), TRUE)
+  discharge <- terra::rast(model_dem)/terra::rast(model_dem)
+  flowStack <- flowMap1D(discharge, dem = model_dem)
+  testthat::expect_equal(terra::nlyr(flowStack), 9)
 
   # Stack them all up
   WatershedStack <- c(terra::rast(model_dem),
                       terra::rast(slope),
-                      terra::rast(flow_file),
+                      flowStack,
                       terra::rast(model_landcover))
   # Pass Watershed Stack to Initial Soil Conditions
   ClassificationMap <- model_landcover
@@ -137,7 +138,7 @@ test_that("Watershed set up- Full", {
 
   testthat::expect_equal("mannings_n" %in% names(SoilStack), TRUE)
 
-  unlink(paste0(ModelFolder,"/*"))
+  #unlink(paste0(ModelFolder,"/*"))
   #unlink(save_folder, recursive = T)
 })
 

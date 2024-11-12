@@ -62,7 +62,7 @@ test_that("Slope edge test", {
   cellsize <- 10 # 10 m cell size
   # Calculate slope adjusted for all cells with values
   slope_total <- slope_edge(mini_dem, slope_c, cellsize = cellsize)
-  dem_cells_sum <- sum(values(anyNA(mini_dem)))
-  slope_cells_sum <- sum(values(anyNA(slope_total)))
+  dem_cells_sum <- sum(terra::values(anyNA(mini_dem)))
+  slope_cells_sum <- sum(terra::values(anyNA(slope_total)))
   expect_equal(dem_cells_sum, slope_cells_sum)
 })

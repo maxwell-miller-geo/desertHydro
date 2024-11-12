@@ -3,7 +3,7 @@ test_that("Create flow maps", {
   dem_path <- file.path(a@watershedPath,"dem-test.tif")
   discharge <- terra::rast(dem_path)/terra::rast(dem_path)
   flowMaps <- flowMap1D(discharge, dem_path = dem_path)
-  expect_equal(terra::nlyr(flowMaps), 8)
+  expect_equal(terra::nlyr(flowMaps), 9)
 
   # Test with larger map area
   dem_path <- file.path(a@watershedPath,"dem.tif")
@@ -12,7 +12,7 @@ test_that("Create flow maps", {
   crsAssign(flow_d8)
   discharge <- terra::rast(dem_path)/terra::rast(dem_path)
   flowMaps <- flowMap1D(discharge, terra::rast(flow_d8))
-  expect_equal(terra::nlyr(flowMaps), 8)
+  expect_equal(terra::nlyr(flowMaps), 9)
   rm(flow_d8)
 })
 
@@ -21,19 +21,19 @@ test_that("1D flow is accounted for", {
   dem_path <- file.path(a@watershedPath,"dem-test.tif")
   discharge <- terra::rast(dem_path)/terra::rast(dem_path)
   flowMaps <- flowMap1D(discharge, dem_path = dem_path)
-  flow_sum <- sum(values(sum(flowMaps, na.rm = T), na.rm = T))
+  flow_sum <- sum(terra::values(sum(flowMaps, na.rm = T), na.rm = T))
   # Count how many holes in dem
   hole_temp <- file.path(tempdir(), "temp-holes.tif")
   whitebox::wbt_find_no_flow_cells(dem_path, hole_temp)
   holes <- terra::rast(hole_temp)
-  h_count <- sum(values(holes, na.rm = T))
+  h_count <- sum(terra::values(holes, na.rm = T))
   # discharge count
-  d_sum <- sum(values(discharge, na.rm = T))
+  d_sum <- sum(terra::values(discharge, na.rm = T))
   # Compare flow values
-  expect_equal(h_count + flow_sum, d_sum)
+  expect_equal(flow_sum, d_sum)
 })
 
-test_that("Water is flowing in all directions ,"{
+test_that("Water is flowing in all directions", {
   a <- model()
   ModelFolder <- tempdir()
   dem_path <- file.path(a@watershedPath,"dem-test.tif")
@@ -57,16 +57,16 @@ test_that("Water is flowing in all directions ,"{
   # problems <- terra::ifel(s == 0, 1, 0)
   # d <- problems * flow
   # Check if all discharge is accounted for
-  expect_equal(sum_out + flow_sum, sum_discharge)
+  expect_equal(flow_sum, sum_discharge)
 })
 
-test_that("Mini-flow map works ," {
+test_that("Mini-flow map works", {
   #v <- c(2,3,4,1,3,5,2,3,5)
   v <- c(1,2,2,2)
   dem <- terra::rast(matrix(v, nrow = 2), crs = "epsg:26911")
   names(dem) <- "model_dem"
   dem_path <- file.path(tempdir(), "dem.tif")
-  writeRaster(dem, dem_path, overwrite=T)
+  terra::writeRaster(dem, dem_path, overwrite=T)
   # D8 flow direction
   d8_flow <- file.path(tempdir(), "d8_flow.tif")
   whitebox::wbt_d8_pointer(dem_path, d8_flow)
@@ -85,6 +85,7 @@ test_that("Mini-flow map works ," {
   surface <- slope/slope * 0
   names(surface) <- "surfaceWater"
   surfaceStack <- c(dem, flow, slope, mannings, throughfall, surface)
+
   time_delta_s <- time_delta(surfaceStack, gridSize = cellsize, courant_condition = .9)
   runoffList <- surfaceRouting(surfaceStack, time_delta_s = time_delta_s, gridSize = cellsize)
   surfaceStack$surfaceWater <- runoffList
@@ -92,9 +93,9 @@ test_that("Mini-flow map works ," {
   # Remove water from most downstream cell - how much water?
   outFlowCell <- 1 # needs to be adjusted for real simulation
   qOut <- manningsVelocity(surfaceStack$mannings_n[outFlowCell], surfaceStack$surfaceWater[outFlowCell],slope = surfaceStack$slope[1], length = cellsize) * surfaceStack$surfaceWater[outFlowCell]
-  hOut <- qOut * time_delta_s / (cellsize *100)
+
   # Assign new height to outflow cell
-  surfaceStack$surfaceWater[outFlowCell] <- surfaceStack$surfaceWater[outFlowCell] - hOut
+  surfaceStack$surfaceWater[outFlowCell] <- surfaceStack$surfaceWater[outFlowCell] - surfaceStack$surfaceWater[outFlowCell]
 
   # Run 1 more time to check
   time_delta_s <- time_delta(surfaceStack, gridSize = cellsize, courant_condition = .9)
@@ -103,5 +104,5 @@ test_that("Mini-flow map works ," {
   rain_added <- throughfall/60 *time_delta_s
   # Where is the water missing from?
   missing_water <- surfaceStack$surfaceWater + rain_added - runoffList
-  expect_equal(sumCells(surfaceStack$surfaceWater + rain_added), sumCells(runoffList))
+  expect_equal(sumCells(surfaceStack$surfaceWater) + sumCells(rain_added), sumCells(runoffList))
 })
