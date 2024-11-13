@@ -276,7 +276,7 @@ for(t in simulation_values){
     infiltration <- 0
 
     # Calculate the time in minutes after each time-step
-    end_time <- beginning_time + round((runoff_counter + time_delta_s) / 60, 5)
+    end_time <- beginning_time + round((runoff_counter + time_delta_s) / 60, 5) # min
 
     # Write raster to file
     if(!impervious){

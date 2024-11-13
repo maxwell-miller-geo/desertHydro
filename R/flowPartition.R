@@ -883,7 +883,10 @@ time_delta <- function(surfaceStack, time_step_min = 1, gridSize = 10, courant_c
   if(dt < time_delta_s){
     time_delta_s <- dt
   }
-
+  # Round down for seconds
+  if(time_delta_s > 1){
+    time_delta_s <- floor(time_delta_s)
+  }
   if(vel){
     return(list(time_delta_s, velocity))
   }

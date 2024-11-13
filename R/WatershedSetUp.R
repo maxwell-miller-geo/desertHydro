@@ -16,7 +16,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
   }
   if(file.exists(file.path(ModelFolder, "model_soil_stack.tif"))){
     print("Found model soil stack in model folder, using that file!")
-    return(file.path(ModelFolder, "model_soil_stack.tif"))
+    return(ModelFolder)
   }
   model_dem <- file.path(ModelFolder, "model_dem.tif") # hard coded - not great Watershed ELements previously
   print('Locating adjusted digital elevation model.')
