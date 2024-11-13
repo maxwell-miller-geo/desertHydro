@@ -122,6 +122,7 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
   # RasterStreams to Vector
   file_removal(vect_stream, overwrite)
 
+
   # Create stream network analysis - Optional
   # stream_network <- file.path(ModelFolder, "stream_network.shp")
   # if(carve > 0){

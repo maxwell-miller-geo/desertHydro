@@ -242,7 +242,7 @@ initial_conditions(ModelOutputs = ModelFolder, model_dem = model_dem) # saves in
 rain_file <- suppressWarnings(rainfallCreation(ModelFolder, WatershedElements,
                                                date = date, method = rainfall_method,
                                                overwrite = overwrite))
-print(rain_file)
+# print(rain_file)
 # Slight issue: will use saved rainfall data if present - does not check to see what type of data the rainfall is
 
 ## Discharge presence - obtain information for graphing
@@ -317,10 +317,10 @@ file_check(c(SoilStack_file, flowStack_file, rain_file, file.path(ModelFolder, "
 print("Beginning Model Run...")
 gc()
 # source("utils.R")
-flowModel(SoilStack_file = SoilStack_file,
-          flowStack_file = flowStack_file,
+flowModel(ModelFolder = ModelFolder,
           rain_file = rain_file,
-          ModelFolder = ModelFolder,
+          SoilStack_file = SoilStack_file,
+          flowStack_file = flowStack_file,
           time_step = time_step,
           simulation_length = simulation_length,
           write = write,

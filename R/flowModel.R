@@ -31,13 +31,11 @@
 ##  Model Script
 #LandCoverCharacteristics <- storage_amount(LandCoverCharacteristics) # adjusts the storage amount must reassign values for table
 
-flowModel <- function(SoilStack_file,
-                      flowStack_file,
+flowModel <- function(ModelFolder,
                       rain_file,
-                      ModelFolder,
                       time_step = 1,
                       simulation_length = 120,
-                      store = TRUE,
+                      store = T,
                       rainfall_method = "gauges",
                       impervious = F,
                       gif = T,
@@ -47,11 +45,21 @@ flowModel <- function(SoilStack_file,
   print(paste("Time step:", time_step))
   print(paste("Simulation length:", simulation_length))
   print(paste("Estimated run time:", round(simulation_length/ time_step * 25/60), " minutes."))
+  # Set up parallel backend
+  # num_cores <- parallel::detectCores() - 1  # Use one less core to avoid overloading the system
+  # cl <- parallel::makeCluster(num_cores)
+  # doParallel::registerDoParallel(cl)
+
   volumeIn_m3 <- volumeOut_m3 <- NULL
   start_time <- Sys.time()
   # Load soil stack
   SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
-  flowStack <- terra::rast(file.path(ModelFolder, "stack_flow.tif"))
+  flowStackMethod <- file.path(ModelFolder, "stack_flow.tif")
+  if(file.exists(flowStackMethod)){
+    flowStack <- terra::rast(flowStackMethod)
+  }
+
+  activeCells <- cellsWithValues(SoilStack$model_dem)
 
   gridsize <- 10 # manually set grid-size, based on DEM
   drainCells <- data.table::fread(file.path(ModelFolder, "drainCells.csv"))
@@ -101,15 +109,16 @@ flowModel <- function(SoilStack_file,
     # drainMapPath <- file.path(ModelFolder, "drainMap.tif")
     #velocityMax_df <- as.data.frame(terra::vect(file.path(ModelFolder, "max-velocity.shp")))
     #depthMaxDF <- as.data.frame(terra::vect(file.path(ModelFolder, "max-depth.shp")))
-    timeVelocity <- data.table::data.table(data.table::fread(file.path(ModelFolder, "time-velocity.csv")))
-    volume <- data.table::fread(file.path(ModelFolder, "volume.csv"))
+    model_checks <- data.table::data.table(data.table::fread(file.path(ModelFolder, "model-checks.csv")))
+    volumes <- data.table::fread(file.path(ModelFolder, "volumes.csv"))
     # volumeOut <- data.table::fread(file.path(ModelFolder, "volumeOut.csv"))
     # volumeIn <- data.table::fread(file.path(ModelFolder, "volumeIn.csv"))
 
   }else{
-    volume <- data.table::data.table(Time_min = 0, volumeIn_m3 = 0, volumeOut_m3 = 0,
-                                     mean_rain_cm = 0, height_cm = 0, velocity_ms = 0,
-                                     discharge_m3 = 0, total_rain_m3 = 0, simulation_volume_m3 = 0)
+    volumes <- data.table::data.table(Time_min = 0, time_elapsed_s = 0, mean_rain_cm = 0, mean_surface_depth_cm = 0,
+                                     mean_infiltration_cm = 0, gauge_height_cm = 0, gauge_velocity_cm_s = 0,
+                                     gauge_discharge_m3_s = 0, mean_total_rain_cm = 0, total_volume_out_cm = 0,
+                                     volume_difference = 0)
     # volumeOut <- data.table::data.table(timestep = 0, volume = 0, discharge = 0)
     # data.table::fwrite(volumeOut, file.path(ModelFolder, "volumeOut.csv"))
     # volumeIn <- data.table::data.table(timestep = 0, total_rain_cm = 0) # Sum all of the rainfall during a rainfall event
@@ -136,7 +145,7 @@ flowModel <- function(SoilStack_file,
     #SoilStack$flowMap <- SoilStack$currentSoilStorage * 0
 
     # Stores the Amount of time elapse for each iteration
-    timeVelocity <- data.table::data.table(time = 0, velocity = 0)
+    model_checks <- data.table::data.table(time = 0, max_velocity_cm_s = 0, vel_cellnumber = 1, max_height_cm = 0, height_cellnumber = 1)
 
     # Stores shapefiles for velocities
     velocityMax_df <- dfMax(terra::rast(file.path(ModelFolder, "velocityStorage.tif")), rename = 0)
@@ -163,7 +172,6 @@ for(t in simulation_values){
   end_time <- simulation_duration[t+1]
   timeElapsed <- end_time - beginning_time # time elapsed in minutes
   simulationTimeSecs <- timeElapsed * 60 # time elapse in minutes * seconds
-
   ## [1] Rainfall
   ## - Calculates the amount of rainfall in a given time step
   if(simulation_duration[t] < total_rain_duration){ # could cut off rainfall if not careful
@@ -191,6 +199,7 @@ for(t in simulation_values){
   averageDepthCM <- volumeM3 / (area) * 100 # average depth cm
   #averageDepthCM <- volumeM3 / (area * active_cells) * 100 # average depth cm
   # Saves later in script
+  mean_rain_depth_cm <- sumCells(SoilStack$current_rainfall) / activeCells
 
   # volumeIn <- rbind(volumeIn,
   #                   list(end_time, volumeM3))
@@ -222,7 +231,7 @@ for(t in simulation_values){
 
     # Effective conductivity function for subsurface flow for unsaturated, saturated, and at fields capacity.
     # Rate of m/s
-    SoilStack$currentSoilStorage <- subsurfaceFlow(SoilStack, simulationTimeSecs, flowStack_file)
+    # SoilStack$currentSoilStorage <- subsurfaceFlow(SoilStack, simulationTimeSecs, flowStack_file)
 
   }else{
     #SoilStack$surfaceWater <- SoilStack$surfaceWater + SoilStack$throughfall # water not infiltrated
@@ -243,33 +252,39 @@ for(t in simulation_values){
   time_remaining <- simulationTimeSecs
   while(runoff_counter != simulationTimeSecs){
     # Calculate the time delta
-    time_delta_s <- time_delta(surfaceStack, gridSize = gridsize, time_step_min = 1, courant_condition = .3)
+    limits <- time_delta(surfaceStack, gridSize = gridsize, time_step_min = 1, courant_condition = .5, vel = T)
+    time_delta_s <- limits[[1]]
+    #print(time_delta_s)
+    # Calculate the velocity over the timestep
+    velocity <- limits[[2]]
+
     time_remaining <- time_remaining - time_delta_s
     if(time_remaining < 0){
       time_delta_s <- time_remaining + time_delta_s
     }
-    # Calculate the velocity over the timestep
-    velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater,
-                                 surfaceStack$slope, length = gridsize,
-                                 units = "cm/s")
     # Calculate new surface (cm)
-    surfaceStack$surfaceWater <- SoilStack$surfaceWater <-
-                                surfaceRouting(surfaceStack = surfaceStack,
+    depth_list <- surfaceRouting(surfaceStack = surfaceStack,
                                  time_delta_s = time_delta_s,
                                  gridSize = gridsize,
                                  rain_step_min = 1)
+
+    surfaceStack$surfaceWater <- SoilStack$surfaceWater <- depth_list[[1]]
+    infiltration_depth_cm <- depth_list[[2]]
+    rain_depth_cm <- depth_list[[3]]
 
     # Infiltrated water goes here
     infiltration <- 0
 
     # Calculate the time in minutes after each time-step
     end_time <- beginning_time + round((runoff_counter + time_delta_s) / 60, 5)
-    print(end_time)
+
     # Write raster to file
     if(!impervious){
       rasterWrite(round(SoilStack$currentSoilStorage,3), ModelFolder, end_time, layername = "soil")
     }
+      # Write surface depth for time-step
       rasterWrite(round(surfaceStack$surfaceWater,3), ModelFolder, end_time, layername = "surface")
+      maxHeight <- max_in_raster(round(surfaceStack$surfaceWater,3))# max height cm
       # Save the outflow cell
       # Adjust the outflow height -- here in cm
       outflow <- surfaceStack$surfaceWater[outflow_cell][[1]]
@@ -281,8 +296,32 @@ for(t in simulation_values){
       SoilStack$surfaceWater[outflow_cell] <- surfaceStack$surfaceWater[outflow_cell] <- 0
 
       rasterWrite(round(velocity,3), ModelFolder, end_time, layername = "velocity")
-    #   # Increment the runoff counter be elapsed time (s)
-     runoff_counter <- runoff_counter + time_delta_s
+      out_velocity <- velocity[outflow_cell][[1]]
+      # Write checks to tables
+
+      # Calculate maximum cell value and location
+      maxVel <- max_in_raster(velocity) # returns c(maximum value, cell number)
+
+      model_checks <- rbind(model_checks, list(time = end_time,
+                                               max_velocity_cm_s = maxVel[1],
+                                                vel_cellnumber = maxVel[2],
+                                                max_height_cm = maxHeight[1],
+                                                height_cellnumber = maxHeight[2]))
+
+      volumes <- rbind(volumes, list(Time_min = end_time,
+                                     time_elapsed_s = time_delta_s,
+                                     mean_rain_cm = sumCells(rain_depth_cm)/activeCells,
+                                     mean_surface_depth_cm = sumCells(SoilStack$surfaceWater)/activeCells,
+                                     mean_infiltration_cm = sumCells(infiltration_depth_cm)/activeCells,
+                                     gauge_height_cm = outflow,
+                                     gauge_velocity_cm_s = out_velocity,
+                                     gauge_discharge_m3_s = round(outflow*10/time_delta_s,4), # hard-coded
+                                     mean_total_rain_cm = sum(volumes[, "mean_rain_cm"]),
+                                     total_volume_out_cm  = sum(volumes[, "gauge_height_cm"]),
+                                     volume_difference = 0))
+
+    # Increment the runoff counter be elapsed time (s)
+     runoff_counter <- runoff_counter + round(time_delta_s,4)
      # Adjust the raster depth for the outflow cell and save it
     }
 
@@ -294,8 +333,9 @@ for(t in simulation_values){
     # Adjust time storage file
     simulationDF$simtime <- end_time
     data.table::fwrite(simulationDF, simulationProgress) # write current simulation time
-    #data.table::fwrite(data.table::data.table(tempvelocityFile), file = file.path(ModelFolder, "max_velocity_per_time.csv"))
-    data.table::fwrite(timeVelocity, file = file.path(ModelFolder, "time-velocity.csv"))
+    #data.table::fwrite(data.table::data.table(tempvelocityFile), file = file.path(ModelFolder, "max_velocity_cm_s_per_time.csv"))
+    data.table::fwrite(model_checks, file = file.path(ModelFolder, "model-checks.csv"))
+    data.table::fwrite(volumes, file = file.path(ModelFolder, "volumes.csv"))
     # Save a temporary version of the soil stack
     temporary <- SoilStack + 0 # create temporary Soil Stack
 
@@ -304,7 +344,6 @@ for(t in simulation_values){
   }
  ##------------------------------------##
   ### give a name to the current storage based upon iteration
-  print(counter)
   counter <- counter + 1
   }
 }

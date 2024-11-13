@@ -30,8 +30,8 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
     print('Finished creating adjusted DEM.')
   } else{
     print("Located DEM")
-    print("Copying digital elevation model over to model folder.")
-    file.copy(model_dem, file.path(ModelFolder, "model_dem.tif"), overwrite = T)
+    #print("Copying digital elevation model over to model folder.")
+    #file.copy(model_dem, ModelFolder, recursive= T)
   }
   # Slope creation
   slope <- file.path(ModelFolder, "model_slope.tif") # default name of slope file
@@ -45,6 +45,10 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
     # NOTE - slope does compute for boundary cells - see slope_edge()
     terra::writeRaster(slope_total, filename = slope, overwrite = T)
   }
+  # Determine potential troublesome cells # assumes path written in
+  trouble <- terra::rast(file.path(ModelFolder, "stream_extracted.tif")) * slope_total
+  terra::writeRaster(trouble, file.path(ModelFolder, "trouble-cells.tif"), overwrite = T)
+
   # Land Cover
   # Project the land cover data into same coordinate system of the DEM
   # Check if the landcover raster is already there
@@ -233,4 +237,44 @@ land_cover_process <- function(landCoverPath, model_dem, watershed_shape_path, k
     terra::writeRaster(land_cover_raster, model_landcover, overwrite = overwrite)
   }
   return(land_cover_raster)
+}
+
+
+# Create a "template" version of model parameters without having to run through everything everytime
+template_watershed <- function(ModelFolder = "test-watershed", model_object = NULL, WatershedElements = NULL, date = "2021-07-21", rainfall_method = "gauges", dem = "dem-test.tif"){
+
+  # Use default model object
+  if(is.null(model_object)){
+    model_object <- model()
+    WatershedElements <- model_object@watershedPath
+    # Append path to lists of objects
+    model_object@demFile <- file.path(model_object@watershedPath, dem)
+    model_object@boundary <- file.path(model_object@watershedPath, model_object@boundary)
+    model_object@LandCoverCharacteristics <- file.path(model_object@watershedPath, model_object@LandCoverCharacteristics)
+    model_object@landCoverFile <- file.path(model_object@watershedPath, model_object@landCoverFile)
+  }
+
+  # Files needed
+  SoilStack <- file.path(ModelFolder, "model_soil_stack.tif")
+  drainCells <- file.path(ModelFolder, "drainCells.csv")
+  if(!file.exists(SoilStack) | !file.exists(drainCells)){
+    # Create model soil stack
+    watershedElementsCreate(ModelFolder, WatershedElements,
+                            DEM = model_object@demFile,
+                            watershed_shape_path = model_object@boundary,
+                            LandCoverCharacteristics = model_object@LandCoverCharacteristics,
+                            landCoverFile = model_object@landCoverFile,
+                            key = model_object@key,
+                            overwrite = F,
+                            cellsize = 10
+                            )
+  }
+  if(!file.exists(SoilStack) | !file.exists(drainCells)){
+    stop("The model soil stack or the drainage cells were not found.")
+  }
+
+  rain_file <- suppressWarnings(rainfallCreation(ModelFolder, WatershedElements,
+                                                 date = date, method = rainfall_method,
+                                                 overwrite = T))
+  return(list(ModelFolder, rain_file))
 }

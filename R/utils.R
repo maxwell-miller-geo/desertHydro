@@ -69,6 +69,7 @@ dfMax <- function(raster, rename = NA, max = T, rank = 2){
 # raster <- surfaceStorage[[5]]
 # dfMax(raster)
 
+
 # ---------------------------- Function to find 1st and 2nd values
 # and output table
 
@@ -437,6 +438,9 @@ gradient <- function(x){
 
 # Sum the values of all of the cells within a raster layer
 sumCells <- function(raster){
+  if(class(raster) != "SpatRaster"){
+    return(0)
+  }
   return(sum(terra::values(raster, na.rm = T)))
 }
 
@@ -448,9 +452,18 @@ cellsWithValues <- function(raster){
 }
 # Extracts the time from a raster stack names - assumes minutes
 extract_time <- function(rasterStack, time = "mins"){
-  numeric_vector <- as.numeric(names(surfaceStorage))
+  numeric_vector <- as.numeric(names(rasterStack))
   # Calculate difference
   time_difference <- diff(numeric_vector)*60 # minutes to seconds
   first_time <- time_difference[1] # makes the assumption 1st time-step = 2nd
   return(c(first_time, time_difference))
 }
+
+# Find the location of maximum cell value in a raster and the cell number - return as vector
+max_in_raster <- function(raster){
+  cellNumber <- terra::where.max(raster)[2] # gets max value cell number
+  maxValue <- terra::minmax(raster)[2] # maximum value of cell
+  # return max value followed by cell value
+  return(c(maxValue, cellNumber))
+}
+

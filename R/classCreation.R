@@ -75,3 +75,8 @@ model <- methods::setClass("model",
 
             validity = check_model)
 
+# setMethod("path", "model", function(watershedPath, demFile, boundary, landCoverFile, LandCoverCharacteristics, rainFile, dischargeFile){
+#   files_to_adjust <- c(demFile, boundary, landCoverFile, LandCoverCharacteristics, rainFile, dischargeFile)
+#   lapply(files_to_adjust, file.path(watershedPath, files_to_adjust))
+# }
+# )
