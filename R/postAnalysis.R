@@ -110,7 +110,7 @@ totalVolume <- function(time, discharge){
 dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length,  discharge = F, store = T, date = NULL, gauge_locations = file.path(WatershedElements, "stream_gauge.shp")){
   time <- Total_in <- xsection_next <- NULL # keep the global variables at bay
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
-  velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
+  #velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
   #subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
   gauge_locations = file.path(WatershedElements, "stream_gauge.shp")
   x_sections_path <- gauge_locations
@@ -143,8 +143,9 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
         lastname <- length(names(discharge_save))
         names(discharge_save)[lastname] <- paste0("xsection_", x)
       }
-
-      modelScore <- modelEfficiency(compareDis, method = "NSE")
+      method <- "NSE"
+      modelScore <- modelEfficiency(compareDis, method = method)
+      print(paste("Model efficiency via", method, "is", modelScore))
       dischargePlot <- ggplot2::ggplot() +
         ggplot2::geom_line(ggplot2::aes(x = compareDis$time, y = compareDis$recDis, color = "Recorded")) +
         ggplot2::geom_line(ggplot2::aes(x = compareDis$time, y = compareDis$predDis, color = "Predicted")) +
@@ -162,10 +163,14 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
         data.table::fwrite(discharge_save, file = file.path(ModelFolder, "discharge-raw.csv"))
       }
     }
-  } else if(file.exists(x_sections_path)){
+  }
+  else if(file.exists(x_sections_path)){
     print(paste("Creating discharge figures..."))
     #x_sections_path <- file.path(ModelElements, "Cross_Section_lines.shp")
     cross_section <- terra::vect(x_sections_path) # bring vector into R
+    # Gather coordinates from vector
+    coords <- as.matrix(terra::geom(cross_section))[,3:4]
+
     # # Extract the height from the surface stack
     surface_Height <- terra::extract(surfaceStorage, cross_section) # surface height in cm
     surface_Height[is.na(surface_Height)] <- 0
@@ -185,13 +190,14 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
              x = paste0("Time (minutes)"),
              y = paste0("Discharge (ft\u00b3/s)"),
              color = "Legend")
-      dischargePlot
+
       if(store){
         ggplot2::ggsave(filename = file.path(ModelFolder, paste0("discharge-prediction","-xsection-", x, "-", date,".png")),
                plot = dischargePlot, width = 5.5, height = 4)
       }
     }
   }
+  plot(dischargePlot)
   print("Discharge complete...")
 }
 # Test

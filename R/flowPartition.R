@@ -129,7 +129,7 @@ flowMap2D <- function(dem, outFolder = NA, name = "stack_flow.tif"){
 #flowMapTest <- flowMap(dem)
 # Flow Map 1D
 # Create a 1D flow map that outputs the flow direction of a cell
-flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out = FALSE){
+flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out = FALSE, ModelFolder = "ws-test-3"){
   # Set up parallel backend
   # num_cores <- parallel::detectCores() - 1  # Use one less core to avoid overloading the system
   # cl <- makeCluster(2)
@@ -157,9 +157,9 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
   xDim <- terra::res(discharge)[1]
   yDim <- terra::res(discharge)[2]
 
-  mapCalculations <- function(flow_direction, dem_flow, discharge, xDim, yDim, flowKey, discharge_out = FALSE){
+  mapCalculations <- function(flow_direction, flow_d8, discharge, xDim, yDim, flowKey, discharge_out = FALSE, ModelFolder){
     # Select cells in particular direction
-    cells_to_flow <- terra::ifel(dem_flow == as.numeric(flow_direction), 1, 0)
+    cells_to_flow <- terra::ifel(flow_d8 == as.numeric(flow_direction), 1, 0)
     flow_distance <- 1 # hard coded for calculating discharge directions
     if(discharge_out){ # when routing flow change the distance for diagonal cells
       flow_distance <- flowKey[[flow_direction]][[3]]
@@ -175,7 +175,7 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
     dischargeShifted <- terra::crop(shiftMap, cells_to_flow, snap = "near", extend = TRUE)
 
     names(dischargeShifted) <- flowKey[[flow_direction]][[1]] # direction of flow
-    #terra::writeRaster(dischargeShifted, file.path(ModelFolder, paste0(flowKey[[flow_direction]][[1]]),".tif"), overwrite = T)
+    #terra::writeRaster(dischargeShifted, file.path(ModelFolder, paste0(flowKey[[flow_direction]][[1]],".tif")), overwrite = T)
     return(dischargeShifted)
   }
   # if(F){
@@ -183,12 +183,11 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
   #     mapCalculations(flow_direction, flow_d8, discharge, xDim, yDim, flowKey, discharge_out)
   #   }
   # }
-  flowList <- lapply(flow_directions, FUN = mapCalculations, flow_d8, discharge, xDim, yDim, flowKey, discharge_out)
-
+  flowList <- lapply(flow_directions, FUN = mapCalculations, flow_d8, discharge, xDim, yDim, flowKey, discharge_out, ModelFolder)
+  #flowList <- lapp(discharge, FUN = mapCalculations, flow_d8, flow_direction, xDim, yDim, flowKey, discharge_out)
   flowMaps <- terra::rast(flowList)
   #rm(flow_d8)
   return(flowMaps)
-
 }
 ## ---------------------------
 # Create flow maps 2.0

@@ -159,7 +159,7 @@ flowModel <- function(ModelFolder,
   rain_values <- terra::values(SoilStack$mannings_n)
   active_cells <- length(rain_values[!is.na(rain_values)]) # cells with values
   # Progress Bar
-  progressBar <- utils::txtProgressBar(min = 0, max = length(simulation_duration), style = 3)
+  #progressBar <- utils::txtProgressBar(min = 0, max = length(simulation_duration), style = 3)
   start <- Sys.time()
 
   simulation_values <- 1:(length(simulation_duration)-1)
@@ -167,7 +167,7 @@ flowModel <- function(ModelFolder,
   outflow_cell <- drainCells$cell[1]
 # Loop through time
 for(t in simulation_values){
-  utils::setTxtProgressBar(progressBar, t)
+ # utils::setTxtProgressBar(progressBar, t)
   beginning_time <- simulation_duration[t]
   end_time <- simulation_duration[t+1]
   timeElapsed <- end_time - beginning_time # time elapsed in minutes
@@ -251,17 +251,19 @@ for(t in simulation_values){
   runoff_counter <- 0
   time_remaining <- simulationTimeSecs
   while(runoff_counter != simulationTimeSecs){
-    # Calculate the time delta
-    limits <- time_delta(surfaceStack, gridSize = gridsize, time_step_min = 1, courant_condition = .5, vel = T)
+    # # Calculate the time delta
+    limits <- time_delta(surfaceStack, gridSize = gridsize, time_step_min = 1, courant_condition = .9, vel = T)
     time_delta_s <- limits[[1]]
-    #print(time_delta_s)
+    print(paste("Time calculate:", time_delta_s))
     # Calculate the velocity over the timestep
     velocity <- limits[[2]]
 
     time_remaining <- time_remaining - time_delta_s
+    print(paste("Time remaining:", time_remaining))
     if(time_remaining < 0){
       time_delta_s <- time_remaining + time_delta_s
     }
+    print(paste("Time remaining:", time_remaining))
     # Calculate new surface (cm)
     depth_list <- surfaceRouting(surfaceStack = surfaceStack,
                                  time_delta_s = time_delta_s,
@@ -323,6 +325,7 @@ for(t in simulation_values){
     # Increment the runoff counter be elapsed time (s)
      runoff_counter <- runoff_counter + round(time_delta_s,4)
      # Adjust the raster depth for the outflow cell and save it
+     print(paste("Runoff Counter:", runoff_counter))
     }
 
   ##---------------- Save step-------------

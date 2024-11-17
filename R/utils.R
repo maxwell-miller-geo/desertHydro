@@ -164,7 +164,22 @@ rasterWrite <- function(raster, ModelFolder, end_time, layername = "surface"){
 # raster1 <- rast(rasterPath)
 # raster2 <- rast(rasterPath2)
 ## -------------------------- Combine rasters
-# Function that takes a bunch of rasters and combined them by name
+#
+#' Function that takes a bunch of rasters and combined them by name and time
+#'
+#' @param ModelFolder path to folder containing files
+#' @param layername string of layername that will combine files. e.g. "velocity"
+#' @param remove T/F. If True will remove all of the separate files
+#' @param time T/F. Default True will sort files in order of time.
+#' Expects format "layername-time-time.tif"
+#'
+#' @return Returns combined raster stack of named files
+#' @export
+#'
+#' @examples \dontrun{
+#' # Format of function
+#' rasterStack <- rasterCompile("Test-Folder", "velocity", remove = T)
+#' }
 rasterCompile <- function(ModelFolder, layername, remove = F, time = T){ # layername must be present in folder
   # Find files with names and combined them by time
   tifFiles <- list.files(ModelFolder, pattern = "*.tif")
@@ -467,3 +482,20 @@ max_in_raster <- function(raster){
   return(c(maxValue, cellNumber))
 }
 
+#' Find the cell numbers in a raster from a given shapefile/vector.
+#' This function is basically a wrapper for "cellFromXY" within the terra package
+#'
+#' @param vect shapefile
+#' @param raster raster
+#'
+#' @return cell numbers for points within shapefile
+#' @export
+#'
+#' @examples /dontrun{
+#' cell_numbers <- getCellCoords(vector, raster)
+#' }
+#'
+getCellCoords <- function(vect, raster){
+  coords <- matrix(terra::geom(vect)[,3:4], ncol = 2)
+  return(terra::cellFromXY(raster, coords))
+}
