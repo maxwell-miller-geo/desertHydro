@@ -263,7 +263,7 @@ for(t in simulation_values){
     if(time_remaining < 0){
       time_delta_s <- time_remaining + time_delta_s
     }
-    print(paste("Time remaining:", time_remaining))
+    print(paste("Time remaining:", time_delta_s))
     # Calculate new surface (cm)
     depth_list <- surfaceRouting(surfaceStack = surfaceStack,
                                  time_delta_s = time_delta_s,
@@ -353,7 +353,7 @@ for(t in simulation_values){
 }
 print(paste("The model took: ", paste0(difftime(Sys.time(), start_time))))
 
-close(progressBar)
+# close(progressBar)
 
   # Saved rasters
   # terra::writeRaster(surfaceStorage, filename = file.path(ModelFolder, "Surface_Storage.tif"), overwrite = T)

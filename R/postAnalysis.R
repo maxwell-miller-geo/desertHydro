@@ -107,9 +107,10 @@ totalVolume <- function(time, discharge){
 #' dischargeAnalysis(ModelFolder, WatershedElements, time_step, simulation_length) #See vignette
 #' }
 #'
-dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length,  discharge = F, store = T, date = NULL, gauge_locations = file.path(WatershedElements, "stream_gauge.shp")){
+dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length,  discharge = F, store = T, date = NULL, gauge_locations = file.path(WatershedElements, "stream_gauge.shp"), units = "cm/s"){
   time <- Total_in <- xsection_next <- NULL # keep the global variables at bay
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
+  time_elapsed <- extract_time(surfaceStorage) # time elapsed - seconds
   #velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
   #subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
   gauge_locations = file.path(WatershedElements, "stream_gauge.shp")
@@ -122,17 +123,19 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
     #x_sections_path <- file.path(ModelElements, "Cross_Section_lines.shp")
     cross_section <- terra::vect(x_sections_path) # bring vector into R
     # # Extract the height from the surface stack
-    surface_Height <- terra::extract(surfaceStorage, cross_section, method = "simple") # surface height in cm
-    surface_velocity <- terra::extract(velocityStorage, cross_section) # velocity at given time (m/s)
-    time_elapsed <- extract_time(surfaceStorage) # time elapsed - seconds
+    surface_height_cm <- terra::extract(surfaceStorage, cross_section, method = "simple") # surface height in cm
+    #surface_velocity <- terra::extract(velocityStorage, cross_section) # velocity at given time (m/s)
 
-    cm_to_m2 <- .01 * 10 # conversion factor - Conversion to m time grid size
-    m3_to_ft3 <- 35.3147 # convert meters3 to feet3
+
+    # cm_to_m2 <- .01 * 10 # conversion factor - Conversion to m time grid size
+    # m3_to_ft3 <- 35.3147 # convert meters3 to feet3
     discharge_save <- data.table::data.table() # save empty data table because of loop scope
-    for(x in 1:nrow(surface_Height)){
+    for(x in 1:nrow(surface_height_cm)){
       # Calculate discharge
-      surface_discharge <- as.numeric(surface_Height[x,2:ncol(surface_Height)]* cm_to_m2 * m3_to_ft3 / time_elapsed)
-      xvalues <- as.numeric(colnames(surface_Height[x,2:ncol(surface_Height)]))
+      #surface_discharge <- as.numeric(surface_height_cm[x,2:ncol(surface_height_cm)]* cm_to_m2 * m3_to_ft3 / time_elapsed)
+      height <- as.numeric(surface_height_cm[x, 2:ncol(surface_height_cm)])
+      xvalues <- round(as.numeric(colnames(surface_height_cm[x,2:ncol(surface_height_cm)])),4)
+      surface_discharge <- heightToDischarge(height, time_elapsed, units = "cm")
       estimated <- data.frame(time = xvalues, predDis = surface_discharge)
       # Combined discharges for comparisons
       compareDis <- compareDischarge(rain_discharge, estimated) # outputs: time|recDis|predDis
@@ -159,7 +162,7 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
         ggplot2::ggsave(filename = file.path(ModelFolder, paste0("compare-discharge-xsection-", x, "-", date,".png")),
                plot = dischargePlot, width = 5.5, height = 4)
       }
-      if(x == nrow(surface_Height)){ # save the
+      if(x == nrow(surface_height_cm)){ # save the
         data.table::fwrite(discharge_save, file = file.path(ModelFolder, "discharge-raw.csv"))
       }
     }
@@ -169,19 +172,21 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
     #x_sections_path <- file.path(ModelElements, "Cross_Section_lines.shp")
     cross_section <- terra::vect(x_sections_path) # bring vector into R
     # Gather coordinates from vector
-    coords <- as.matrix(terra::geom(cross_section))[,3:4]
+    #coords <- as.matrix(terra::geom(cross_section))[,3:4]
 
     # # Extract the height from the surface stack
-    surface_Height <- terra::extract(surfaceStorage, cross_section) # surface height in cm
-    surface_Height[is.na(surface_Height)] <- 0
-    surface_Height <- surface_Height[,2:ncol(surface_Height)]
-    surface_velocity <- terra::extract(velocityStorage, cross_section) # velocity at given time (m/s)
-    surface_velocity[is.na(surface_velocity)] <- 0
-    surface_velocity <- surface_velocity[,2:ncol(surface_velocity)]
-    xvalues <- as.numeric(colnames(surface_Height))
-    for(x in 1:nrow(surface_Height)){
-      estimatedDischarge <- heightToDischarge(surface_Height[x,], time_step)
-      #estimated <- as.numeric(surface_Height[x,2:ncol(surface_Height)] * cm_to_m2 * surface_velocity[x,2:ncol(surface_velocity)] * m3_to_ft3) # m^3/s
+    surface_height_cm <- terra::extract(surfaceStorage, cross_section)
+    # Does this work with multiple rows - noooo
+    surface_height_cm$ID <- 0 # surface height in cm
+    colnames(surface_height_cm)[1] <- "0" # adjust first column to 0
+    xvalues <- as.numeric(colnames(surface_height_cm))
+    #surface_height_cm <- c(0, as.numeric(surface_height_cm[,2:ncol(surface_height_cm)]))
+    # surface_velocity <- terra::extract(velocityStorage, cross_section) # velocity at given time (m/s)
+    # surface_velocity[is.na(surface_velocity)] <- 0
+    # surface_velocity <- surface_velocity[,2:ncol(surface_velocity)]
+    for(x in 1:nrow(surface_height_cm)){
+      estimatedDischarge <- heightToDischarge(surface_height_cm[x,2:ncol(surface_height_cm)], time_elapsed)
+      #estimated <- as.numeric(surface_height_cm[x,2:ncol(surface_height_cm)] * cm_to_m2 * surface_velocity[x,2:ncol(surface_velocity)] * m3_to_ft3) # m^3/s
       #xvalues <- seq(time_step, simulation_length, by = time_step)
       dischargePlot <- ggplot2::ggplot() +
         #geom_line(aes(x = compareDis$time, y = compareDis$recDis, color = "Recorded")) +
@@ -190,7 +195,7 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
              x = paste0("Time (minutes)"),
              y = paste0("Discharge (ft\u00b3/s)"),
              color = "Legend")
-
+      dischargePlot
       if(store){
         ggplot2::ggsave(filename = file.path(ModelFolder, paste0("discharge-prediction","-xsection-", x, "-", date,".png")),
                plot = dischargePlot, width = 5.5, height = 4)
