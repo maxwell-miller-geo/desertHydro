@@ -241,7 +241,7 @@ land_cover_process <- function(landCoverPath, model_dem, watershed_shape_path, k
 
 
 # Create a "template" version of model parameters without having to run through everything everytime
-template_watershed <- function(ModelFolder = "test-watershed", model_object = NULL, WatershedElements = NULL, date = "2021-07-21", rainfall_method = "gauges", dem = "dem-test.tif"){
+template_watershed <- function(ModelFolder = "Results/test-watershed", model_object = NULL, WatershedElements = NULL, date = "2021-07-21", rainfall_method = "gauges", dem = "dem-test.tif"){
 
   # Use default model object
   if(is.null(model_object)){

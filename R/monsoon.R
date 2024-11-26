@@ -1,7 +1,7 @@
 # Script to run via Monsoon
 # Blank function that will just be run once inside of monsoon
 
-monsoon <- function(ModelFolder = NULL, time = NaN, date = "2021-07-22", dem = "dem-test.tif", overwrite = T){
+monsoon <- function(ModelFolder = NULL, time = NaN, date = "2021-07-22", dem = "dem-test.tif", rain_method = "gauges", overwrite = T, courant = 0.8, restart = F){
 
   if(is.null(ModelFolder)){
     ModelFolder <- tempdir()
@@ -13,11 +13,12 @@ monsoon <- function(ModelFolder = NULL, time = NaN, date = "2021-07-22", dem = "
   model1@simulation_length <- time
   model1@demFile <-  dem
   model1@boundary <- desertHydro::polygonize(model1@demFile, model1@watershedPath)
-
+  model1@rainMethod <- rain_method
   # Model variation - NLCD
   model1@LandCoverCharacteristics <- "nlcd_characteristics.xlsx"
   model1@landCoverFile <- "waterholes_LC.tif"
   model1@key <- "ID"
+  model1@courant <- courant
 
   a <- arid_model(model1@ModelFolder,
                   model1@watershedPath,

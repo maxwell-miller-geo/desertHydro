@@ -107,13 +107,13 @@ totalVolume <- function(time, discharge){
 #' dischargeAnalysis(ModelFolder, WatershedElements, time_step, simulation_length) #See vignette
 #' }
 #'
-dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulation_length,  discharge = F, store = T, date = NULL, gauge_locations = file.path(WatershedElements, "stream_gauge.shp"), units = "cm/s"){
+dischargeAnalysis <- function(ModelFolder, WatershedElements, discharge = F, store = T, date = NULL, gauge_locations = file.path(WatershedElements, "stream_gauge.shp"), units = "cm/s",...){
   time <- Total_in <- xsection_next <- NULL # keep the global variables at bay
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
   time_elapsed <- extract_time(surfaceStorage) # time elapsed - seconds
   #velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
   #subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
-  gauge_locations = file.path(WatershedElements, "stream_gauge.shp")
+  #gauge_locations = file.path(WatershedElements, "stream_gauge.shp")
   x_sections_path <- gauge_locations
   if(file.exists(x_sections_path) & discharge){
     print(paste("Creating discharge figures..."))
@@ -135,7 +135,7 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
       #surface_discharge <- as.numeric(surface_height_cm[x,2:ncol(surface_height_cm)]* cm_to_m2 * m3_to_ft3 / time_elapsed)
       height <- as.numeric(surface_height_cm[x, 2:ncol(surface_height_cm)])
       xvalues <- round(as.numeric(colnames(surface_height_cm[x,2:ncol(surface_height_cm)])),4)
-      surface_discharge <- heightToDischarge(height, time_elapsed, units = "cm")
+      surface_discharge <- stream_gauge_discharge(height, time_elapsed, units = "cm")
       estimated <- data.frame(time = xvalues, predDis = surface_discharge)
       # Combined discharges for comparisons
       compareDis <- compareDischarge(rain_discharge, estimated) # outputs: time|recDis|predDis
@@ -166,14 +166,13 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
         data.table::fwrite(discharge_save, file = file.path(ModelFolder, "discharge-raw.csv"))
       }
     }
-  }
-  else if(file.exists(x_sections_path)){
+  }else if(file.exists(x_sections_path)){
     print(paste("Creating discharge figures..."))
     #x_sections_path <- file.path(ModelElements, "Cross_Section_lines.shp")
     cross_section <- terra::vect(x_sections_path) # bring vector into R
     # Gather coordinates from vector
     #coords <- as.matrix(terra::geom(cross_section))[,3:4]
-
+    #surfaceStorage <- surfaceStorage[1]
     # # Extract the height from the surface stack
     surface_height_cm <- terra::extract(surfaceStorage, cross_section)
     # Does this work with multiple rows - noooo
@@ -185,7 +184,7 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, time_step, simulat
     # surface_velocity[is.na(surface_velocity)] <- 0
     # surface_velocity <- surface_velocity[,2:ncol(surface_velocity)]
     for(x in 1:nrow(surface_height_cm)){
-      estimatedDischarge <- heightToDischarge(surface_height_cm[x,2:ncol(surface_height_cm)], time_elapsed)
+      estimatedDischarge <- stream_gauge_discharge(surface_height_cm[x,], time_elapsed)
       #estimated <- as.numeric(surface_height_cm[x,2:ncol(surface_height_cm)] * cm_to_m2 * surface_velocity[x,2:ncol(surface_velocity)] * m3_to_ft3) # m^3/s
       #xvalues <- seq(time_step, simulation_length, by = time_step)
       dischargePlot <- ggplot2::ggplot() +

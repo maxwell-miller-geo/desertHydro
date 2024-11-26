@@ -180,7 +180,7 @@ rasterWrite <- function(raster, ModelFolder, end_time, layername = "surface"){
 #' # Format of function
 #' rasterStack <- rasterCompile("Test-Folder", "velocity", remove = T)
 #' }
-rasterCompile <- function(ModelFolder, layername, remove = F, time = T){ # layername must be present in folder
+rasterCompile <- function(ModelFolder, layername, remove = T, time = T, overwrite = T, end = T){ # layername must be present in folder
   # Find files with names and combined them by time
   tifFiles <- list.files(ModelFolder, pattern = "*.tif")
   # Layer files present
@@ -189,31 +189,31 @@ rasterCompile <- function(ModelFolder, layername, remove = F, time = T){ # layer
   }else{
     layerFiles <- grep(paste0(layername,"-"), tifFiles, value = T)
   }
-  if(length(layerFiles) == 1){
-    stop("Only 1 layer file found. Please check the duration of the simulation.")
-  }
+  # if(length(layerFiles) == 1){
+  #   if(file.exists(outT))
+  #   stop("Only 1 layer file found. Please check the duration of the simulation.")
+  #}
   # Converts strings into ordered dataframe
   orderedDF <- convert_string(layerFiles)
   #print(orderedDF)
   # combine layers and save as combined stack
   layerStack <- terra::rast(file.path(ModelFolder, names(orderedDF)[1]))
-
-  for(x in 2:length(orderedDF)){
-    terra::add(layerStack) <- terra::rast(file.path(ModelFolder, names(orderedDF)[x]))
+  if(length(orderedDF) > 1){
+    for(x in 2:length(orderedDF)){
+      terra::add(layerStack) <- terra::rast(file.path(ModelFolder, names(orderedDF)[x]))
+    }
   }
 
+  # Check previously created stack
   outStack <- file.path(ModelFolder, paste0(layername, "Storage.tif"))
-  # Check if previously created stack
   if(file.exists(outStack)){
-    if(terra::nlyr(terra::rast(outStack)) > 2){
-      # Append the layer stack
-      combined <- c(layerStack, terra::rast(outStack)+0)
+      # Append the layer stack - not cleverly
+      combined <- c(terra::rast(outStack) + 0, layerStack)
       terra::writeRaster(combined, filename = outStack, overwrite = T)
-    }
   }else{
     terra::writeRaster(layerStack, filename = outStack, overwrite = T)
   }
-  terra::writeRaster(layerStack, filename = outStack, overwrite = T)
+
   print(paste0("Created ", layername, "Storage.tif"))
   # Remove temporary files
   fullPaths <- lapply(layerFiles, FUN = function(x)(file.path(ModelFolder, x)))

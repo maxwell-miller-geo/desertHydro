@@ -351,6 +351,9 @@ outputFlow <- function(values, dir){
 initializeRaster <- function(firstLayer, name, outFolder, zero = F){
   temp <- firstLayer
   names(temp) <- c(name)
+  if(zero){
+    names(temp) <- c("0")
+  }
   #names(temp) <- 0
   outFile <- file.path(outFolder, paste0(name, ".tif"))
   terra::writeRaster(temp, outFile, overwrite = T) # writes the initial raster
@@ -762,7 +765,14 @@ manningsVelocity <- function(n, depth, slope, length, units = "cm/s"){
 #
 #   }
 # }
-surfaceRouting <- function(surfaceStack, time_delta_s, gridSize = 10, rain_step_min = 1){
+adjust_mannings <- function(slope){
+  # (Hessel et al., 2003) Adjust Manning's velocity based upon empirical relationship
+  # n = 0.0559 + 0.0022S where S is % slope
+  n <- 0.0559 + 0.0022 * tanpi(slope/180) * 100 # convert slope to gradient %
+  return(n)
+}
+
+surfaceRouting <- function(surfaceStack, velocity, time_delta_s, gridsize = 10, rain_step_min = 1){
   # Cannot be negative depths
   # Check the source term
   time_adjustment <- rain_step_min/ 60 # time per hour - h^-1
@@ -785,13 +795,13 @@ surfaceRouting <- function(surfaceStack, time_delta_s, gridSize = 10, rain_step_
 
   h_current <- surfaceStack$surfaceWater
   # Calculate flow lengths
-  flow_units <- flowLength(surfaceStack$flow_direction) * gridSize * 100
+  flow_units <- flowLength(surfaceStack$flow_direction) * gridsize * 100
   # pit_cells <- as.numeric(terra::cells(flow_units, 0))
   # If flow lengths equal 0 for the outflow cell, set equal to 1
   # # Makes the assumption that discharge in the outflow cell is in a cardinal direction
   # flow_units <- terra::ifel(flow_units == 0, 1, flow_units)
-  # flow_length <- flow_units * gridSize * 100 # grid size (m) * (cm/m)
-  velocity <- manningsVelocity(surfaceStack$mannings_n, h_current, surfaceStack$slope, length = gridSize, units = "cm/s")
+  # flow_length <- flow_units * gridsize * 100 # grid size (m) * (cm/m)
+  #velocity <- manningsVelocity(surfaceStack$mannings_n, h_current, surfaceStack$slope, length = gridsize, units = "cm/s")
   # Unit discharge calculation
   discharge_out <- h_current * velocity / flow_units # unit cm2/s
   #discharge_out[pit_cells] <- 0
@@ -842,9 +852,12 @@ deltaX <- function(discharge_in_sep){
 # }
 ## ---------------------------- Flow Routing fixed
 # Check the limiting conditions of flow
-time_delta <- function(surfaceStack, time_step_min = 1, gridSize = 10, courant_condition = 0.9, vel = F, trouble = F){
+time_delta <- function(surfaceStack, time_step_min = 1, gridsize = 10, courant_condition = 0.9, vel = F, trouble = T){
+  if(trouble){
+    surfaceStack$mannings_n <- adjust_mannings(surfaceStack$slope)
+  }
   # Velocity calculation
-  velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater, surfaceStack$slope, length = gridSize, units = "cm/s")
+  velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater, surfaceStack$slope, length = gridsize, units = "cm/s")
   # Bring in the trouble areas - should be brought in first
   # if(trouble){
   #   trouble_cells <- terra::rast(file.path(ModelFolder, "trouble-cells.tif"))
@@ -877,7 +890,7 @@ time_delta <- function(surfaceStack, time_step_min = 1, gridSize = 10, courant_c
   ## Courant stability of flow
   # velocity * time / distance < 1 or
   # dt = C(courant number) * distance traveled (cm) / velocity (cm/s)
-  dt <- floor(min(terra::values(courant_condition * gridSize *100 / velocity, na.rm = T))*1000)/1000
+  dt <- floor(min(terra::values(courant_condition * gridsize *100 / velocity, na.rm = T))*1000)/1000
   # Change the time step, if the conditions require it
   if(dt < time_delta_s){
     time_delta_s <- dt

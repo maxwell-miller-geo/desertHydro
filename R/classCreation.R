@@ -45,7 +45,8 @@ model <- methods::setClass("model",
                   overwrite = "logical",
                   write = "logical",
                   restartModel = "logical",
-                  gif = "logical"
+                  gif = "logical",
+                  courant = "numeric"
                   ),
 
             prototype = list(ModelFolder = NA_character_,
@@ -70,7 +71,8 @@ model <- methods::setClass("model",
                             overwrite = T,
                             write = T,
                             restartModel = T,
-                            gif = F
+                            gif = F,
+                            courant = 0.8
                             ),
 
             validity = check_model)

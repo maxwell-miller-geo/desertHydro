@@ -31,6 +31,7 @@
 ##  Model Script
 #LandCoverCharacteristics <- storage_amount(LandCoverCharacteristics) # adjusts the storage amount must reassign values for table
 
+
 flowModel <- function(ModelFolder,
                       rain_file,
                       time_step = 1,
@@ -40,6 +41,7 @@ flowModel <- function(ModelFolder,
                       impervious = F,
                       gif = T,
                       restartModel = F,
+                      courant = 0.8,
                       ...){
   gc()
   print(paste("Time step:", time_step))
@@ -85,7 +87,7 @@ flowModel <- function(ModelFolder,
   out_discharge <- data.table::data.table(time = 0, height_cm = 0, discharge = 0)
   #write.csv(simulationDF, file = simulationProgress)ra
   #readin <- read.csv(simulationProgress)
-  if(file.exists(tempStorage) & file.exists(simulationProgress) & !restartModel){ # if model was cutoff during simulation - restart option
+  if(file.exists(tempStorage) & file.exists(simulationProgress) & restartModel){ # if model was cutoff during simulation - restart option
     print("Picking up where model left off...")
     # Determine the time it left off - model simulation and overwrite the last step recorded
     simulationDF <- data.table::fread(simulationProgress)
@@ -101,7 +103,7 @@ flowModel <- function(ModelFolder,
     # Reado previous step? What if there are partial saves - doesn't check for
     SoilStack <- terra::rast(tempStorage)
     subsurfacePath <- file.path(ModelFolder, "soilStorage.tif")
-    #surfacePath <- file.path(ModelFolder, "surfaceStorage.tif")
+    surfacePath <- file.path(ModelFolder, "surfaceStorage.tif")
     velocityPath <- file.path(ModelFolder, "velocityStorage.tif")
     distancePath <- file.path(ModelFolder, "distanceStorage.tif")
     # runoffDepthPath <- file.path(ModelFolder, "runoffDepth.tif")
@@ -125,10 +127,10 @@ flowModel <- function(ModelFolder,
     # data.table::fwrite(volumeIn, file.path(ModelFolder, "volumeIn.csv"))
     # Create initial rasters for outputs
     if(impervious == FALSE){
-      subsurfacePath <- initializeRaster(SoilStack$mannings_n, "soilStorage", ModelFolder)
+      subsurfacePath <- initializeRaster(SoilStack$mannings_n*0, "soilStorage", ModelFolder, zero = T)
     }
-    surfacePath <- initializeRaster(SoilStack$mannings_n*0, "surfaceStorage", ModelFolder)
-    velocityPath <- initializeRaster(SoilStack$mannings_n*0, "velocityStorage", ModelFolder)
+    surfacePath <- initializeRaster(SoilStack$mannings_n*0, "surfaceStorage", ModelFolder, zero = T)
+    velocityPath <- initializeRaster(SoilStack$mannings_n*0, "velocityStorage", ModelFolder, zero = T)
 
     # Create distance storage
     SoilStack$distStorage <- SoilStack$mannings_n * 0 # Creates new layer
@@ -252,27 +254,36 @@ for(t in simulation_values){
   time_remaining <- simulationTimeSecs
   while(runoff_counter != simulationTimeSecs){
     # # Calculate the time delta
-    limits <- time_delta(surfaceStack, gridSize = gridsize, time_step_min = 1, courant_condition = .9, vel = T)
+    limits <- time_delta(surfaceStack, gridsize = gridsize, time_step_min = 1, courant_condition = courant, vel = T)
     time_delta_s <- limits[[1]]
     print(paste("Time calculate:", time_delta_s))
     # Calculate the velocity over the timestep
     velocity <- limits[[2]]
-
+    print(paste("Time remaining:", time_remaining))
     time_remaining <- time_remaining - time_delta_s
     print(paste("Time remaining:", time_remaining))
     if(time_remaining < 0){
       time_delta_s <- time_remaining + time_delta_s
     }
-    print(paste("Time remaining:", time_delta_s))
+
     # Calculate new surface (cm)
     depth_list <- surfaceRouting(surfaceStack = surfaceStack,
+                                 velocity = velocity,
                                  time_delta_s = time_delta_s,
-                                 gridSize = gridsize,
+                                 gridsize = gridsize,
                                  rain_step_min = 1)
 
     surfaceStack$surfaceWater <- SoilStack$surfaceWater <- depth_list[[1]]
+    # Adjust the slope for next time-step
+    new_dem <- surfaceStack$surfaceWater/100 + surfaceStack$model_dem
+    slope_temp <- terra::terrain(new_dem, v = "slope", neighbors = 8, unit = "degrees")
+    new_slope <- slope_edge(new_dem, slope_temp, cellsize = gridsize)
+    names(new_slope) <- "slope"
+    surfaceStack$slope <- SoilStack$slope <- new_slope
+    # Return infiltration depth
     infiltration_depth_cm <- depth_list[[2]]
     rain_depth_cm <- depth_list[[3]]
+
 
     # Infiltrated water goes here
     infiltration <- 0
@@ -286,7 +297,7 @@ for(t in simulation_values){
     }
       # Write surface depth for time-step
       rasterWrite(round(surfaceStack$surfaceWater,3), ModelFolder, end_time, layername = "surface")
-      maxHeight <- max_in_raster(round(surfaceStack$surfaceWater,3))# max height cm
+      maxHeight <- max_in_raster(round(surfaceStack$surfaceWater,3)) # max height cm
       # Save the outflow cell
       # Adjust the outflow height -- here in cm
       outflow <- surfaceStack$surfaceWater[outflow_cell][[1]]
@@ -331,7 +342,11 @@ for(t in simulation_values){
   ##---------------- Save step-------------
   if(counter %% saveRate == 0){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
   if(TRUE | gif | counter %% saveRate == 0 | t == length(simulation_duration)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
-
+    if(!impervious){
+      rasterCompile(ModelFolder, "soil", remove = T, overwrite = F)
+    }
+    rasterCompile(ModelFolder, "surface", remove = T, overwrite = F)
+    rasterCompile(ModelFolder, "velocity", remove = T, overwrite = F)
     # CSV saves
     # Adjust time storage file
     simulationDF$simtime <- end_time
@@ -365,11 +380,11 @@ print(paste("The model took: ", paste0(difftime(Sys.time(), start_time))))
   utils::write.table(model_complete, file = file.path(ModelFolder, "ModelComplete.txt"))
   #file.remove(tempStorage)
 
-  if(!impervious){
-    rasterCompile(ModelFolder, "soil", remove = T)
-  }
-  rasterCompile(ModelFolder, "surface", remove = T)
-  rasterCompile(ModelFolder, "velocity", remove = T)
+  # if(!impervious){
+  #   rasterCompile(ModelFolder, "soil", remove = T)
+  # }
+  # rasterCompile(ModelFolder, "surface", remove = F)
+  # rasterCompile(ModelFolder, "velocity", remove = F)
 
 # Save simulation time as text
 end_time <- Sys.time()

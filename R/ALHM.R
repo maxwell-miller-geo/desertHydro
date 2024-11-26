@@ -68,6 +68,7 @@ arid_model <- function(ModelFolder,
                        overwrite = T,
                        write = T,
                        restartModel = F,
+                       courant = 0.8,
                        ...){
 
 # ModelFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\Test_1)"
@@ -109,9 +110,8 @@ if(!file.exists(ModelFolder)){ # Create Model folder, if it doesn't exist
 }
 model_complete <- file.path(ModelFolder, "ModelComplete.txt")
 print("Checking if model is completed...")
-if(file.exists(model_complete) & !overwrite){ # check if model complete
-  print("The model already exists in: ")
-  print(ModelFolder)
+if(file.exists(model_complete) & !overwrite & !restartModel){ # check if model complete
+  print(paste("The model already exists in:", ModelFolder))
   print("Next model...")
   return(0)
 }
@@ -327,7 +327,8 @@ flowModel(ModelFolder = ModelFolder,
           rainfall_method = rainfall_method,
           impervious = impervious,
           gif = gif,
-          restartModel = restartModel
+          restartModel = restartModel,
+          courant = courant
           )
 ## Display - Ought to be modular
 ## ----------------------------------------------------------------------------
