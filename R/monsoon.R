@@ -1,7 +1,7 @@
 # Script to run via Monsoon
 # Blank function that will just be run once inside of monsoon
 
-monsoon <- function(ModelFolder = NULL, time = NaN, date = "2021-07-22", dem = "dem-test.tif", rain_method = "gauges", overwrite = T, courant = 0.8, restart = F){
+monsoon <- function(ModelFolder = NULL, time = NaN, date = "2021-07-22", dem = "dem-test.tif", rain_method = "gauges", overwrite = T, courant = 0.8, restart = F, gif = F){
 
   if(is.null(ModelFolder)){
     ModelFolder <- tempdir()
@@ -19,6 +19,7 @@ monsoon <- function(ModelFolder = NULL, time = NaN, date = "2021-07-22", dem = "
   model1@landCoverFile <- "waterholes_LC.tif"
   model1@key <- "ID"
   model1@courant <- courant
+  model1@gif <- gif
 
   a <- arid_model(model1@ModelFolder,
                   model1@watershedPath,
@@ -39,9 +40,11 @@ monsoon <- function(ModelFolder = NULL, time = NaN, date = "2021-07-22", dem = "
                   write = model1@write,
                   restartModel = model1@restartModel
                   )
+  if(gif){
+    gifs <- desertHydro::gifCreation(model1@ModelFolder, model1@rainMethod, date = model1@date,
+                                     discharge = model1@discharge, saveGraph = T)
+  }
 
-  gifs <- desertHydro::gifCreation(model1@ModelFolder, model1@rainMethod, date = model1@date,
-                                   discharge = model1@discharge, saveGraph = T)
   # Watershed Elements folder
   # WatershedElements <- dirname(system.file("extdata", "dem.tif", package = "desertHydro"))
   #

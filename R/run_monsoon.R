@@ -2,11 +2,11 @@
 # require(desertHydro)
 #
 # date <- "2021-07-22"
-# date <- "2022-07-05"
-# date <- "2022-07-15"
-# date <- "2021-07-24"
+# # date <- "2022-07-05"
+# # date <- "2022-07-15"
+# # date <- "2021-07-24"
 #
-# time <- 5
+# time <- NaN
 # dem <- "dem.tif"
 # rain_method <- "gauges"
 # overwrite <- T
@@ -20,5 +20,6 @@
 #                       dem = dem,
 #                       overwrite = overwrite,
 #                       courant = courant)
+#
 # print("Finished!")
 

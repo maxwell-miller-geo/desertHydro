@@ -214,7 +214,7 @@ rasterCompile <- function(ModelFolder, layername, remove = T, time = T, overwrit
     terra::writeRaster(layerStack, filename = outStack, overwrite = T)
   }
 
-  print(paste0("Created ", layername, "Storage.tif"))
+  #print(paste0("Created ", layername, "Storage.tif"))
   # Remove temporary files
   fullPaths <- lapply(layerFiles, FUN = function(x)(file.path(ModelFolder, x)))
   # Remove temp files

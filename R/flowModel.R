@@ -256,12 +256,12 @@ for(t in simulation_values){
     # # Calculate the time delta
     limits <- time_delta(surfaceStack, gridsize = gridsize, time_step_min = 1, courant_condition = courant, vel = T)
     time_delta_s <- limits[[1]]
-    print(paste("Time calculate:", time_delta_s))
+    #print(paste("Time calculate:", time_delta_s))
     # Calculate the velocity over the timestep
     velocity <- limits[[2]]
-    print(paste("Time remaining:", time_remaining))
+    #print(paste("Time remaining:", time_remaining))
     time_remaining <- time_remaining - time_delta_s
-    print(paste("Time remaining:", time_remaining))
+    #print(paste("Time remaining:", time_remaining))
     if(time_remaining < 0){
       time_delta_s <- time_remaining + time_delta_s
     }
@@ -336,7 +336,7 @@ for(t in simulation_values){
     # Increment the runoff counter be elapsed time (s)
      runoff_counter <- runoff_counter + round(time_delta_s,4)
      # Adjust the raster depth for the outflow cell and save it
-     print(paste("Runoff Counter:", runoff_counter))
+     #print(paste("Runoff Counter:", runoff_counter))
     }
 
   ##---------------- Save step-------------
