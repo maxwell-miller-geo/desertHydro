@@ -499,3 +499,9 @@ getCellCoords <- function(vect, raster){
   coords <- matrix(terra::geom(vect)[,3:4], ncol = 2)
   return(terra::cellFromXY(raster, coords))
 }
+
+# Mass create gifs
+get_folders <- function(parent_folder){
+  folders <- list.dirs(parent_folder)
+  return(folders[2:length(folders)])
+}

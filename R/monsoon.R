@@ -14,12 +14,14 @@ monsoon <- function(ModelFolder = NULL, time = NaN, date = "2021-07-22", dem = "
   model1@demFile <-  dem
   model1@boundary <- desertHydro::polygonize(model1@demFile, model1@watershedPath)
   model1@rainMethod <- rain_method
+  model1@courant <- courant
+  model1@gif <- gif
+  model1@restartModel <- restart
   # Model variation - NLCD
   model1@LandCoverCharacteristics <- "nlcd_characteristics.xlsx"
   model1@landCoverFile <- "waterholes_LC.tif"
   model1@key <- "ID"
-  model1@courant <- courant
-  model1@gif <- gif
+
 
   a <- arid_model(model1@ModelFolder,
                   model1@watershedPath,
