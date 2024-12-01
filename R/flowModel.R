@@ -161,7 +161,7 @@ flowModel <- function(ModelFolder,
   rain_values <- terra::values(SoilStack$mannings_n)
   active_cells <- length(rain_values[!is.na(rain_values)]) # cells with values
   # Progress Bar
-  #progressBar <- utils::txtProgressBar(min = 0, max = length(simulation_duration), style = 3)
+  progressBar <- utils::txtProgressBar(min = 0, max = length(simulation_duration), style = 3)
   start <- Sys.time()
 
   simulation_values <- 1:(length(simulation_duration)-1)
@@ -169,7 +169,7 @@ flowModel <- function(ModelFolder,
   outflow_cell <- drainCells$cell[1]
 # Loop through time
 for(t in simulation_values){
- # utils::setTxtProgressBar(progressBar, t)
+  utils::setTxtProgressBar(progressBar, t)
   beginning_time <- simulation_duration[t]
   end_time <- simulation_duration[t+1]
   timeElapsed <- end_time - beginning_time # time elapsed in minutes
