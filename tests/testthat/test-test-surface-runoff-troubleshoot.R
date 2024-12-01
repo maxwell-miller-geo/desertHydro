@@ -1,7 +1,8 @@
 test_that("Surface routing trouble shootings", {
-  ModelFolder <- "Results/ws-test-2"
+  ModelFolder <- "Results/test-watershed"
   elements <- template_watershed(ModelFolder = ModelFolder, dem = "dem-test.tif")
   rain_file <- elements[[2]]
+
   discharge <- terra::rast(file.path(ModelFolder, "model_dem.tif"))/terra::rast(file.path(ModelFolder, "model_dem.tif"))
   library(microbenchmark)
   flow_d8 <- terra::terrain(terra::rast(file.path(ModelFolder, "model_dem.tif")), v = "flowdir")

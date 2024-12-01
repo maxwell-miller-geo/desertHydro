@@ -410,12 +410,16 @@ get_crs <- function(raster_path){
 }
 
 # Estimate slope based on elevation and pre-existing slope map
-slope_edge <- function(dem, slope, cellsize){
+slope_edge <- function(dem, slope, cellsize, cpp = F){
   if(is.character(dem)){
     dem <- terra::rast(dem)
   }
-  set.seed(1)
-  gradient_edge <- terra::focal(dem, fun = gradient, fillvalue = NA)
+  if(cpp){
+    gradient_edge <- terra::focalCpp(dem, fun = gradientCpp, fillvalue = NaN)
+  }else{
+    gradient_edge <- terra::focal(dem, fun = gradient, fillvalue = NA)
+  }
+
   slope_edges <- atan(gradient_edge/cellsize) * 180/pi
   slope_total <- terra::merge(slope, slope_edges, first = T)
   return(slope_total)
@@ -428,7 +432,7 @@ gradient <- function(x){
   }
   # passes 9 numbers from top left to bottom right
   minimum <- min(x, na.rm = T)
-  if(minimum == x[5]){
+  if(minimum == x[5]){ # find middle number in center
     minimum <- max(x, na.rm = T)
     dh <- minimum - x[5]
   }else{
@@ -451,6 +455,73 @@ gradient <- function(x){
   return(gradient)
 }
 
+Rcpp::cppFunction('NumericVector gradientCpp(NumericVector x, NumericMatrix ni) {
+  // Check if the 5th element is NA (Index 4 in 0-based index)
+  if (R_IsNA(x[4])) {
+    return NumericVector::get_na();  // Return NA if x[5] (x[4] in 0-indexed) is NA
+  }
+
+  // Get the minimum value of the vector, ignoring NAs
+  double minimum = *std::min_element(x.begin(), x.end(), [](double a, double b) {
+    return !R_IsNA(a) && (R_IsNA(b) || a < b);
+  });
+
+  // Check if the minimum is the 5th element (index 4 in 0-based indexing)
+  double dh;
+  if (minimum == x[4]) {
+    // If the minimum is at position 5, use the maximum value
+    minimum = *std::max_element(x.begin(), x.end(), [](double a, double b) {
+      return !R_IsNA(a) && (R_IsNA(b) || a < b);
+    });
+    dh = minimum - x[4];
+  } else {
+    dh = x[4] - minimum;
+  }
+
+  // Return NA if dh is infinite or NA
+  if (R_finite(dh) == 0) {
+    return NumericVector::get_na();
+  }
+
+  // Find indices where the minimum occurs
+  IntegerVector indices;
+  for (int i = 0; i < x.size(); ++i) {
+    if (x[i] == minimum) {
+      indices.push_back(i);
+    }
+  }
+
+  // Check if we have valid indices
+  if (indices.size() == 0) {
+    return NumericVector::get_na();  // Return NA if no minimum found
+  }
+
+  // Randomly sample one index from the minimum values if there are multiple minimums
+  int index = indices[R::runif(0, indices.size())];
+
+  // You can also manipulate the neighborhood information `ni` here if needed
+  // For example, lets assume we calculate the average of the neighborhood
+                  double ni_avg = 0;
+                  for (int i = 0; i < ni.nrow(); ++i) {
+                    for (int j = 0; j < ni.ncol(); ++j) {
+                      ni_avg += ni(i, j);
+                    }
+                  }
+                  ni_avg /= (ni.nrow() * ni.ncol());  // Average of the neighborhood values
+
+                  // Calculate the gradient based on the index and neighborhood data
+                  NumericVector result(2); // 2D spatial vector (x, y)
+
+                  if (index % 2 == 0) {
+                    result[0] = dh / 1;   // X direction
+                    result[1] = ni_avg;   // Y direction (using neighborhood average for the Y direction)
+                  } else {
+                    result[0] = dh / sqrt(2);   // X direction
+                    result[1] = dh / sqrt(2);   // Y direction
+                  }
+
+                  return result;
+                  }')
 # Sum the values of all of the cells within a raster layer
 sumCells <- function(raster){
   if(class(raster) != "SpatRaster"){

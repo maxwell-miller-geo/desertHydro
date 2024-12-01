@@ -272,7 +272,7 @@ for(t in simulation_values){
                                  time_delta_s = time_delta_s,
                                  gridsize = gridsize,
                                  rain_step_min = 1)
-
+    # Save new depth
     surfaceStack$surfaceWater <- SoilStack$surfaceWater <- depth_list[[1]]
     # Adjust the slope for next time-step
     new_dem <- surfaceStack$surfaceWater/100 + surfaceStack$model_dem
@@ -280,6 +280,7 @@ for(t in simulation_values){
     new_slope <- slope_edge(new_dem, slope_temp, cellsize = gridsize)
     names(new_slope) <- "slope"
     surfaceStack$slope <- SoilStack$slope <- new_slope
+
     # Return infiltration depth
     infiltration_depth_cm <- depth_list[[2]]
     rain_depth_cm <- depth_list[[3]]
@@ -291,12 +292,16 @@ for(t in simulation_values){
     # Calculate the time in minutes after each time-step
     end_time <- beginning_time + round((runoff_counter + time_delta_s) / 60, 5) # min
 
-    # Write raster to file
-    if(!impervious){
-      rasterWrite(round(SoilStack$currentSoilStorage,3), ModelFolder, end_time, layername = "soil")
-    }
+    # Write raster to file at every minute
+    if(end_time %% 1 == 0){
+      if(!impervious){
+        rasterWrite(round(SoilStack$currentSoilStorage,3), ModelFolder, end_time, layername = "soil")
+        }
       # Write surface depth for time-step
       rasterWrite(round(surfaceStack$surfaceWater,3), ModelFolder, end_time, layername = "surface")
+      # Write velocity for time-step
+      rasterWrite(round(velocity,3), ModelFolder, end_time, layername = "velocity")
+    }
       maxHeight <- max_in_raster(round(surfaceStack$surfaceWater,3)) # max height cm
       # Save the outflow cell
       # Adjust the outflow height -- here in cm
@@ -308,7 +313,6 @@ for(t in simulation_values){
       # Remove water from outflow cell
       SoilStack$surfaceWater[outflow_cell] <- surfaceStack$surfaceWater[outflow_cell] <- 0
 
-      rasterWrite(round(velocity,3), ModelFolder, end_time, layername = "velocity")
       out_velocity <- velocity[outflow_cell][[1]]
       # Write checks to tables
 
