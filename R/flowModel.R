@@ -167,6 +167,10 @@ flowModel <- function(ModelFolder,
   simulation_values <- 1:(length(simulation_duration)-1)
   # Determine the outflow cell
   outflow_cell <- drainCells$cell[1]
+  # Set infiltration to zero for runoff only
+  if(impervious){
+    SoilStack$infiltration_cmhr <- 0
+  }
 # Loop through time
 for(t in simulation_values){
   utils::setTxtProgressBar(progressBar, t)
@@ -198,7 +202,7 @@ for(t in simulation_values){
   totalDepthCM <- sum(terra::values(SoilStack$current_rainfall), na.rm = T) # Sum of all depths
   area <- terra::expanse(SoilStack$current_rainfall, unit = "m")[[2]] # area with non-zeros
   volumeM3 <- totalDepthCM/100 * area # cubic meters
-  averageDepthCM <- volumeM3 / (area) * 100 # average depth cm
+  averageDepthCM <- volumeM3/(area) * 100 # average depth cm
   #averageDepthCM <- volumeM3 / (area * active_cells) * 100 # average depth cm
   # Saves later in script
   mean_rain_depth_cm <- sumCells(SoilStack$current_rainfall) / activeCells
@@ -223,21 +227,19 @@ for(t in simulation_values){
   # Diversions and tile drains are assumed to effectively divert the lateral flow, so that it goes directly into the stream rather than downhill?? - Not in here
   # Calculate the amount of runoff - based on the difference between the throughfall and current soil storage amount
   # Effective conductivity function for subsurface flow for unsaturated, saturated, and at fields capacity.
-  if(!impervious){
     # Adjustments
     #SoilStack$effectiveInfiltrationRate <- SoilStack$surfaceWater * .4 # Infiltration rate is 40% of surface water
     # Infiltration rate
-    soilAdjustments <- infiltration(SoilStack, simulationTimeSecs)
-    SoilStack$surfaceWater <- soilAdjustments[[1]]
-    SoilStack$currentSoilStorage <- soilAdjustments[[2]]
+    # soilAdjustments <- infiltration(SoilStack, simulationTimeSecs)
+    # SoilStack$surfaceWater <- soilAdjustments[[1]]
+    # SoilStack$currentSoilStorage <- soilAdjustments[[2]]
 
     # Effective conductivity function for subsurface flow for unsaturated, saturated, and at fields capacity.
     # Rate of m/s
     # SoilStack$currentSoilStorage <- subsurfaceFlow(SoilStack, simulationTimeSecs, flowStack_file)
 
-  }else{
-    #SoilStack$surfaceWater <- SoilStack$surfaceWater + SoilStack$throughfall # water not infiltrated
 
+    #SoilStack$surfaceWater <- SoilStack$surfaceWater + SoilStack$throughfall # water not infiltrated
   # Calculates the current storage of the throughfall and current soil storage - adjust for rate of infiltration?
  #becomes surface water
   ## [4] Surface Runoff
@@ -248,13 +250,21 @@ for(t in simulation_values){
                     SoilStack$throughfall,
                     SoilStack$slope,
                     SoilStack$model_dem,
-                    SoilStack$flow_direction)
+                    SoilStack$flow_direction,
+                    SoilStack$infiltration_cmhr)
 
   runoff_counter <- 0
   time_remaining <- simulationTimeSecs
   while(runoff_counter != simulationTimeSecs){
     # # Calculate the time delta
     limits <- time_delta(surfaceStack, gridsize = gridsize, time_step_min = 1, courant_condition = courant, vel = T)
+
+    # Adjust infiltration rate based upon water infiltrated
+    # of remaining water
+    SoilStack$infiltration_cmhr <- SoilStack$infiltration_cmhr * 1
+    # Adjust amount of water stored in the soil
+    # -- SoilStack$currentSoilStorage <- amount infiltrated + previous
+
     time_delta_s <- limits[[1]]
     #print(paste("Time calculate:", time_delta_s))
     # Calculate the velocity over the timestep
@@ -368,7 +378,6 @@ for(t in simulation_values){
   ### give a name to the current storage based upon iteration
   counter <- counter + 1
   }
-}
 }
 print(paste("The model took: ", paste0(difftime(Sys.time(), start_time))))
 

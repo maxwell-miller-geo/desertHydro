@@ -18,6 +18,8 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
     print("Found model soil stack in model folder, using that file!")
     return(ModelFolder)
   }
+  # Look for modelwatershed stack in the Watershed elements folder
+
   model_dem <- file.path(ModelFolder, "model_dem.tif") # hard coded - not great Watershed ELements previously
   print('Locating adjusted digital elevation model.')
 
@@ -61,9 +63,10 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
       #landCoverFile <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Spatial_Data\LandCoverData\nlcd_2021_land_cover_l48_20230630.img)" # school desktop
       land_cover_raster <- land_cover_process(landCoverFile,
                                               model_dem,
-                                              watershed_shape_path,
-                                              model_landcover = model_landcover,
+                                              boundary_path = watershed_shape_path,
                                               key = key,
+                                              model_landcover = model_landcover,
+                                              WatershedElements = WatershedElements,
                                               save = T,
                                               ModelFolder = ModelFolder)
 
@@ -215,21 +218,24 @@ geologyProcess <- function(landCoverShape, SoilStack, WatershedElements, ModelFo
   # hard coded flow
 }
 
-land_cover_process <- function(landCoverPath, model_dem, watershed_shape_path, key, ModelFolder, model_landcover = NULL, save = T, overwrite = T, ...){
+land_cover_process <- function(landCoverFile, model_dem, boundary_path, key, ModelFolder, WatershedElements, model_landcover = NULL, save = T, overwrite = T, ...){
   # Output model land-cover
   if(is.null(model_landcover)){
     model_landcover <- file.path(ModelFolder, "model_landcover.tif") # must pass ModelFolder
   }
-  extension <- sub(".*\\.", "", landCoverPath) # use regular expression to get file extension
+  extension <- sub(".*\\.", "", landCoverFile) # use regular expression to get file extension
+  # Find land cover file in watershed path
+  landCoverFile <- check_path(landCoverFile, WatershedElements)
+  boundary_path <- check_path(boundary_path, WatershedElements)
   if(extension == "shp"){
-    land_cover <- terra::vect(landCoverPath)
+    land_cover <- terra::vect(landCoverFile)
   }else{
-    land_cover <- terra::rast(landCoverPath)
+    land_cover <- terra::rast(landCoverFile)
   }
   dem_local <- terra::rast(model_dem)
   land_cover_raster <- resizeShape(spatialObject = land_cover,
                                    extent_raster = dem_local,
-                                   watershedboundary = watershed_shape_path,
+                                   boundary_path = boundary_path,
                                    key = key,
                                    save = F)
   # Create model land cover raster

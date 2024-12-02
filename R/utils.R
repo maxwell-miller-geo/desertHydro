@@ -576,3 +576,20 @@ get_folders <- function(parent_folder){
   folders <- list.dirs(parent_folder)
   return(folders[2:length(folders)])
 }
+
+# Check the path of the file in input folders
+check_path <- function(filepath, path, path2 = ""){
+  new_path <- file.path(filepath)
+  # Checks if file exists in 3 input paths
+  if(!file.exists(filepath)){
+    new_path <- file.path(path, filepath)
+    if(!file.exists(new_path)){
+      new_path <- file.path(path2, filepath)
+      if(!file.exists(new_path)){
+        stop(paste("Could not find file path: ", filepath,"in \n",path,"\n",path2))
+      }
+    }
+  }
+  return(new_path)
+}
+

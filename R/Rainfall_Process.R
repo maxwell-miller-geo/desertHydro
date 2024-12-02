@@ -12,7 +12,7 @@
 # Weighted Data from Gauges
 # Spatially Distributed Rainfall
 # Always returns a rainfile path - Expects within the Model Folder
-rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method = "gauges", weighted = T, overwrite = F){
+rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method = "gauges", weighted = T, overwrite = F, shape = "voronoi.shp"){
   # Getting rid of notes
   time <- Total_in <- Time_minute <- NULL
   print("Rainfall...")
@@ -103,6 +103,10 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
 
       # Save the output
       readr::write_csv(spatial_rain, rain_spatial_file)
+      # Copy voronoi shapefile over
+      copy_shape <- file.path(WatershedElements, shape)
+      terra::writeVector(terra::vect(copy_shape), file.path(ModelFolder, "voronoi.shp"), overwrite = T)
+      #file.copy(, ModelFolder)
       print("Spatial Rainfall created...")
       return(rain_spatial_file)
     }

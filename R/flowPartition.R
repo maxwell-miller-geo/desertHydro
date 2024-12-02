@@ -780,7 +780,7 @@ surfaceRouting <- function(surfaceStack, velocity, time_delta_s, gridsize = 10, 
   # other rainfall methods
   rainfall_rate_cm_hr <- surfaceStack$throughfall/ time_adjustment
   # Add infiltration rate here ---
-  infiltration_rate_cm_hr <- 0 # to be adjusted - part of surface stack
+  infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr/time_adjustment # to be adjusted - part of surface stack
   # Calculate source water term
   source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
   #n <- slope <- NULL
@@ -869,9 +869,9 @@ time_delta <- function(surfaceStack, time_step_min = 1, gridsize = 10, courant_c
   time_adjustment <- time_step_min/ min_to_hour # time per hour - h^-1
   # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand for
   # other rainfall methods
-  rainfall_rate_cm_hr <- surfaceStack$throughfall/ time_adjustment
+  rainfall_rate_cm_hr <- surfaceStack$throughfall/time_adjustment
   # Add infiltration rate here ---
-  infiltration_rate_cm_hr <- 0 # to be adjusted - part of surface stack
+  infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr/time_adjustment # to be adjusted - part of surface stack
   # Calculate source water term
   source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
   ### Stability check on rainfall magnitude

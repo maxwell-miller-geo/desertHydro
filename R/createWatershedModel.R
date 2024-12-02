@@ -22,18 +22,18 @@
 
 # Function to read in the land cover map - assumes NLCD - crops and resamples
 # to computational watershed
-resizeShape <- function(spatialObject, extent_raster, watershedboundary, key = "MUSYM", save = FALSE, save_name = "", save_location = ""){
+resizeShape <- function(spatialObject, extent_raster, boundary_path, key = "MUSYM", save = FALSE, save_name = "", save_location = ""){
   if(class(spatialObject)[1] == "SpatVector"){
     land_cover_proj <- terra::project(spatialObject, extent_raster) # for categorical data only
   }else{
     land_cover_proj <- terra::project(spatialObject, extent_raster, method = "near") # for categorical data only
   }
   # crop the landcover to the extend boundary
-  if(!is.na(watershedboundary)){
+  if(!is.na(boundary_path)){
     print("Clipping to watershed boundary.")
     if(class(land_cover_proj)[1] == "SpatVector"){
       print("Cropping land cover vector.")
-      land_cover_crop <- terra::crop(land_cover_proj, terra::vect(watershedboundary), ext = FALSE)
+      land_cover_crop <- terra::crop(land_cover_proj, terra::vect(boundary_path), ext = FALSE)
       # Find KEY within names
       # if(key %in% names(land_cover_crop)){
       print("Rasterizing land cover.")
@@ -41,7 +41,7 @@ resizeShape <- function(spatialObject, extent_raster, watershedboundary, key = "
       return(land_cover_adj)
       # }
     }else{
-      land_cover_adj <- terra::crop(land_cover_proj, terra::vect(watershedboundary), ext = FALSE, mask = TRUE)
+      land_cover_adj <- terra::crop(land_cover_proj, terra::vect(boundary_path), ext = FALSE, mask = TRUE)
     }
 
   }else{

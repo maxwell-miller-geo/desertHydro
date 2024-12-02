@@ -46,7 +46,8 @@ model <- methods::setClass("model",
                   write = "logical",
                   restartModel = "logical",
                   gif = "logical",
-                  courant = "numeric"
+                  courant = "numeric",
+                  soilstack = "character"
                   ),
 
             prototype = list(ModelFolder = NA_character_,
@@ -72,7 +73,8 @@ model <- methods::setClass("model",
                             write = T,
                             restartModel = T,
                             gif = F,
-                            courant = 0.8
+                            courant = 0.8,
+                            soilstack = "model_soil_stack.tif"
                             ),
 
             validity = check_model)
@@ -82,3 +84,42 @@ model <- methods::setClass("model",
 #   lapply(files_to_adjust, file.path(watershedPath, files_to_adjust))
 # }
 # )
+
+# Modify model object to certain type
+infil_model <- function(ModelFolder){
+  object <- model()
+  object@ModelFolder <- ModelFolder
+  object@LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
+  object@key <- "MUSYM"
+  object@impervious <- F
+  return(object)
+}
+
+# Modify model object to small scale impervious
+small_impervious <- function(ModelFolder){
+  object <- model()
+  object@ModelFolder <- ModelFolder
+  object@LandCoverCharacteristics <- "nlcd_characteristics.xlsx"
+  object@key <- "ID"
+  object@impervious <- T
+  object@demFile <- "dem-test.tif"
+  object@overwrite <- F
+  object@restartModel <- F
+  object@boundary <- desertHydro::polygonize(object@demFile, object@watershedPath)
+  return(object)
+}
+
+# Modify model to small scale with infiltration
+small_infiltration <- function(ModelFolder){
+  object <- model()
+  object@ModelFolder <- ModelFolder
+  object@LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
+  object@key <- "MUSYM"
+  object@impervious <- T
+  object@demFile <- "dem-test.tif"
+  object@overwrite <- F
+  object@restartModel <- F
+  object@boundary <- desertHydro::polygonize(object@demFile, object@watershedPath)
+  object@soilstack <- file.path(ModelFolder, object@soilstack)
+  return(object)
+}
