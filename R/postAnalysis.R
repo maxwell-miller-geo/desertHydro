@@ -135,7 +135,7 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, discharge = F, sto
       #surface_discharge <- as.numeric(surface_height_cm[x,2:ncol(surface_height_cm)]* cm_to_m2 * m3_to_ft3 / time_elapsed)
       height <- as.numeric(surface_height_cm[x, 2:ncol(surface_height_cm)])
       xvalues <- round(as.numeric(colnames(surface_height_cm[x,2:ncol(surface_height_cm)])),4)
-      surface_discharge <- stream_gauge_discharge(height, time_elapsed, units = "cm")
+      surface_discharge <- stream_gauge_discharge(height, time_elapsed, units = "cm", raster = surfaceStorage)
       estimated <- data.frame(time = xvalues, predDis = surface_discharge)
       # Combined discharges for comparisons
       compareDis <- compareDischarge(rain_discharge, estimated) # outputs: time|recDis|predDis
@@ -184,7 +184,7 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, discharge = F, sto
     # surface_velocity[is.na(surface_velocity)] <- 0
     # surface_velocity <- surface_velocity[,2:ncol(surface_velocity)]
     for(x in 1:nrow(surface_height_cm)){
-      estimatedDischarge <- stream_gauge_discharge(surface_height_cm[x,], time_elapsed)
+      estimatedDischarge <- stream_gauge_discharge(surface_height_cm[x,], time_elapsed, raster = surfaceStorage)
       #estimated <- as.numeric(surface_height_cm[x,2:ncol(surface_height_cm)] * cm_to_m2 * surface_velocity[x,2:ncol(surface_velocity)] * m3_to_ft3) # m^3/s
       #xvalues <- seq(time_step, simulation_length, by = time_step)
       dischargePlot <- ggplot2::ggplot() +

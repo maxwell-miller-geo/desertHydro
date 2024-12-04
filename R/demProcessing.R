@@ -291,7 +291,7 @@ holes_check <- function(dem, temp_no_flow = file.path(tempdir(), "temp-file.tif"
 #   plot(terra::rast(no_flow_rast))
 # }
 # Water with one outlet
-dem_adjustment <- function(dem_file_path, model_dem, max_dist = 10){
+dem_adjustment <- function(dem_file_path, model_dem, max_dist = 11){
   fill_dem <- file.path(tempdir(), "temp-fill.tif")
   no_flow <- file.path(tempdir(), "no-fill.tif")
   flow_accum <- file.path(tempdir(), "flow-accum.tif")

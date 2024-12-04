@@ -415,6 +415,7 @@ slope_edge <- function(dem, slope, cellsize, cpp = F){
     dem <- terra::rast(dem)
   }
   if(cpp){
+    # Does not work
     gradient_edge <- terra::focalCpp(dem, fun = gradientCpp, fillvalue = NaN)
   }else{
     gradient_edge <- terra::focal(dem, fun = gradient, fillvalue = NA)

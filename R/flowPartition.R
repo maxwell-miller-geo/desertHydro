@@ -459,9 +459,9 @@ flowRouting <- function(flowToRoute, flowDirectionMap, time = F, parallel = T){
 # Manning's Formula
 ##-----------------------
 # Percent of total volume moved for a timestep
-percentLength <- function(velocity, timestepSeconds, adjustmentRatio = 1, gridsize = 10){
+percentLength <- function(velocity, timestepSeconds, adjustmentRatio = 1, cellsize = 10){
   lengthMoved <- velocity * timestepSeconds / adjustmentRatio # m/s * seconds / adjustment
-  percentMoved <- lengthMoved / gridsize # (m) /  (m)
+  percentMoved <- lengthMoved / cellsize # (m) /  (m)
   return(percentMoved)
 }
 
@@ -772,7 +772,7 @@ adjust_mannings <- function(slope){
   return(n)
 }
 
-surfaceRouting <- function(surfaceStack, velocity, time_delta_s, gridsize = 10, rain_step_min = 1){
+surfaceRouting <- function(surfaceStack, velocity, time_delta_s, cellsize = 10, rain_step_min = 1){
   # Cannot be negative depths
   # Check the source term
   time_adjustment <- rain_step_min/ 60 # time per hour - h^-1
@@ -795,13 +795,13 @@ surfaceRouting <- function(surfaceStack, velocity, time_delta_s, gridsize = 10, 
 
   h_current <- surfaceStack$surfaceWater
   # Calculate flow lengths
-  flow_units <- flowLength(surfaceStack$flow_direction) * gridsize * 100
+  flow_units <- flowLength(surfaceStack$flow_direction) * cellsize * 100
   # pit_cells <- as.numeric(terra::cells(flow_units, 0))
   # If flow lengths equal 0 for the outflow cell, set equal to 1
   # # Makes the assumption that discharge in the outflow cell is in a cardinal direction
   # flow_units <- terra::ifel(flow_units == 0, 1, flow_units)
-  # flow_length <- flow_units * gridsize * 100 # grid size (m) * (cm/m)
-  #velocity <- manningsVelocity(surfaceStack$mannings_n, h_current, surfaceStack$slope, length = gridsize, units = "cm/s")
+  # flow_length <- flow_units * cellsize * 100 # grid size (m) * (cm/m)
+  #velocity <- manningsVelocity(surfaceStack$mannings_n, h_current, surfaceStack$slope, length = cellsize, units = "cm/s")
   # Unit discharge calculation
   discharge_out <- h_current * velocity / flow_units # unit cm2/s
   #discharge_out[pit_cells] <- 0
@@ -852,12 +852,16 @@ deltaX <- function(discharge_in_sep){
 # }
 ## ---------------------------- Flow Routing fixed
 # Check the limiting conditions of flow
-time_delta <- function(surfaceStack, time_step_min = 1, gridsize = 10, courant_condition = 0.9, vel = F, trouble = T){
+time_delta <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T){
+  if(is.null(cellsize)){
+    cellsize <- grid_size(surfaceStack)
+  }
+  # Remove this from here - doesn't need to be recalculated each time
   if(trouble){
     surfaceStack$mannings_n <- adjust_mannings(surfaceStack$slope)
   }
   # Velocity calculation
-  velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater, surfaceStack$slope, length = gridsize, units = "cm/s")
+  velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater, surfaceStack$slope, length = cellsize, units = "cm/s")
   # Bring in the trouble areas - should be brought in first
   # if(trouble){
   #   trouble_cells <- terra::rast(file.path(ModelFolder, "trouble-cells.tif"))
@@ -871,7 +875,7 @@ time_delta <- function(surfaceStack, time_step_min = 1, gridsize = 10, courant_c
   # other rainfall methods
   rainfall_rate_cm_hr <- surfaceStack$throughfall/time_adjustment
   # Add infiltration rate here ---
-  infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr/time_adjustment # to be adjusted - part of surface stack
+  infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr # to be adjusted - part of surface stack
   # Calculate source water term
   source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
   ### Stability check on rainfall magnitude
@@ -879,7 +883,7 @@ time_delta <- function(surfaceStack, time_step_min = 1, gridsize = 10, courant_c
   time_step_hr <- courant_condition / max(terra::values(source_water_cm_hr, na.rm = T))
   time_step_sec <- floor(time_step_hr * 3600) # convert hours to seconds - needs to be changed
   # Calculate time delta or the time-step for this step in seconds
-  if(time_step_sec < time_step_min * 60){
+  if(time_step_sec > 0 & time_step_sec < time_step_min * 60){
     time_delta_s <- time_step_sec
   }else{
     time_delta_s <- time_step_min * 60
@@ -890,7 +894,8 @@ time_delta <- function(surfaceStack, time_step_min = 1, gridsize = 10, courant_c
   ## Courant stability of flow
   # velocity * time / distance < 1 or
   # dt = C(courant number) * distance traveled (cm) / velocity (cm/s)
-  dt <- floor(min(terra::values(courant_condition * gridsize *100 / velocity, na.rm = T))*1000)/1000
+  # (1000/1000) is to leave 2 decimal places for hundreths of a second to elapse
+  dt <- floor(min(terra::values(courant_condition * cellsize * 100 / velocity, na.rm = T))*1000)/1000
   # Change the time step, if the conditions require it
   if(dt < time_delta_s){
     time_delta_s <- dt
@@ -1022,7 +1027,7 @@ depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 1
 
 
 slopeCalculate <- function(dem){
-  slopeAdj <- slopeInitial <- terra::terrain(dem, neighbors = 4)
+  slopeAdj <- terra::terrain(dem, neighbors = 4)
   #slopeAdj <- terra::focal(slopeInitial, w = 3, "modal", na.policy = "only", na.rm = F)
   return(slopeAdj)
 }
@@ -1260,4 +1265,16 @@ get_out_cell <- function(dem_path){
   return(cell_number)
 }
 
-
+# Determine grid size
+grid_size <- function(raster, unit = "m"){
+  if(class(raster) == "character"){
+    raster <- terra::rast(raster)
+  }
+  # Determine the area of the cell
+  area <- terra::cellSize(raster, unit = unit)
+  # Average value
+  mean <- mean(terra::values(area))
+  # assuming square shape
+  length <- sqrt(mean)
+  return(length)
+}
