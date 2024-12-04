@@ -256,14 +256,27 @@ for(t in simulation_values){
   while(runoff_counter != simulationTimeSecs){
     # # Calculate the time delta
     limits <- time_delta(surfaceStack, cellsize = cellsize, time_step_min = 1, courant_condition = courant, vel = T)
-
+    time_delta_s <- limits[[1]]
+    if(time_delta_s < 0){
+      stop("Error: Negative time step occured, please check input variables")
+    }
     # Adjust infiltration rate based upon water infiltrated
     # of remaining water
-    SoilStack$infiltration_cmhr <- SoilStack$infiltration_cmhr * 1
-    # Adjust amount of water stored in the soil
-    # -- SoilStack$currentSoilStorage <- amount infiltrated + previous
+    if(!impervious){
+      # Insert method for infiltration here or earlier
+      #SoilStack$infiltration_cmhr <- SoilStack$infiltration_cmhr * 1
+      time_hours <- time_delta_s / 3600
+      water_infiltrated_cm <- SoilStack$infiltration_cmhr * time_hours
+      # Adjust amount of water stored in the soil
+      SoilStack$currentSoilStorage <- SoilStack$currentSoilStorage + water_infiltrated_cm
+      # Check to see if the water exceed storage
+      difference <- SoilStack$maxSoilStorageAmount - SoilStack$currentSoilStorage
+      # Calculate the excess water infiltrated
+      excess_water <- terra::ifel(difference < 0, abs(difference), 0)
+      SoilStack$currentSoilStorage <- SoilStack$currentSoilStorage - excess_water
+      # Adjust soil infiltration rate for next time step -- to-do
+    }
 
-    time_delta_s <- limits[[1]]
     #print(paste("Time calculate:", time_delta_s))
     # Calculate the velocity over the timestep
     velocity <- limits[[2]]
