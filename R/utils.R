@@ -593,3 +593,27 @@ check_path <- function(filepath, path, path2 = ""){
   return(new_path)
 }
 
+# Find the difference between to digital elevation models
+rast_diff <- function(x, raster){
+  if(class(x) != "SpatRaster"){
+    x <- terra::rast(x)
+  }
+  if(class(raster) != "SpatRaster"){
+    raster <- terra::rast(raster)
+  }
+  elev_adj <- x - raster
+  values_adj <- terra::values(elev_adj, na.rm = T)
+  dem_adjustments <- values_adj[! values_adj %in% 0]
+  cells_adjusted <- length(dem_adjustments)
+  percent_total <- round(cells_adjusted / length(values_adj)*100,3)
+  range <- range(dem_adjustments)
+  majority_qs <- quantile(dem_adjustments, c(0.1, .5, .9))
+  #histor <- hist(dem_adjustments)
+  cat("Total Cells adjusted:", cells_adjusted, "\nPercent of Cells adjusted (%):", percent_total, "\n")
+  cat("Elevation adjustment range (m):\n", "Carved:", range[1], "\n", "Filled:", range[2],"\n")
+  cat("dem_adjustments by Quantile: \n")
+  print(paste(majority_qs, "\n"))
+
+  hist(dem_adjustments, main = paste("Histogram of elevation adjustments (m)"), xlab = "Adjustments (m)")
+  return(elev_adj)
+}
