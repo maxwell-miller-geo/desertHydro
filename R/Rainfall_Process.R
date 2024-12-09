@@ -648,3 +648,5 @@ resizeImagery <- function(imagery, outline, targetRaster, method = "near"){
 # targetRaster <- terra::rast("Example/WatershedElements/model_dem.tif")
 # # Test script
 # resizeImagery(imagery, outline, targetRaster)
+
+# Process rainfall data to obtain dates

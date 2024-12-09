@@ -48,3 +48,26 @@ test_that("surfaceRunoff function", {
     unlink(ModelFolder, recursive = T)
   }
 })
+test_that("Infiltration tests", {
+  ModelFolder <- tempdir()
+  flow_inputs <- template_watershed(ModelFolder)
+
+  # Create elements necessary for surface water stack
+  surfaceStack <- c(SoilStack$model_dem,
+                    SoilStack$flow_direction,
+                    SoilStack$slope,
+                    SoilStack$mannings_n,
+                    SoilStack$throughfall,
+                    SoilStack$surfaceWater,
+                    SoilStack$infiltration_cmhr)
+
+  s_list <- surfaceRouting(surfaceStack, time_delta_s = 20, rain_step_min = 1)
+
+  # Should return 0 infiltration!!
+  # Remove the outputs from memory
+  if(file.exists(ModelFolder)){
+    all_files <- list.files(ModelFolder)
+    file.remove(file.path(ModelFolder, all_files))
+    unlink(ModelFolder)
+  }
+})

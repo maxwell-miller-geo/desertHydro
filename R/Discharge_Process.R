@@ -372,7 +372,9 @@ days_of_discharge <- function(discharge_csv){
 # # discharge_csv <- r"(C:\Thesis\Arid-Land-Hydrology\R\max-discharge-per-day.csv)"
 
 ## ------------------------ Height -> discharge
-stream_gauge_discharge <- function(height, time_elapsed, units = "cm", gridsize = 10){
+stream_gauge_discharge <- function(height, time_elapsed, units = "cm", cellsize = NULL, raster = NULL){
+  if(!is.null(raster))
+    cellsize <- grid_size(raster)
   # Height adjustments
   height <- as.numeric(height)
   length_diff <- length(height) - length(time_elapsed)
@@ -388,7 +390,7 @@ stream_gauge_discharge <- function(height, time_elapsed, units = "cm", gridsize 
   if(units == "cm"){
     cm_to_m <- .01 # conversion factor - Conversion to m
     m3_to_ft3 <- 35.3147
-    Q <- (height * cm_to_m * gridsize* m3_to_ft3) / time_elapsed
+    Q <- (height * cm_to_m * cellsize* m3_to_ft3) / time_elapsed
   }
   return(round(Q,3))
 }

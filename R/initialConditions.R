@@ -6,15 +6,18 @@
 #library(terra)
 
 
-initial_conditions <- function(ModelOutputs, model_dem, gridsize = 10.0){
+initial_conditions <- function(ModelOutputs, model_dem, cellsize = NULL){
   # Load in the raster version
   local_dem <- terra::rast(model_dem)
+  if(is.null(cellsize)){
+    cellsize <- grid_size(local_dem)
+  }
   # Constants for model
   minimum_elevation <- terra::minmax(local_dem)[1] # meters
   maximum_elevation <- terra::minmax(local_dem)[2] # meters
   basin_area_m <- terra::expanse(local_dem, unit = "m")[[2]] # basin area meters^2
   basin_area_hec <- terra::expanse(local_dem, unit = "ha")[[2]]# basin area hectares
-  gridsize <- gridsize # meters
+  cellsize <- cellsize # meters
 
   #recession_con_a <- 75 #input for perc2runoff non-linear percolation reservoir model -- higher value flattens regression curve and peaks, lower value heightens initial value and rapidly drops
   #reces_con_b <- 0.2 #input for perc2runoff non-linear percolation reservoir model -- higher value flattens regression curve and peaks, lower value raises peaks (0.1-0.9) and rapidly drops
@@ -34,7 +37,7 @@ initial_conditions <- function(ModelOutputs, model_dem, gridsize = 10.0){
 
   # Assign conditions into a variable list
   variable_list <- data.frame(date, time, minimum_elevation, maximum_elevation, basin_area_m,
-                              basin_area_hec, gridsize)
+                              basin_area_hec, cellsize)
 
   # save the initial constants for a particular run and the initial soil conditions
   utils::write.csv(variable_list, file.path(ModelOutputs, "set_up_variables.csv"), row.names = F)

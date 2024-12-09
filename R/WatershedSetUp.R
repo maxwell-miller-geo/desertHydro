@@ -6,7 +6,7 @@
 # 4 - Voronoi polygons
 # Some of the scripts are created in external functions
 
-watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watershed_shape_path, LandCoverCharacteristics, landCoverFile, landcovername = "landcover_soil.tif", key = "MUSYM", overwrite = T, cellsize = 10){ # DEM should be unaltered
+watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watershed_shape_path, LandCoverCharacteristics, landCoverFile, landcovername = "landcover_soil.tif", key = "MUSYM", overwrite = T, cellsize = NULL){ # DEM should be unaltered
   #requireNamespace("terra")
   # DEM adjustments
   # Adjust the input DEM with the watershed shapefile.
@@ -20,7 +20,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
   }
   # Look for modelwatershed stack in the Watershed elements folder
 
-  model_dem <- file.path(ModelFolder, "model_dem.tif") # hard coded - not great Watershed ELements previously
+  model_dem <- file.path(ModelFolder, "model_dem.tif") # hard coded - not great Watershed Elements previously
   print('Locating adjusted digital elevation model.')
 
   if(!file.exists(model_dem) | overwrite){
@@ -28,7 +28,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
     flow_accumlation_wb(dem_file_path = DEM,
                         ModelFolder = ModelFolder,
                         watershed_shape_path = watershed_shape_path,
-                        overwrite = overwrite) # Does not overwrite - creates many rasters
+                        overwrite = overwrite) #  creates many rasters
     print('Finished creating adjusted DEM.')
   } else{
     print("Located DEM")
@@ -38,6 +38,10 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
   # Slope creation
   slope <- file.path(ModelFolder, "model_slope.tif") # default name of slope file
   print('Locating slope file')
+  # Check if cell size exists
+  if(is.null(cellsize)){
+    cellsize <- grid_size(model_dem)
+  }
   if(!file.exists(slope) | overwrite){
     # Expects one of the outputs from previous function to produce "cropped_dem.tif"
     #cropped_dem <- file.path(WatershedElements, "cropped_dem.tif")
@@ -247,8 +251,11 @@ land_cover_process <- function(landCoverFile, model_dem, boundary_path, key, Mod
 
 
 # Create a "template" version of model parameters without having to run through everything everytime
-template_watershed <- function(ModelFolder = "Results/test-watershed", model_object = NULL, WatershedElements = NULL, date = "2021-07-21", rainfall_method = "gauges", dem = "dem-test.tif"){
-
+template_watershed <- function(ModelFolder = "Results/test-watershed", model_object = NULL, WatershedElements = NULL, date = "2021-07-21", rainfall_method = "gauges", dem = "dem-test.tif", cellsize = NULL){
+  if(is.null(cellsize)){
+    print("Determining cell size from dem")
+    cellsize <- grid_size(terra::rast(file.path(model()@watershedPath, "dem.tif")))
+  }
   # Use default model object
   if(is.null(model_object)){
     model_object <- model()
@@ -272,7 +279,7 @@ template_watershed <- function(ModelFolder = "Results/test-watershed", model_obj
                             landCoverFile = model_object@landCoverFile,
                             key = model_object@key,
                             overwrite = F,
-                            cellsize = 10
+                            cellsize = cellsize
                             )
   }
   if(!file.exists(SoilStack) | !file.exists(drainCells)){

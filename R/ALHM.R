@@ -209,28 +209,10 @@ model_dem <- file.path(ModelFolder, "model_dem.tif") # can adjust the input dem
 #"C:\Thesis\Arid-Land-Hydrology\R\Example\WatershedElements\"
 #smooth_dem <- terra::rast(model_dem)
 
-initial_conditions(ModelOutputs = ModelFolder, model_dem = model_dem) # saves initial conditions into model folder
-
 ## Initial Soil conditions
 ##-----------------------------------
+initial_conditions(ModelOutputs = ModelFolder, model_dem = model_dem) # saves initial conditions into model folder
 
-#source("initialSoilConditions.R")
-
-# ClassificationMap <- landCoverFile # adjusted/cropped classification map - must be named correctly
-#
-# #DEM <- file.path(WatershedElements, "cropped_dem.tif") # clipped dem, elevations unaltered - must be named correctly
-# #DEM <- file.path(WatershedElements, "model_dem.tif") # modified dem, elevations unaltered - must be named correctly
-# # Initial soil conditions for model - a stacked map of soil characteristics including:
-# # Initial saturation, porosity, soil depth, hydraulic conductivity, etc.
-# # See initialSoilConditions.R for more details
-# initial_soil_conditions(LandCoverCharacteristics = LandCoverCharacteristics,
-#                         ClassificationMap = ClassificationMap,
-#                         DEM = model_dem,
-#                         outline = watershed_shape_path,
-#                         ModelOutputs = ModelFolder,
-#                         key = key,
-#                         overwrite = overwrite
-#                         ) # Saves the modeled soil stack as raster brick
 
 ## Rainfall
 ##--------------------------------------
