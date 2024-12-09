@@ -594,3 +594,15 @@ check_path <- function(filepath, path, path2 = ""){
   return(new_path)
 }
 
+# Create function that finds all the dates in a given dataset
+get_dates <- function(dataframe){
+  # Read data with data.table
+  if(is.character(dataframe)){
+    dt <- data.table::fread(dataframe)
+  }else{
+    dt <- dataframe
+  }
+  dates <- lubridate::mdy(as.vector(dt[,1]))
+  dates <- as.Date(as.vector(dt[, 1]), format = "%d-%m-%Y")
+  lubridate::mdy(dt[,1])
+}

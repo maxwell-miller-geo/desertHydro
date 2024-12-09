@@ -174,6 +174,10 @@ flowModel <- function(ModelFolder,
   if(impervious){
     SoilStack$infiltration_cmhr <- 0
   }
+  # Adjust manning's based on slope - not re-adjusted through time
+  if(TRUE){
+    SoilStack$mannings_n <- adjust_mannings(SoilStack$slope)
+  }
 # Loop through time
 for(t in simulation_values){
   utils::setTxtProgressBar(progressBar, t)
@@ -249,7 +253,9 @@ for(t in simulation_values){
                     SoilStack$slope,
                     SoilStack$model_dem,
                     SoilStack$flow_direction,
-                    SoilStack$infiltration_cmhr)
+                    SoilStack$infiltration_cmhr,
+                    SoilStack$currentSoilStorage,
+                    SoilStack$maxSoilStorageAmount)
 
   runoff_counter <- 0
   time_remaining <- simulationTimeSecs
@@ -289,8 +295,8 @@ for(t in simulation_values){
 
     # Calculate new surface (cm)
     depth_list <- surfaceRouting(surfaceStack = surfaceStack,
-                                 velocity = velocity,
                                  time_delta_s = time_delta_s,
+                                 velocity = velocity,
                                  cellsize = cellsize,
                                  rain_step_min = 1)
     # Save new depth
@@ -298,7 +304,7 @@ for(t in simulation_values){
     # Adjust the slope for next time-step
     new_dem <- surfaceStack$surfaceWater/100 + surfaceStack$model_dem # assumes meters
     slope_temp <- terra::terrain(new_dem, v = "slope", neighbors = 8, unit = "degrees")
-    new_slope <- terra::merge(slope_temp, model_slope)
+    new_slope <- terra::merge(slope_temp, model_slope) # opened earlier
     #new_slope <- slope_edge(new_dem, slope_temp, cellsize = cellsize)
     names(new_slope) <- "slope"
     surfaceStack$slope <- SoilStack$slope <- new_slope

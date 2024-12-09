@@ -640,6 +640,10 @@ waterMovement <- function(surfaceStorage,
 # ManningsWideChannelVelocity(n = 0.05, depth = .004, slope = 45, length = 10)
 # ----------------------------- Manning's Channel Velocity
 manningsVelocity <- function(n, depth, slope, length, units = "cm/s"){
+  if(is.null(length) & class(n) == "SpatRaster"){
+    length <- grid_size(n)
+  }
+
   depth_adj <- depth / 100 # convert depth in cm to meters
   Area <- depth_adj * length # calculate cross sectional area
   HydraulicRadius <-  Area / (2* depth_adj + length) # calculate the hydraulic radius
@@ -772,54 +776,85 @@ adjust_mannings <- function(slope){
   return(n)
 }
 
-surfaceRouting <- function(surfaceStack, velocity, time_delta_s, cellsize = 10, rain_step_min = 1){
+surfaceRouting <- function(surfaceStack,  time_delta_s, velocity = NULL, cellsize = NULL, rain_step_min = 1, infiltration = T){
   # Cannot be negative depths
+  if(is.null(velocity)){
+    velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater, surfaceStack$slope, length = NULL)
+  }
+  if(is.null(cellsize)){
+    cellsize <- grid_size(velocity)
+  }
   # Check the source term
   time_adjustment <- rain_step_min/ 60 # time per hour - h^-1
+  hr_to_s <- 1 / 3600
   # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand for
   # other rainfall methods
-  rainfall_rate_cm_hr <- surfaceStack$throughfall/ time_adjustment
-  # Add infiltration rate here ---
-  infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr/time_adjustment # to be adjusted - part of surface stack
+  # Rainfall rate over 1 minute - depth of rain (cm)
+  rainfall_rate_cm_hr <- surfaceStack$throughfall/time_adjustment # cm/hr
+  # Add infiltration rate here --- cm/hr - rate should already be in cm/hr
+  max_infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr
   # Calculate source water term
-  source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
-  #n <- slope <- NULL
-  # Calculate total water infiltrated per time step
-  hr_to_s <- 1 / 3600
-  # Calculate for infiltrated water
-  infiltrated_water_cm <-  infiltration_rate_cm_hr * hr_to_s * time_delta_s
-  rainfall_water_cm <- rainfall_rate_cm_hr * hr_to_s * time_delta_s
+  #source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
+
   # Calculate the source term: (rainfall rate - infiltration rate) * time elapsed
   # the rainfall period. For each time step
-  source_water_cm <- source_water_cm_hr * hr_to_s * time_delta_s
+  #source_water_cm <- source_water_cm_hr * hr_to_s * time_delta_s
+  # Calculate total water infiltrated per time step
+  # Maximum amount of water to be infiltrated
+  max_infiltrated_water_cm <-  max_infiltration_rate_cm_hr * hr_to_s * time_delta_s
+  # Amount of rainfall for given time-step
+  rainfall_water_cm <- rainfall_rate_cm_hr * hr_to_s * time_delta_s
 
   h_current <- surfaceStack$surfaceWater
-  # Calculate flow lengths
-  flow_units <- flowLength(surfaceStack$flow_direction) * cellsize * 100
-  # pit_cells <- as.numeric(terra::cells(flow_units, 0))
-  # If flow lengths equal 0 for the outflow cell, set equal to 1
-  # # Makes the assumption that discharge in the outflow cell is in a cardinal direction
-  # flow_units <- terra::ifel(flow_units == 0, 1, flow_units)
-  # flow_length <- flow_units * cellsize * 100 # grid size (m) * (cm/m)
-  #velocity <- manningsVelocity(surfaceStack$mannings_n, h_current, surfaceStack$slope, length = cellsize, units = "cm/s")
-  # Unit discharge calculation
-  discharge_out <- h_current * velocity / flow_units # unit cm2/s
-  #discharge_out[pit_cells] <- 0
+  # Calculate flow lengths - m * 100 = cm
+  flow_units <- flowLength(surfaceStack$flow_direction) * cellsize * 100 # cm
+  # Discharge out of every cell - normalized by distance
+  discharge_out <- h_current * velocity / flow_units # unit cm/s - technically cm/s
   #discharge_out <- discharge_out / flow_units # scale the discharge by the distance out
   discharge_sum <- sumCells(discharge_out)
-  # Route the discharge in different directions
+  # Route the discharge in different directions - technically a velocity right now..
   discharge_in_sep <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
   discharge_in <- sum(discharge_in_sep, na.rm = T)
   discharge_in_sum <- sumCells(discharge_in)
+  # Check that discharge out equals discharge in
   testthat::expect_equal(discharge_in_sum, discharge_sum)
-  # Calculate the movement of water
-  water_move <- time_delta_s * (discharge_out - discharge_in)
-  testthat::expect_lt(sumCells(water_move), 1e-9)
+  # Calculate the movement of water = s * (cm/s - cm/s) = cm
+  flow_water_cm <- time_delta_s * (discharge_out - discharge_in)
+  testthat::expect_lt(sumCells(flow_water_cm), 1e-9)
+  # New height cannot be negative!! Negative depths are bad
+  # Determine the infiltrated water per cell
+  if(infiltration){
+  possible_surface_water <- h_current - flow_water_cm + rainfall_water_cm
+  infiltration_overflow <- max_infiltrated_water_cm - possible_surface_water
+  all_surface_infiltrated <- terra::ifel(infiltration_overflow >= 0, 1, 0) * possible_surface_water
+  partial_surface_infiltrated <- terra::ifel(infiltration_overflow < 0, 1, 0) * max_infiltrated_water_cm
+  potential_infiltration_cm <- all_surface_infiltrated + partial_surface_infiltrated
+  # Check if storage is exceeded
+  current_storage <- SoilStack$currentSoilStorage
+  potential_storage_cm <- SoilStack$currentSoilStorage + potential_infiltration_cm
+  storage_check <- SoilStack$maxSoilStorageAmount - potential_storage_cm
+  # If the amount of water that could be infiltrated is greater than the soil capacity,
+  # set the soil storage to max capacity
+  max_storage_cells <- terra::ifel(storage_check <= 0, 1, 0) * SoilStack$maxSoilStorageAmount
+  partial_storage_cells <- terra::ifel(storage_check > 0, 1, 0) * potential_storage_cm
+  soil_storage <- max_storage_cells + partial_storage_cells # adjust the soil - stack
+  SoilStack$currentSoilStorage <- soil_storage
+  actual_infiltration_cm <- soil_storage - current_storage
+  #partial_infiltration <- terra::ifel()
+  # Add infiltrated water to soil? do afterwaterds...
+  #soil_level <- terra::ifel(SoilStack$maxSoilStorageAmount - SoilStack$currentSoilStorage + infiltrated_water_cm < 0,
+                            # SoilStack$maxSoilStorageAmount,
+                            # SoilStack$currentSoilStorage + infiltrated_water_cm)
+  }else{
+    actual_infiltration_cm <- surfaceStack$infiltration_cmhr
+  }
   # Calculate new height
-  h_new <- h_current - water_move + source_water_cm
+  h_0 <- h_current - flow_water_cm + (rainfall_water_cm - actual_infiltration_cm)
+  # If infiltrated water is greater than water present
+  h_new <- terra::ifel(h_0 < 0, 0, h_0)
   # Check this makes sense
   # New surface depth
-  return(list(h_new,infiltrated_water_cm,rainfall_water_cm))
+  return(list(h_new,actual_infiltration_cm,rainfall_water_cm))
 }
 
 # return mean distance that flows into a given cell
@@ -855,10 +890,6 @@ deltaX <- function(discharge_in_sep){
 time_delta <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T){
   if(is.null(cellsize)){
     cellsize <- grid_size(surfaceStack)
-  }
-  # Remove this from here - doesn't need to be recalculated each time
-  if(trouble){
-    surfaceStack$mannings_n <- adjust_mannings(surfaceStack$slope)
   }
   # Velocity calculation
   velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater, surfaceStack$slope, length = cellsize, units = "cm/s")
