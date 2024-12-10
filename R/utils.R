@@ -577,6 +577,19 @@ get_folders <- function(parent_folder){
   return(folders[2:length(folders)])
 }
 
+# Get the dates within a csv file
+get_dates <- function(dataframe, date_key = "time"){
+  # Read in as data.table
+  if(is.character(dataframe)){
+    dt <- data.table::fread(dataframe)
+  }else{
+    dt <- dataframe
+  }
+  # Get names of column headers
+  time_index <- grep(date_key, colnames(dt), value = T) # Returns first column name with "time"
+  date_vector <- unique(as.Date(dt[[time_index]]))
+  return(date_vector)
+}
 # Check the path of the file in input folders
 check_path <- function(filepath, path, path2 = ""){
   new_path <- file.path(filepath)

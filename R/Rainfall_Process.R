@@ -309,8 +309,8 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", total_col = 
 
 rainfallForEvent <- function(rainDF, eventDate, remove = T){
   filteredDF <- rainDF |> # filters recorded rainfall by given date "YYYY-MM-DD"
-    dplyr::filter(lubridate::date(rainDF[,1]) == eventDate) |>
-    dplyr::filter(dplyr::row_number() <= dplyr::n()-1)
+    dplyr::filter(lubridate::date(rainDF[,1]) == eventDate) #|>
+    #dplyr::filter(dplyr::row_number() <= dplyr::n()-1) # Why is this here?
 
   if(nrow(filteredDF) == 0){
     return(NULL) # No dates found - exits script
@@ -339,20 +339,23 @@ rainfallFilter <- function(date, ModelFolder, WatershedElements, overwrite = F){
     errorMessage <- paste("No rainfall data found for", date, ": Exiting script.")
     print(errorMessage)
     print("--------------------------")
-    return(utils::write.table(errorMessage, file = file.path(ModelFolder, "errors.txt"), row.names = F, col.names = F))
+    return(NULL)
+    #return(utils::write.table(errorMessage, file = file.path(ModelFolder, "errors.txt"), row.names = F, col.names = F))
     #stop(paste("ERROR: No rainfall data found for date:", date))
   }
   # Remove some pesky early data
   rainTemp <- rainFiltered |>
     dplyr::arrange(rainFiltered$Time_minute)
 
-  # Calculate time difference of first rainfall value
-  timeDiff <- diff(rainTemp$Time_minute)[[1]]
-
-  if(timeDiff > 30){ # remove first rainfall value if greater than 30 minutes before next rainfall
-    print("Removing minor incident rainfall")
-    rainTemp <- rainTemp[2:length(rainTemp$Time_minute),]
+  # Calculate time difference of first rainfall value - if more than 1 value
+  if(nrow(rainTemp) != 1){
+    timeDiff <- diff(rainTemp$Time_minute)[[1]]
+    if(timeDiff > 30){ # remove first rainfall value if greater than 30 minutes before next rainfall
+      print("Removing minor incident rainfall")
+      rainTemp <- rainTemp[2:length(rainTemp$Time_minute),]
+    }
   }
+
   # Further filter the rainfall files
   rainFiltered <-  rainTemp |>
     dplyr::mutate(time = (as.numeric(Time_minute - base::min(Time_minute)) / 60) + 1)

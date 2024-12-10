@@ -12,7 +12,7 @@
 
 ##-------------------- Discharge Creation
 # Function that checks and/or creates discharge for given date
-dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, discharge = F, store = T, discharge_file = "observage-discharge.csv"){
+dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file = NULL, discharge = F, store = T, discharge_file = "observage-discharge.csv"){
   time <- Total_in <- NULL
   # Load in the filtered rainfall file
   rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
@@ -36,11 +36,15 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file, dis
                                     saveGraphs = store)
       # Create filtered rainfall
       rainFiltered <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = F)
+      if(is.null(rainFiltered)){
+        return(cat("No rainfall found for", date))
+      }
       # Combine the rainfall and discharge into a single .csv file
       rain_discharge <- rainfall_discharge_combine(rainfallDF = rainFiltered,
                                                    dischargeDF,
                                                    outpath = ModelFolder,
-                                                   store = T)
+                                                   store = T,
+                                                   date = date)
       return(rain_discharge)
     }
   }else{
@@ -185,11 +189,12 @@ discharge_present <- function(data_folder, date, ModelFolder = NULL, discharge_n
 #
 # # Function that creates combined discharge and rainfall output
 #
-rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store = T, trim = F){
+rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store = T, trim = F, date = NULL){
   # # Create zeros within the data create a sequence of time from the rainfall DF
   # time_seq <- data.frame(Time_minute = seq(rainfallDF$Time_minute[1], tail(rainfallDF$Time_minute,1), by = "min"))
   # # Change gauge names
   time <- Time_minute <- NULL
+  print(colnames(rainfallDF))
   colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "-", "_")
   colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "[.]", "_")
   # # This step combines the rainfall and the discharge data into 1 dataframe - dirty
@@ -255,7 +260,7 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
   # xapprox <- approx(x$discharge, method = "linear")
   # Writes the values into csv
   if(store){
-    filename <- file.path(outpath, "rain-discharge.csv")
+    filename <- file.path(outpath, paste0("rain-discharge-",date,".csv"))
     readr::write_csv(x = rain_discharge, file = filename)
     # Read csv
     #x <- readr::read_csv(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Demo_Test\2022-07-15\rain-discharge.csv)")
