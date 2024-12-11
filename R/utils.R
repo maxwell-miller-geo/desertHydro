@@ -630,3 +630,9 @@ rast_diff <- function(x, raster){
   hist(dem_adjustments, main = paste("Histogram of elevation adjustments (m)"), xlab = "Adjustments (m)")
   return(elev_adj)
 }
+
+# Remove null values from a list
+remove_nulls <- function(my_list){
+  cleaned_list <- my_list[!sapply(my_list, function(x) length(x) == 0 || is.null(x))]
+  return(cleaned_list)
+}

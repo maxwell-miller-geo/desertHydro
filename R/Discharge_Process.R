@@ -43,7 +43,7 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file = NU
       rain_discharge <- rainfall_discharge_combine(rainfallDF = rainFiltered,
                                                    dischargeDF,
                                                    outpath = ModelFolder,
-                                                   store = T,
+                                                   store = store,
                                                    date = date)
       return(rain_discharge)
     }
@@ -261,6 +261,7 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
   # Writes the values into csv
   if(store){
     filename <- file.path(outpath, paste0("rain-discharge-",date,".csv"))
+    filename <- file.path(outpath, paste0("rain-discharge.csv"))
     readr::write_csv(x = rain_discharge, file = filename)
     # Read csv
     #x <- readr::read_csv(r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleModel\Demo_Test\2022-07-15\rain-discharge.csv)")
@@ -414,3 +415,39 @@ dischargeVolume <- function(dischargeDF, ModelFolder){
   data.table::fwrite(volume, file.path(ModelFolder, "observed-discharge-volume.csv"))
   return(volume)
  }
+
+# Determine the discharge dates, lengths, and rainfall amounts
+model_elements <- function(discharge_file, ModelFolder, WatershedElements = model()@watershedPath, store = F, discharge = T){
+  # Assumes observable discharge file is in location
+  dates <- get_dates(discharge_file)
+  # Create discharge events from those dates
+  discharge_events <- lapply(dates, dischargeCreate, ModelFolder, WatershedElements, discharge = T, store = store)
+  # Assign names to list
+  names(discharge_events) <- dates
+  # Filter out null dates
+  dates_filtered <- remove_nulls(discharge_events)
+  # Save stuff
+  wb <- openxlsx::createWorkbook()
+
+  for (sheet_name in names(dates_filtered)){
+    addWorksheet(wb, sheet_name)                      # Add a worksheet
+    writeData(wb, sheet_name, dates_filtered[[sheet_name]])  # Write data to the sheet
+  }
+  openxlsx::saveWorkbook(wb, file.path(ModelFolder, "DischargeEvents.xlsx") , overwrite = TRUE)
+  cat("Workbook saved as 'DischargeEvents.xlsx'.\n")
+
+  a <- lapply(dates_filtered, date_length_rain)
+  # Create dataframe/data.table from the list
+  df <- do.call(rbind, lapply(a, as.data.frame))
+  # Save the dataframe
+  utils::write.csv(x = df, file = file.path(ModelFolder, "input-list.csv"))
+  #df <- data.frame(date = names(dates_filtered), duration = )
+  return(df)
+}
+
+# Determines the very specific qualities of a dataframe - not-flexible
+date_length_rain <- function(dataframe){
+  rain <- sum(dataframe$Total_in)
+  length <- max(dataframe$time)
+  return(list(duration = length, rain_total = rain))
+}

@@ -830,15 +830,15 @@ surfaceRouting <- function(surfaceStack,  time_delta_s, velocity = NULL, cellsiz
   partial_surface_infiltrated <- terra::ifel(infiltration_overflow < 0, 1, 0) * max_infiltrated_water_cm
   potential_infiltration_cm <- all_surface_infiltrated + partial_surface_infiltrated
   # Check if storage is exceeded
-  current_storage <- SoilStack$currentSoilStorage
-  potential_storage_cm <- SoilStack$currentSoilStorage + potential_infiltration_cm
-  storage_check <- SoilStack$maxSoilStorageAmount - potential_storage_cm
+  current_storage <- surfaceStack$currentSoilStorage
+  potential_storage_cm <- surfaceStack$currentSoilStorage + potential_infiltration_cm
+  storage_check <- surfaceStack$maxSoilStorageAmount - potential_storage_cm
   # If the amount of water that could be infiltrated is greater than the soil capacity,
   # set the soil storage to max capacity
-  max_storage_cells <- terra::ifel(storage_check <= 0, 1, 0) * SoilStack$maxSoilStorageAmount
+  max_storage_cells <- terra::ifel(storage_check <= 0, 1, 0) * surfaceStack$maxSoilStorageAmount
   partial_storage_cells <- terra::ifel(storage_check > 0, 1, 0) * potential_storage_cm
   soil_storage <- max_storage_cells + partial_storage_cells # adjust the soil - stack
-  SoilStack$currentSoilStorage <- soil_storage
+  surfaceStack$currentSoilStorage <- soil_storage
   actual_infiltration_cm <- soil_storage - current_storage
   #partial_infiltration <- terra::ifel()
   # Add infiltrated water to soil? do afterwaterds...

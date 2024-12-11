@@ -28,25 +28,8 @@ monsoon <- function(ModelFolder = NULL, date = "2021-07-22", model_type = "defau
   }
 
   # Insert function to mess with the default options through additional inputs
+  # Added stuff - should be passed as arguments
 
-  #return(list(...))
-  # Model Class
-  # model1 <- model(ModelFolder = ModelFolder) # default model characteristics
-  # model1@overwrite <- overwrite
-  # model1@date <- date
-  # model1@simulation_length <- time
-  # model1@demFile <-  dem
-  # model1@boundary <- desertHydro::polygonize(model1@demFile, model1@watershedPath)
-  # model1@rainMethod <- rain_method
-  # model1@courant <- courant
-  # model1@gif <- gif
-  # model1@restartModel <- restart
-  # # Model variation - NLCD
-  # model1@LandCoverCharacteristics <- land_cover
-  # model1@landCoverFile <- "waterholes_LC.tif"
-  # model1@key <- "ID"
-  # model1@impervious <- impervious
-  # Added stuff
   model1@date <- date
   model1@rainMethod <- rain_method
   model1@courant <- courant
