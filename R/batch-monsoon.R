@@ -1,23 +1,28 @@
 # Run monsoon batch files
-# require(desertHydro)
-# # Expect multiple arguments from command line
-# args <- commandArgs(trailingOnly = T)
-# # Expected argument order
+#require(desertHydro)
+# Expect multiple arguments from command line
+#args <- commandArgs(trailingOnly = T)
+# Expected argument order
 # date <- as.character(args[1])
 # model_type <- as.character(args[2])
 # rain_method <- as.character(args[3])
 # courant <- as.numeric(args[4])
-#
+## Uncomment here
+# date <- "2022-07-15"
+# rain_method <- "spatial"
+# model_type <- "default"
 # # Hard coded right now
-# time <- 2
+# time <- 5
 # overwrite <- F
-# # folderName <- paste0(date,"-", rain_method, "-c-", courant)
-# #
+# courant <- 0.8
+# folderName <- file.path("Results", paste0(date,"-", rain_method, "-c-", courant))
+#
 # desertHydro:::monsoon(folderName,
-#                       time = time,
 #                       date = date,
+#                       model_type = model_type,
 #                       rain_method = rain_method,
 #                       overwrite = overwrite,
-#                       courant = courant)
+#                       courant = courant,
+#                       time = time)
 
 # print("Finished!")

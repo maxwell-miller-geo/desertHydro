@@ -175,7 +175,7 @@ flowModel <- function(ModelFolder,
     SoilStack$infiltration_cmhr <- 0
   }
   # Adjust manning's based on slope - not re-adjusted through time
-  if(TRUE){
+  if(FALSE){
     SoilStack$mannings_n <- adjust_mannings(SoilStack$slope)
   }
 # Loop through time

@@ -20,6 +20,11 @@ monsoon <- function(ModelFolder = NULL, date = "2021-07-22", model_type = "defau
     model1 <- infil_model(ModelFolder)
     model1@key <- "MUSYM"
   }
+  if(model_type == "l-runoff"){
+    model1 <- infil_model(ModelFolder)
+    model1@key <- "MUSYM"
+    model1@impervious <- T
+  }
   if(model_type == "s-runoff"){
     model1 <- small_impervious(ModelFolder)
   }

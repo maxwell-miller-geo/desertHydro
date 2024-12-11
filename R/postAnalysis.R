@@ -229,7 +229,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
 
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
   velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
-  #subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
+  subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
 
   # Check if stacks have been created
   if(terra::nlyr(surfaceStorage) == 1){
@@ -278,24 +278,24 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
       gganimate::anim_save(filename = paste0(date,"-surface-Depth.gif"), path = ModelFolder, animation = surface_plot, fps = 10, renderer = gganimate::gifski_renderer())
     }
 
-    ##--------------------------------------
+    #--------------------------------------
     # Subsurface depths
-    #Load in surface moisture
-    # print(paste("Creating soil moisture animation..."))
-    # if(terra::nlyr(subsurfaceStorage) > 1){
-    #   meltedMoistureContent <- meltStack(subsurfaceStorage, timevalues = xvalues) # subsurface % fill through time
-    #   # Create an animated ggplot - Subsurface Storage
-    #   subsurface_plot <- animateStack(meltedMoistureContent,
-    #                                   title = "Moisture Content",
-    #                                   units = "% Full",
-    #                                   caption = paste0(total_rain," inches of rain over ",
-    #                                                    round(total_rain_duration, 2)," minutes."))
-    #
-    #   # Display the animation
-    #   #gganimate::animate(subsurface_plot)
-    #   # store the animated GIF
-    #   gganimate::anim_save(filename = paste0(date, "-moisture-content.gif"), path = ModelFolder, animation = subsurface_plot, fps = 10, renderer = gganimate::gifski_renderer())
-    # }
+    # Load in surface moisture
+    print(paste("Creating soil moisture animation..."))
+    if(terra::nlyr(subsurfaceStorage) > 1){
+      meltedMoistureContent <- meltStack(subsurfaceStorage, timevalues = xvalues) # subsurface % fill through time
+      # Create an animated ggplot - Subsurface Storage
+      subsurface_plot <- animateStack(meltedMoistureContent,
+                                      title = "Moisture Content",
+                                      units = "% Full",
+                                      caption = paste0(total_rain," inches of rain over ",
+                                                       round(total_rain_duration, 2)," minutes."))
+
+      # Display the animation
+      #gganimate::animate(subsurface_plot)
+      # store the animated GIF
+      gganimate::anim_save(filename = paste0(date, "-moisture-content.gif"), path = ModelFolder, animation = subsurface_plot, fps = 10, renderer = gganimate::gifski_renderer())
+    }
 
 
     ## ------------------------------
