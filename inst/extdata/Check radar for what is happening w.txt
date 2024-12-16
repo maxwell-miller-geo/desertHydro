@@ -1,0 +1,18 @@
+Check radar for what is happening with some of these events
+Show in a defense for these regions - spatial patterns of these types of storms events. Image of cloud over gauges- show data and how this manifests in data.
+
+How do you resolve that?
+Pair with radar product.
+Half a dozen to a dozen events. That you trust with rainfall and response 
+Find better rainfall product. Besides land-cover and topography input. At the mercy of the data.
+
+Duration of flow and maximum discharge. It might show a nice correlation, suggest an outlier events. Have plotted all gauges?
+
+1) Know lag time - start of storm and start of flow. Some is negative. Center of mass of rain and the peak discharge
+2) Duration of flow
+3) Peak discharge
+4) Sum up the volume of water from discharge. Total rain * area = averaging the rainfall over the areas. 
+Rain gauges capture all of the water necessary.
+
+Radar data
+Plotting the data out to see and pick the best events.
