@@ -29,17 +29,15 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file = NU
       #print(date)
       # Load in stream data from Waterholes - GCMRC
       dischargeDataPath <- file.path(WatershedElements, "example_discharge.csv") #- sloppy
-      dischargeDataPath <- file.path(WatershedElements, "waterholes_discharge_2001_2024.tsv")
       # Calculate the daily discharge for given date
       dischargeDF <- dailyDischarge(discharge_file_path = dischargeDataPath,
                                     discharge_date = date,
                                     save_location = ModelFolder,
                                     saveGraphs = store)
       # Create filtered rainfall
-      rainFiltered <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = T)
+      rainFiltered <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = F)
       if(is.null(rainFiltered)){
-        cat("No rainfall found for:", date)
-        return(NULL)
+        return(cat("No rainfall found for", date))
       }
       # Combine the rainfall and discharge into a single .csv file
       rain_discharge <- rainfall_discharge_combine(rainfallDF = rainFiltered,
@@ -196,6 +194,7 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
   # time_seq <- data.frame(Time_minute = seq(rainfallDF$Time_minute[1], tail(rainfallDF$Time_minute,1), by = "min"))
   # # Change gauge names
   time <- Time_minute <- NULL
+  print(colnames(rainfallDF))
   colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "-", "_")
   colnames(rainfallDF) <- stringr::str_replace_all(colnames(rainfallDF), "[.]", "_")
   # # This step combines the rainfall and the discharge data into 1 dataframe - dirty
@@ -204,16 +203,10 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
   #   tidyr::replace_na(list( time = 0))
   # # This step combines the rainfall and the discharge data into 1 dataframe - dirty
 
-  # Get the first time recorded for the discharge and rainfall - assumes input from rainfall and discharge
-  discharge_start <- dischargeDF$time[1]
-  discharge_end <- dischargeDF$time[nrow(dischargeDF)]
+  # Get the first time recorded for the discharge and rainfall
+  discharge_start <- dischargeDF$`time (MST)`[1]
   rain_start <- rainfallDF$Time_minute[1]
-  if(nrow(dischargeDF) < 2){
-    cat("Less than two points of discharge present for", date, "\n")
-    return(NULL)
-  }
-  #rain_end <- rainfallDF$Time_minute[nrow(rainfallDF)]
-  # Match up starting points of rainfall
+
   if(rain_start < discharge_start){
     time_diff <- as.numeric(difftime(discharge_start, rain_start, units = "mins"))
     # Append discharge time at the end of rainfall
@@ -224,44 +217,43 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
                      .before = 1) |>
       dplyr::arrange(Time_minute)
   }
-  # Cut off the rain fall that occurs after discharge == 0
-  rainfallDF <- rainfallDF[rainfallDF$Time_minute <= discharge_end,]
-  # Combine maps
-  rain_discharge <- dplyr::full_join(rainfallDF, dischargeDF, by = dplyr::join_by("Time_minute" == "time"))
+
+  rain_discharge <- dplyr::full_join(rainfallDF, dischargeDF, by = dplyr::join_by("Time_minute" == "time (MST)"))
   # interpolate between values
   # Selectable columns
-  cols <- c("Time_minute", "Total_in", "discharge", "scale_height", "time")
+  cols <- c("Time_minute", "Total_in", "discharge", "height")
 
   # Filter columns
   rain_discharge <- rain_discharge |>
-    dplyr::arrange(rain_discharge$Time_minute) |>
-    dplyr::select(cols)# |>
-
-    # dplyr::mutate(time = (as.numeric(rain_discharge$Time_minute - base::min(rain_discharge$Time_minute)
-    #                          ) / 60) + 1)
+    dplyr::select(cols) |>
+    dplyr::arrange(rain_discharge$`Time-minute`) |>
+    dplyr::mutate(time = (as.numeric(rain_discharge$`Time_minute` - base::min(rain_discharge$`Time_minute`)
+                             ) / 60) + 1)
 
   #return(rain_discharge)
   # Perform linear approximation on discharge and height values
   rain_discharge$discharge <- round(zoo::na.approx(rain_discharge$discharge, na.rm = F), 4)
-  rain_discharge$scale_height <- round(zoo::na.approx(rain_discharge$scale_height, na.rm = F), 2)
+  rain_discharge$height <- round(zoo::na.approx(rain_discharge$height, na.rm = F), 2)
   #return(rain_discharge)
   # Replace NA values with 0s
   rain_discharge[is.na(rain_discharge)] <- as.integer(0)
-  rain_discharge$time <- as.numeric(difftime(rain_discharge$Time_minute, rain_start, units = "mins")) + 1
+
   # Add a line of zeros at the beginning
   rain_discharge <-  rain_discharge |>
       dplyr::add_row(Time_minute = c(rain_discharge[1,1] - lubridate::minutes(1)),
                         Total_in = 0,
                        discharge = 0,
-                          scale_height = 0,
-                            time = 0, .before = 1)
+                          height = 0,
+                            time = 0, .before = 1) |>
+                      dplyr::arrange(time) |>
+                      dplyr::mutate(difftime = c(0, diff(time)))
 
   # Cut off values if rainfall occurs after discharge recedes
   #which(rain_discharge$difftime > 60)[1])){
-  # index <- which(rain_discharge$difftime > 60)[1] # grab first time hour jump
-  # if(rain_discharge[index, ]$discharge < 1 & trim){ # remove last entries if little discharge
-  #     rain_discharge <- rain_discharge[1:(index-1),] # remove end points
-  #  }
+  index <- which(rain_discharge$difftime > 60)[1] # grab first time hour jump
+  if(rain_discharge[index, ]$discharge < 1 & trim){ # remove last entries if little discharge
+      rain_discharge <- rain_discharge[1:(index-1),] # remove end points
+   }
 
   # Interpolate between discharge amounts
   # discharge <- approx(rain_discharge$discharge, method = "linear")
@@ -315,45 +307,40 @@ plot_rainfall_discharge <- function(rain_discharge_DF, date, store = T, outpath 
 #
 #
 # # Filters discharge data set for a particular date, optional - create graphic
-dailyDischarge <- function(discharge_file_path, discharge_date, save_location, saveGraphs = T, time_match = "time", height_match ="Height", discharge_match = "Discharge"){
+dailyDischarge <- function(discharge_file_path, discharge_date, save_location, saveGraphs = T){
   discharge <- discharge_diff <- height <- NULL
   # Read data into R
   stream_data <- data.table::fread(discharge_file_path)
-  # Find the column with time, Height, and discharge in it
-  time_col <- grep(time_match, colnames(stream_data), value = T)[1]
-  height_col <- grep(height_match, colnames(stream_data), value = T)[1] # also bad practice
-  discharge_col <- grep(discharge_match, colnames(stream_data), value = T)[1]
-  cols <- c(time_col, discharge_col,height_col)
+  # find colum with time
+  # time <- stringMatch(stream_data, "time")
+  # time_col <- stream_data[,..time][[1]]
+  # convertTime <- lubridate::ymd_hms(time_col)
+  # stream_data[, time_date := as.POSIXct(time_col, format = "%Y-%m-%d %H:%M:%S")]
+  # as.POSIXct(stream_data[,1], format ="%Y-%m-%d %H:%M:%S")
+  #
+  # sFilter data with recorded discharge value
+  discharge_per_day <- as.data.frame(stream_data) |>
+    dplyr::mutate(date = lubridate::ymd_hms(stream_data$`time (MST)`, quiet = T), discharge = stream_data$`Discharge(cfs)-GCMRC-GCLT1`, height = stream_data$`Gage Height(ft)-GCMRC-GCLT1`) |>
+    dplyr::filter(lubridate::date(date) == discharge_date) |> # filters out discharge for date "YYYY-MM-DD"
+    dplyr::mutate(discharge_diff = round(c(diff(discharge),0),3)) |> # Calculates difference in discharge per time step
+    dplyr::filter(discharge > 0 | discharge_diff > 0) # selects locations with measured discharge and point before discharge occur
 
-  # Select necessary columns
-  discharge_per_day <- stream_data[,..cols]
-  discharge_per_day$date <- as.Date(discharge_per_day[[time_col]])
-  names(discharge_per_day) <- c("time", "discharge", "height", "date")
-
-  # Select day of discharge
-  discharge_per_day <- discharge_per_day[date %in% discharge_date] # Select the discharge date
-
-  # Calculate discharge diifference
-  discharge_per_day$discharge_diff <- round(c(diff(discharge_per_day[,discharge]),0),3)
-
-  # Determine index of last row with discharge
-  discharge_per_day <- discharge_per_day[discharge_diff > 0 | data.table::shift(discharge_diff,type = "lag") != 0]
 
   # Scale the height data for a particular storm to zero.
-  discharge_per_day$scale_height <- round(discharge_per_day$height - min(discharge_per_day$height), 3)
+  discharge_per_day$height <- round(discharge_per_day$height - min(discharge_per_day$height), 3)
 
   # Determine the length of discharge
   time_diff <- round(as.double(difftime(data.table::last(discharge_per_day$time), discharge_per_day$time[1], units = "mins")), 3) # number of minutes for particular discharge
 
   # Discharge graph
   discharge_plot <- ggplot2::ggplot(discharge_per_day) +
-    ggplot2::geom_line(ggplot2::aes(x = hms::as_hms(time), y = discharge)) +
+    ggplot2::geom_line(ggplot2::aes(x = hms::as_hms(date), y = discharge)) +
     ggplot2::labs(title = paste("Discharge at Waterholes Watershed, AZ:", discharge_date), x = "Time", y = paste0("Measured Discharge ft\u00b3/s)")) + ggplot2::theme_bw() +
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 
   # Height graph
   height_plot <- ggplot2::ggplot(discharge_per_day) +
-    ggplot2::geom_line(ggplot2::aes(x = hms::as_hms(time), y = height)) +
+    ggplot2::geom_line(ggplot2::aes(x = hms::as_hms(date), y = height)) +
     ggplot2::labs(title = paste("Stage Height at Waterholes Watershed, AZ:", discharge_date), x = "Time", y = "Measured Height (ft)") +
     ggplot2::theme_bw() +
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
@@ -429,25 +416,49 @@ dischargeVolume <- function(dischargeDF, ModelFolder){
   return(volume)
  }
 
-# Determine the discharge dates, lengths, and rainfall amounts
-discharge_events <- function(discharge_file, ModelFolder, WatershedElements = model()@watershedPath, store = F, discharge = T){
+#' Discharge-Rainfall Comparisons
+#' Determine the discharge amounts, lengths, and rainfall amounts for a set of given dates
+#' Function is not very flexible in current state.
+#'
+#' @param discharge_file table containing a list of discharge dates
+#' @param ModelFolder Path to save location
+#' @param WatershedElements Path to location of saved stream data and rainfall data
+#' @param store T/F If TRUE, saves elements to ModelFolder
+#'
+#' @return Returns and saves csv file into Model Folder. Optional saves recorded
+#' discharge and rainfall events as excel spreadsheet.
+#' @export
+#'
+#' @examples \dontrun{
+#' # Change this to output folder
+#' discharge_file <- "C:/path_to_discharge/discharge_file.csv"
+#' ModelFolder <- r"(C:/Thesis/Arid-Land-Hydrology/R/Example/SampleModel)"
+#' WatershedElements <- file.path("inst/extdata/DemoElements") # demo elements
+#' discharge_events <- discharge_rainfall_events(discharge_file, ModelFolder,
+#'                                       WatershedElements, store = T)
+#' }
+discharge_rainfall_events <- function(discharge_file, ModelFolder, WatershedElements = model()@watershedPath, store = F){
   # Assumes observable discharge file is in location
+  # Discharge file needs to just be observable discharge dates...
   dates <- get_dates(discharge_file)
   # Create discharge events from those dates
-  discharge_events <- lapply(dates, dischargeCreate, ModelFolder, WatershedElements, discharge = discharge, store = store)
+  discharge_events <- lapply(dates, dischargeCreate, ModelFolder, WatershedElements, discharge = T, store = store)
   # Assign names to list
   names(discharge_events) <- dates
   # Filter out null dates
   dates_filtered <- remove_nulls(discharge_events)
-  # Save stuff
-  wb <- openxlsx::createWorkbook()
-  for(sheet_name in names(dates_filtered)){
-    openxlsx::addWorksheet(wb, sheet_name)                      # Add a worksheet
-    openxlsx::writeData(wb, sheet_name, dates_filtered[[sheet_name]])  # Write data to the sheet
+  # If saved
+  if(store){
+    # Save stuff
+    wb <- openxlsx::createWorkbook()
+    for (sheet_name in names(dates_filtered)){
+      openxlsx::addWorksheet(wb, sheet_name)                      # Add a worksheet
+      openxlsx::writeData(wb, sheet_name, dates_filtered[[sheet_name]])
+      }# Write data to the sheet
+    openxlsx::saveWorkbook(wb, file.path(ModelFolder, "DischargeEvents.xlsx") , overwrite = TRUE)
+    cat("Workbook saved as 'DischargeEvents.xlsx'.\n")
   }
-  openxlsx::saveWorkbook(wb, file.path(ModelFolder, "DischargeEvents.xlsx") , overwrite = TRUE)
-  cat("Workbook saved as 'DischargeEvents.xlsx'.\n")
-
+  return(dates_filtered)
   a <- lapply(dates_filtered, date_length_rain)
   # Create dataframe/data.table from the list
   df <- do.call(rbind, lapply(a, as.data.frame))
@@ -461,6 +472,5 @@ discharge_events <- function(discharge_file, ModelFolder, WatershedElements = mo
 date_length_rain <- function(dataframe){
   rain <- sum(dataframe$Total_in)
   length <- max(dataframe$time)
-  max_discharge <- max
   return(list(duration = length, rain_total = rain))
 }
