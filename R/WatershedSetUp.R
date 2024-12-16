@@ -92,7 +92,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
     if(method == "flowMap1D"){
       discharge <- terra::rast(model_dem)/ terra::rast(model_dem)
       flowStack <- flowMap1D(discharge, dem_path = model_dem)
-      terra::writeRaster(flowStack, flow_file)
+      terra::writeRaster(flowStack, flow_file, overwrite = T)
     }else{
       flowStack <- flowMap(dem = model_dem, outFolder = ModelFolder)
     }

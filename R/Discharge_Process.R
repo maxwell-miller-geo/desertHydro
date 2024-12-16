@@ -209,7 +209,7 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
   discharge_end <- dischargeDF$time[nrow(dischargeDF)]
   rain_start <- rainfallDF$Time_minute[1]
   if(nrow(dischargeDF) < 2){
-    cat("Less than two points of discharge present for", date)
+    cat("Less than two points of discharge present for", date, "\n")
     return(NULL)
   }
   #rain_end <- rainfallDF$Time_minute[nrow(rainfallDF)]
