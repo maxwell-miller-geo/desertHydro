@@ -4,7 +4,14 @@
 \alias{rasterCompile}
 \title{Function that takes a bunch of rasters and combined them by name and time}
 \usage{
-rasterCompile(ModelFolder, layername, remove = F, time = T)
+rasterCompile(
+  ModelFolder,
+  layername,
+  remove = T,
+  time = T,
+  overwrite = T,
+  end = T
+)
 }
 \arguments{
 \item{ModelFolder}{path to folder containing files}

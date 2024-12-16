@@ -1,28 +1,28 @@
-# library(readxl)
-# #library(methods)
-# library(terra)
-# library(tidyverse)
-
-# Create the land cover stacked map with soil characteristics
-# createSoilRasters <- function(ClassMap, soilTable){
-#   landtypes <- unique(terra::values(ClassMap, na.rm = TRUE))
-#   outStack <- c() # creates empty vector
-#   for(x in 1:length(soilTable)){
-#
-#     if(is.character(soilTable[[x]])){
-#       next # Breaks if the value in the table is a character (names)
-#     }
-#     c_matrix <- matrix(cbind(as.numeric(soilTable$NLCD_Key), c(soilTable[[x]])), ncol = 2) # Create classification matrix
-#     temp <- terra::classify(ClassMap, c_matrix) # classify ClassMap based on matrix
-#     names(temp) <- names(soilTable[x]) # Assign a name to the Raster Layer
-#     outStack <- append(outStack, temp) # Append raster layer to raster 'brick'
-#   }
-#   return(outStack)
-# }
-
 # Function to read in the land cover map - assumes NLCD - crops and resamples
 # to computational watershed
-resizeShape <- function(spatialObject, extent_raster, boundary_path, key = "MUSYM", save = FALSE, save_name = "", save_location = ""){
+#' Resizes and reprojects the shape of a spatial object based on a pair
+#'
+#' @param spatialObject SpatVector or SpatRaster to be resized and/or reprojected
+#' @param extent_raster Spatial extent raster to reproject into
+#' @param boundary_path Optional shapefile path location to crop raster to
+#' @param key Key to land cover type
+#' @param save T/F If T, saves adjust land cover raster
+#' @param save_name If save = T, file name to save adjusted land cover raster -
+#' "~/adjusted_land_cover.tif"
+#' @param save_location If save = T, location to save adjusted land cover raster
+#'
+#' @return Returns a SpatRaster with reprojected and cropped to input extents
+#' dimenstions
+#' @export
+#'
+#' @examples \dontrun{
+#' spatialObject <- terra::rast()
+#' extent_raster <- terra::rast()
+#' boundary_path <- terra::vect()
+#' key <- "MUSYM"
+#' new_land_cover <- resizeShape(spatialObject, extent_raster, boundary_path, key = key)
+#' }
+resizeShape <- function(spatialObject, extent_raster, boundary_path = NA, key = "MUSYM", save = FALSE, save_name = "", save_location = ""){
   if(class(spatialObject)[1] == "SpatVector"){
     land_cover_proj <- terra::project(spatialObject, extent_raster) # for categorical data only
   }else{
@@ -31,6 +31,7 @@ resizeShape <- function(spatialObject, extent_raster, boundary_path, key = "MUSY
   # crop the landcover to the extend boundary
   if(!is.na(boundary_path)){
     print("Clipping to watershed boundary.")
+    # Procedure for spatial vector land cover files
     if(class(land_cover_proj)[1] == "SpatVector"){
       print("Cropping land cover vector.")
       land_cover_crop <- terra::crop(land_cover_proj, terra::vect(boundary_path), ext = FALSE)
@@ -60,9 +61,8 @@ resizeShape <- function(spatialObject, extent_raster, boundary_path, key = "MUSY
 # Function to set the initial storage amount based upon table values
 storage_amount <- function(landCoverTable){
   # Function changes the table values and returns two column list with NLCD land type and corresponding storage
-  landCoverTable$maximumStorageAmount <- (1- landCoverTable$rockPercent) * landCoverTable$saturatedMoistureContent * landCoverTable$soilDepth
+  landCoverTable$maximumStorageAmount <- (1-landCoverTable$rockPercent) * landCoverTable$saturatedMoistureContent * landCoverTable$soilDepth
   # Create a map??
-  #return(cbind(c(landCoverTable$NLCD_Key),c(landCoverTable$storageAmount)))
   return(landCoverTable$maximumStorageAmount)
 }
 

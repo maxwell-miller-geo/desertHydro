@@ -12,14 +12,6 @@
 # }
 
 
-storage_amount <- function(landCoverTable){
-  # Function changes the table values and returns two column list with NLCD land type and corresponding storage
-  landCoverTable$storageAmount <- (1- landCoverTable$rockPercent) * landCoverTable$saturatedMoistureContent * landCoverTable$soilDepth
-  # Create a map??
-  #return(cbind(c(landCoverTable$NLCD_Key),c(landCoverTable$storageAmount)))
-  return(landCoverTable$storageAmount)
-}
-
 
 # Calculates the hydraulic conductivity
 hydraulicFieldConductivity <- function(KsatMatrix, SaturatedMC, FieldCapAmt, SoilDepth){

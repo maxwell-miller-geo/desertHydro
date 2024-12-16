@@ -7,22 +7,18 @@
 dischargeAnalysis(
   ModelFolder,
   WatershedElements,
-  time_step,
-  simulation_length,
   discharge = F,
   store = T,
   date = NULL,
-  gauge_locations = file.path(WatershedElements, "stream_gauge.shp")
+  gauge_locations = file.path(WatershedElements, "stream_gauge.shp"),
+  units = "cm/s",
+  ...
 )
 }
 \arguments{
 \item{ModelFolder}{Model Folder with saved outputs}
 
 \item{WatershedElements}{Watershed Folder with Watershed components. Assumes that}
-
-\item{time_step}{Time in minutes}
-
-\item{simulation_length}{Length of simulation in minutes}
 
 \item{discharge}{T/F: Default TRUE: If TRUE, will look for observed discharge
 hydrographs}
@@ -36,6 +32,10 @@ file.}
 \item{gauge_locations}{path to shapefile that contains gauge locations for
 discharge comparisons. Default location checks Watershed Elements folder for
 "stream_gauge.shp"}
+
+\item{time_step}{Time in minutes}
+
+\item{simulation_length}{Length of simulation in minutes}
 }
 \value{
 Returns discharge excel table and plots from model simulation

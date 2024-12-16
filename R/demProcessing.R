@@ -1,11 +1,3 @@
-## Whitebox - Flow accumulation piece from the DEM
-### Install whitebox tools
-#install.packages("whitebox", repos="http://R-Forge.R-project.org")
-#whitebox::install_whitebox()
-# load in whitebox
-# library(whitebox)
-# library(terra)
-
 full_workflow_wb <- function(dem_file_path, outputLocation, out_dem = "./adjusted_dem.tif", out_pntr = "./flow_direction.tif", out_accum = "./flow_accum.tif"){
   setwd(outputLocation)
   #clipped_dem <- "./clipped_dem.tif" # name to save clip
