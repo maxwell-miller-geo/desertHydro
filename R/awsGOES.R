@@ -1,6 +1,7 @@
 # AWS CLI interface with GOES Series
 
 get_GOES_Rainfall <- function(date = "2022-07-15", region = "us-east-1", ModelFolder, WatershedElements = model()@watershedPath){
+  ModelFolder <- "C:/PackageDev/desertHydro/Results/example/"
   # Calculate the day of the year
   date <- as.Date(date)
   year <- as.numeric(strftime(date, format = "%Y"))
