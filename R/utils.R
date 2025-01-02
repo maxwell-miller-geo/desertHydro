@@ -3,11 +3,15 @@
 # to put
 
 ## ---------------------------------- Wrapper finder function
-stringMatch <- function(dataset, guessName = "Discharge", string = T){
+stringMatch <- function(dataset, guessName = "Discharge", string = T, multi = F){
   matchLocations <- grep(guessName, colnames(dataset), ignore.case = T) # index of guesses
   if(length(matchLocations) == 1){
     stringName <- colnames(dataset)[matchLocations]
   }else if(length(matchLocations > 1)){
+    if(multi){
+      stringName <- colnames(dataset)[matchLocations]
+      return(stringName)
+    }
     print("Found multiple matches with data sheet, using first match")
     stringName <- colnames(dataset)[matchLocations][1]
   }else{
@@ -635,4 +639,38 @@ rast_diff <- function(x, raster){
 remove_nulls <- function(my_list){
   cleaned_list <- my_list[!sapply(my_list, function(x) length(x) == 0 || is.null(x))]
   return(cleaned_list)
+}
+
+beautify <- function(string){
+  remove <- stringr::str_replace_all(string, "_", " ")
+  capitalize <- capwords(remove)
+  ## and the better, more sophisticated version:
+  return(capitalize)
+}
+
+capwords <- function(s, strict = FALSE) {
+  cap <- function(s) paste(toupper(substring(s, 1, 1)),
+                           {s <- substring(s, 2); if(strict) tolower(s) else s},
+                           sep = "", collapse = " " )
+  sapply(strsplit(s, split = " "), cap, USE.NAMES = !is.null(names(s)))
+}
+
+get_start_end_time <- function(table, time_col = "time", data_col = "Total_in", timezone = "America/Phoenix"){
+  if(is.character(table)){
+    table <- data.table::fread(table)
+  }
+
+  timeIndex <- grep(time_col, colnames(table), ignore.case = T)[[1]]
+  dataIndex <- grep(data_col, colnames(table), ignore.case = T)[[1]]
+
+  start <- head(which(table[[dataIndex]] != 0), 1)
+  end <- tail(which(table[[dataIndex]] != 0), 1)
+
+  start_t <- lubridate::force_tz(table[[timeIndex]][start], timezone)
+  end_t <- lubridate::force_tz(table[[timeIndex]][end], timezone)
+
+  # Return start and end time as list
+  start_end <- data.frame(start = start_t,
+                    end = end_t)
+  return(start_end)
 }

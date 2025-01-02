@@ -320,4 +320,8 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
 # Test
 # gifCreation(ModelFolder, rainfall_method = "goes")
 
+# Create function that looks at the discharge and rainfall data and determines certain characteristics
+# Assumes column called Total_in
+
+
 

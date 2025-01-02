@@ -287,8 +287,9 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", total_col = 
   # Sum the rainfall for a particular time-step
   joinedDF$Total_in <- rowSums(joinedDF[gauges])
   outDF <- joinedDF
-  outputName <- paste0("rain-data-", level, "-2022.csv")
+
   if(write){
+    outputName <- paste0("rain-data-", level, "-2022.csv")
     utils::write.csv(outDF, file = file.path(rainfall_folder, outputName), row.names = F)
   }
   return(outDF)
