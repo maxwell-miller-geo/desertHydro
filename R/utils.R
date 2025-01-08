@@ -674,3 +674,22 @@ get_start_end_time <- function(table, time_col = "time", data_col = "Total_in", 
                     end = end_t)
   return(start_end)
 }
+
+order_by_time <- function(file_list) {
+  # Extract the observation start time (YYYYDDDHHMMSSS)
+  extract_start_time <- function(filename) {
+    matches <- regmatches(filename, regexpr("s\\d{4}\\d{3}\\d{6}", filename))
+    sub("s", "", matches) # Remove the 's' prefix
+  }
+
+  # Extract start times for all files
+  start_times <- sapply(file_list, extract_start_time)
+
+  # Convert start times to a sortable format
+  sortable_times <- as.numeric(start_times)
+
+  # Order the file list by start times
+  ordered_list <- file_list[order(sortable_times)]
+
+  return(ordered_list)
+}

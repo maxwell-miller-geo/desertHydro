@@ -18,7 +18,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
   print("Rainfall...")
   rain_file <- file.path(ModelFolder, "Model-Rainfall.csv")
   rain_spatial_file <- file.path(ModelFolder, "Model-Spatial-Rainfall.csv")
-  rain_goes_file <- file.path(ModelFolder, "goes-rainfall.tif")
+  rain_goes_file <- file.path(ModelFolder, paste0(date, "-goes.tif"))
   rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
   rainFilterFile <- file.exists(rainFiltered_file)
   # Check for files that have been written
@@ -64,7 +64,31 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
     # Rainfall filtering
     rainFiltered <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = T)
     #test <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = F)
+    # GOES Rainfall
+    if(method == "goes"){
+      #temporalFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Temporal_Data)"
+      #rainFolder <- file.path(temporalFolder, paste0(date,"-rain"))
+      # Get rainfall and discharge if possible.
+      if(T){
+        # Rainfall filtering
+        rainFiltered <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = T)
+        #Save rainfall to model folder
+        rainNormal <- rainFiltered |>
+          dplyr::select(time, Total_in) |>
+          round(4) # round columns to 4 decimals
+        readr::write_csv(rainNormal, rain_file)
+        print("Rainfall created...")
 
+        # Determine discharge
+        discharge <- dischargeCreate(date, ModelFolder, WatershedElements, rain_file = rain_file, discharge = T)
+        # Determine start and end times
+        #a <- get_start_end_time(discharge)
+        rain_file <- get_GOES_Rainfall(ModelFolder, date = date, WatershedElements = WatershedElements)
+        # rainfall_inches_per_time <- rainfall_stack/6
+        # total_rainfall <- sum(rainfall_inches_per_time, na.rm = T)
+      }
+      return(rain_file)
+    }
     # Normalize the rainfall data
     if(method == "gauges"){
       # Weight the input rainfall
@@ -110,13 +134,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
       print("Spatial Rainfall created...")
       return(rain_spatial_file)
     }
-    # GOES Rainfall
-    if(method == "goes"){
-      temporalFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Temporal_Data)"
-      rainFolder <- file.path(temporalFolder, paste0(date,"-rain"))
-      goes_Rain <- goesRain(date, rainFolder, WatershedElements)
-      return(goes_Rain)
-    }
+
   }
 }
 # Test
@@ -127,7 +145,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
 # rain_file <- file.path(ModelFolder, paste0(date, "-Rainfall.csv"))
 # rain_spatial_file <- file.path(ModelFolder, paste0(date, "-Spatial-Rainfall.csv"))
 ## ----------------- Rainfall per time step
-rainfallAccum <- function(rain, beginning_time, end_time, rainfall_method = "gauges", ModelFolder = ""){
+rainfallAccum <- function(rain, beginning_time, end_time, rainfall_method = "gauges", ModelFolder = "", goes = NA){
   if(rainfall_method == "spatial"){
     # Get rainfall from shape
     rainForGauges <- cumulativeRain(rain, left = beginning_time, right = end_time, spatial = T)
@@ -136,16 +154,15 @@ rainfallAccum <- function(rain, beginning_time, end_time, rainfall_method = "gau
                                                rainAtGauges = rainForGauges,
                                                rainfallRaster = terra::rast(file.path(ModelFolder, "model_soil_stack.tif")))
     return(rainfall_for_timestep)
-  }else if(rainfall_method == "goes"){
+  }else if(rainfall_method == "goes" & !is.logical(goes)){
     if(beginning_time == 1){
       rainfall_for_timestep <- 0
       return(rainfall_for_timestep)
     }else{
-      goesRain <- terra::rast(rain)
       layerSelection <- ceiling(beginning_time/10)+1
       mm_to_in <- 0.0393701
       timeElapsed <- end_time - beginning_time
-      rainfall_for_timestep <- goesRain[[layerSelection]] / (10/timeElapsed) * mm_to_in # rain fallen in inches
+      rainfall_for_timestep <- goes[[layerSelection]] / (10/timeElapsed) * mm_to_in # rain fallen in inches
       return(rainfall_for_timestep)
     }
   }else{
@@ -615,6 +632,12 @@ parseTimeGOES <- function(time_string){
   # Truncate string - don't need seconds
   return(time_posix)
 }
+extract_time_string <- function(filename, starting_char ="s") {
+  matches <- regmatches(filename, regexpr(paste0(starting_char,"\\d{4}\\d{3}\\d{6}"), filename))
+  date_string <- sub("s", "", matches) # Remove the 's' prefix
+  converted_time <- parseTimeGOES(date_string)
+  return(converted_time)
+}
 # Test
 # time_string <- "2022 239 23 00 31 9"
 # goesTime <- parseTimeGOES("20222392300319")
@@ -640,8 +663,8 @@ resizeImagery <- function(imagery, outline, targetRaster, method = "near"){
   reproject <- terra::project(imagery, targetRaster, method = method)
   clipRaster <- terra::crop(reproject, outline, ext = F, mask = T)
   # Select the first layer - the RRQPE
-  rainfall <- clipRaster[[1]]
-  return(rainfall)
+  #rainfall <- clipRaster[[1]]
+  return(clipRaster)
 }
 
 # Imagery file

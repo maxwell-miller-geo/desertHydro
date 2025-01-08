@@ -128,7 +128,6 @@ arid_model <- function(ModelFolder,
        the land cover excel spreadsheet matches the input key.")
   }
   # Function adjusts digital elevation model (smooths with preserved features)and land cover map is projected in same coordinate system and clipped to watershed.
-  gc()
   WatershedStack <- watershedElementsCreate(WatershedElements = WatershedElements,
                                             DEM = dem_path,
                                             watershed_shape_path = watershed_shape_path,

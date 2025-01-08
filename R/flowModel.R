@@ -178,6 +178,13 @@ flowModel <- function(ModelFolder,
   if(FALSE){
     SoilStack$mannings_n <- adjust_mannings(SoilStack$slope)
   }
+  # Load in rainfall method first if GOES satellite imagery
+  if(tolower(rainfall_method) == "goes"){
+    # Load in the rainfall raster
+    goes <- terra::rast(rain_file)
+  }else{
+    goes <- NA
+  }
 # Loop through time
 for(t in simulation_values){
   utils::setTxtProgressBar(progressBar, t)
@@ -188,7 +195,7 @@ for(t in simulation_values){
   ## [1] Rainfall
   ## - Calculates the amount of rainfall in a given time step
   if(simulation_duration[t] < total_rain_duration){ # could cut off rainfall if not careful
-   rainfall_for_timestep <- rainfallAccum(rain, beginning_time, end_time, rainfall_method = rainfall_method, ModelFolder = ModelFolder)
+   rainfall_for_timestep <- rainfallAccum(rain, beginning_time, end_time, rainfall_method = rainfall_method, ModelFolder = ModelFolder, goes = goes)
    if(rainfall_method == "goes" & inherits(rainfall_for_timestep, "SpatRaster")){
      if(terra::ext(rainfall_for_timestep) != terra::ext(SoilStack)){
        rainfall_for_timestep <- terra::crop(rainfall_for_timestep, terra::ext(SoilStack))
@@ -201,6 +208,7 @@ for(t in simulation_values){
   in_to_cm <- 2.54
   # rainfall in cm / time step - which the time-step should be in minutes
   total_rain_cm <- rainfall_for_timestep * in_to_cm
+  print(total_rain_cm)
   # # Same amount of rain per time step
   # Check rainfall extent
   SoilStack$current_rainfall <- terra::ifel(is.finite(SoilStack$model_dem), total_rain_cm, NA) # rainfall distribution map
