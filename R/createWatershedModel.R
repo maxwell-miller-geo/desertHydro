@@ -39,7 +39,6 @@ resizeShape <- function(spatialObject, extent_raster, boundary_path = NA, key = 
       # Find KEY within names
       # if(key %in% names(land_cover_crop)){
       print("Rasterizing land cover.")
-      browser()
       # Check key is inside land cover - try additional key
       if(!(key %in% names(land_cover_crop))){
         new_key <- "ID" # try another key
