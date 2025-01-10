@@ -27,9 +27,11 @@ monsoon <- function(ModelFolder = NULL, date = "2021-07-22", model_type = "defau
   }
   if(model_type == "s-runoff"){
     model1 <- small_impervious(ModelFolder)
+    model1@impervious <- T
   }
   if(model_type == "s-infil"){
     model1 <- small_infiltration(ModelFolder)
+    model1@key <- "MUSYM"
   }
 
   # Insert function to mess with the default options through additional inputs

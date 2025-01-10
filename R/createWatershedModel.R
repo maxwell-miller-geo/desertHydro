@@ -23,6 +23,7 @@
 #' new_land_cover <- resizeShape(spatialObject, extent_raster, boundary_path, key = key)
 #' }
 resizeShape <- function(spatialObject, extent_raster, boundary_path = NA, key = "MUSYM", save = FALSE, save_name = "", save_location = ""){
+  # Check class of spatial object
   if(class(spatialObject)[1] == "SpatVector"){
     land_cover_proj <- terra::project(spatialObject, extent_raster) # for categorical data only
   }else{
@@ -38,6 +39,16 @@ resizeShape <- function(spatialObject, extent_raster, boundary_path = NA, key = 
       # Find KEY within names
       # if(key %in% names(land_cover_crop)){
       print("Rasterizing land cover.")
+      browser()
+      # Check key is inside land cover - try additional key
+      if(!(key %in% names(land_cover_crop))){
+        new_key <- "ID" # try another key
+        if(!(new_key %in% names(land_cover_crop))){
+          stop(cat("Could not find key match for land cover. Input:", key, "in available attributes of file:", terra::sources(spatialObject),"\n"))
+        }else{
+          key <- new_key
+        }
+      }
       land_cover_adj <- terra::rasterize(land_cover_crop, extent_raster, field = key, touches = T)
       return(land_cover_adj)
       # }

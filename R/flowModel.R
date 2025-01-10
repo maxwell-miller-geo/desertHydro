@@ -255,21 +255,25 @@ for(t in simulation_values){
   ## [4] Surface Runoff
   #print(names(SoilStack))
   # Create surface stack to pass only the important surface variables
+  #browser()
   surfaceStack <- c(SoilStack$surfaceWater,
                     SoilStack$mannings_n,
                     SoilStack$throughfall,
                     SoilStack$slope,
                     SoilStack$model_dem,
-                    SoilStack$flow_direction,
-                    SoilStack$infiltration_cmhr,
-                    SoilStack$currentSoilStorage,
-                    SoilStack$maxSoilStorageAmount)
+                    SoilStack$flow_direction)
+  if(!impervious){
+    # Add subsurface stack
+    surfaceStack <- surfaceStack + c(SoilStack$infiltration_cmhr,
+                                     SoilStack$currentSoilStorage,
+                                    SoilStack$maxSoilStorageAmount)
+  }
 
   runoff_counter <- 0
   time_remaining <- simulationTimeSecs
   while(runoff_counter != simulationTimeSecs){
     # # Calculate the time delta
-    limits <- time_delta(surfaceStack, cellsize = cellsize, time_step_min = 1, courant_condition = courant, vel = T)
+    limits <- time_delta(surfaceStack, cellsize = cellsize, time_step_min = 1, courant_condition = courant, vel = T, impervious = impervious)
     time_delta_s <- limits[[1]]
     if(time_delta_s < 0){
       stop("Error: Negative time step occured, please check input variables")
@@ -306,7 +310,8 @@ for(t in simulation_values){
                                  time_delta_s = time_delta_s,
                                  velocity = velocity,
                                  cellsize = cellsize,
-                                 rain_step_min = 1)
+                                 rain_step_min = 1,
+                                 infiltration = !impervious)
     # Save new depth
     surfaceStack$surfaceWater <- SoilStack$surfaceWater <- depth_list[[1]]
     # Adjust the slope for next time-step

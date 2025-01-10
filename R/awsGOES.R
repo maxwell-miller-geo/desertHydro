@@ -63,7 +63,7 @@ get_GOES_Rainfall <- function(ModelFolder, date = "2021-07-22", region = "us-eas
   cat("Retrieving rainfall from AWS\n")
   # Determine number of days
   days <- seq(number_day_start, number_day_end)
-  ordered_rain_paths <- lapply(days, FUN = retrieve_and_order_GOES, days, hour_start, hour_end, bucket, pattern, region, year)
+  ordered_rain_paths <- lapply(days, FUN = retrieve_and_order_GOES, days, hour_start, hour_end, bucket, pattern, region, year, ModelFolder)
   # Remove NA's if present
   ordered_files <- unlist(ordered_rain_paths)
   stack <- create_GOES_raster(ordered_files)
@@ -117,7 +117,7 @@ create_GOES_raster <- function(ordered_files, start ="", end = ""){
   return(stacked_raster)
 }
 
-retrieve_and_order_GOES <- function(day, days, hour_start, hour_end, bucket, pattern, region, year){
+retrieve_and_order_GOES <- function(day, days, hour_start, hour_end, bucket, pattern, region, year, ModelFolder){
   x <- which(days == day)
   day_of <- day
   year_day <- paste0(year,"/",day,"/")

@@ -277,7 +277,14 @@ rainfallMethodCheck <- function(ModelFolder, rainfall_method = "", rainfall_stri
   }else if(rainfall_method == "spatial"){
     rainfall <- filePresent("Model-Spatial-Rainfall.csv", ModelFolder)
   }else if(rainfall_method == "goes"){
-    rainfall <- filePresent("Goes-Summary.csv", ModelFolder)
+    # Look for goes
+    guesses <- grep("goes.tif", list.files(ModelFolder), ignore.case = T, value = T)
+    if(length(guesses) != 0){
+      rainfall <- guesses[which.min(nchar(guesses))] # Select the shortest file.
+    }else{
+      stop(cat("Could not find the GOES tif file in the Model Folder."))
+    }
+    rainfall <- filePresent(rainfall, ModelFolder)
   }
   return(rainfall)
 }

@@ -52,7 +52,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
     terra::writeRaster(slope_total, filename = slope, overwrite = T)
   }
   # Determine potential troublesome cells # assumes path written in
-  trouble <- terra::rast(file.path(ModelFolder, "stream_extracted.tif")) * slope_total
+  trouble <- terra::rast(file.path(ModelFolder, "stream_extracted.tif")) * terra::rast(slope)
   terra::writeRaster(trouble, file.path(ModelFolder, "trouble-cells.tif"), overwrite = T)
 
   # Land Cover

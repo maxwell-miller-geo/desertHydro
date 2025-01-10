@@ -106,6 +106,7 @@ small_impervious <- function(ModelFolder){
   object@overwrite <- F
   object@restartModel <- F
   object@boundary <- desertHydro::polygonize(object@demFile, object@watershedPath)
+  object@landCoverFile <- "waterholes_LC.tif"
   return(object)
 }
 

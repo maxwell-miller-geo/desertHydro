@@ -792,7 +792,12 @@ surfaceRouting <- function(surfaceStack,  time_delta_s, velocity = NULL, cellsiz
   # Rainfall rate over 1 minute - depth of rain (cm)
   rainfall_rate_cm_hr <- surfaceStack$throughfall/time_adjustment # cm/hr
   # Add infiltration rate here --- cm/hr - rate should already be in cm/hr
-  max_infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr
+  if(infiltration){
+    max_infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr
+  }else{
+    max_infiltration_rate_cm_hr <- 0
+  }
+
   # Calculate source water term
   #source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
 
@@ -846,7 +851,8 @@ surfaceRouting <- function(surfaceStack,  time_delta_s, velocity = NULL, cellsiz
                             # SoilStack$maxSoilStorageAmount,
                             # SoilStack$currentSoilStorage + infiltrated_water_cm)
   }else{
-    actual_infiltration_cm <- surfaceStack$infiltration_cmhr
+    #actual_infiltration_cm <- surfaceStack$infiltration_cmhr
+    actual_infiltration_cm <- 0
   }
   # Calculate new height
   h_0 <- h_current - flow_water_cm + (rainfall_water_cm - actual_infiltration_cm)
@@ -887,7 +893,7 @@ deltaX <- function(discharge_in_sep){
 # }
 ## ---------------------------- Flow Routing fixed
 # Check the limiting conditions of flow
-time_delta <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T){
+time_delta <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T, impervious = F){
   if(is.null(cellsize)){
     cellsize <- grid_size(surfaceStack)
   }
@@ -906,7 +912,12 @@ time_delta <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant
   # other rainfall methods
   rainfall_rate_cm_hr <- surfaceStack$throughfall/time_adjustment
   # Add infiltration rate here ---
-  infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr # to be adjusted - part of surface stack
+  if(!impervious){
+    infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr # to be adjusted - part of surface stack
+  }else{
+    infiltration_rate_cm_hr <- 0
+  }
+
   # Calculate source water term
   source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
   ### Stability check on rainfall magnitude
@@ -926,6 +937,7 @@ time_delta <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant
   # velocity * time / distance < 1 or
   # dt = C(courant number) * distance traveled (cm) / velocity (cm/s)
   # (1000/1000) is to leave 2 decimal places for hundreths of a second to elapse
+  # browser()
   dt <- floor(min(terra::values(courant_condition * cellsize * 100 / velocity, na.rm = T))*1000)/1000
   # Change the time step, if the conditions require it
   if(dt < time_delta_s){

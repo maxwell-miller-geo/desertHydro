@@ -226,22 +226,44 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, discharge = F, sto
 #' gifCreation(ModelFolder, saveGraph = T)
 #' }
 gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharge = F, saveGraph = T){
-
-  surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
-  velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
-  subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
-
-  # Check if stacks have been created
-  if(terra::nlyr(surfaceStorage) == 1){
-    surfaceStorage <- rasterCompile(ModelFolder, "surface", remove = T)
+  # paths to storage layers
+  surface_path <- file.path(ModelFolder, "surfaceStorage.tif")
+  velocity_path <- file.path(ModelFolder, "velocityStorage.tif")
+  subsurface_path <- file.path(ModelFolder, "soilStorage.tif")
+  # Check if stacks and files exist
+  # Surface
+  if(file.exists(surface_path)){
+    surfaceStorage <- terra::rast(surface_path)
+    if(terra::nlyr(surfaceStorage) == 1){
+      surfaceStorage <- rasterCompile(ModelFolder, "surface", remove = T)
+    }
+  }else{
+    cat(surface_path, "does not exist \n")
   }
-  if(terra::nlyr(velocityStorage) == 1){
-    velocityStorage <- rasterCompile(ModelFolder, "velocity", remove = T)
+  # Velocity
+  if(file.exists(velocity_path)){
+      velocityStorage <- terra::rast(velocity_path)
+    if(terra::nlyr(velocityStorage) == 1){
+      velocityStorage <- rasterCompile(ModelFolder, "velocity", remove = T)
+    }
+  }else{
+    cat(velocity_path, "does not exist \n")
   }
+  # Soil
+  if(file.exists(file.path(ModelFolder, "soilStorage.tif"))){
+    subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
+    if(terra::nlyr(subsurfaceStorage) == 1){
+      surfaceStorage <- rasterCompile(ModelFolder, "soil", remove = T)
+    }
+  }else{
+    cat(surface_path, "does not exist \n")
+  }
+  # Check rainfall method
   rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method = rainfall_method)
 
+  # Determine points taken by raster stack
   xvalues <- as.vector(stats::na.omit(as.numeric(names(surfaceStorage))))
-
+  # Determine how rainfall is read in
   if(discharge & rainfall_method != "goes"){ # gathers total rain and rain duration values
     print("Retrieving rainfall data from simulation: rain_discharge")
     rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
@@ -252,7 +274,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
   }else if(rainfall_method == "goes"){
     rain <- terra::rast(rain_file)
     total_rain <- max(terra::values(sum(rain)), na.rm = T) / 25.4 # rainfall in inches
-    total_rain_duration <- (terra::nlyr(rain) -1) * 10 # rainfall minutes
+    total_rain_duration <- (terra::nlyr(rain)-1) * 10 # rainfall minutes
   }else{
     print(paste("No rain-discharge data: Retrieving rainfall data from rainfile...", rain_file))
     rain <- readr::read_csv(file.path(ModelFolder, "Model-Rainfall.csv"), show_col_types = F)
@@ -282,7 +304,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
     # Subsurface depths
     # Load in surface moisture
     print(paste("Creating soil moisture animation..."))
-    if(terra::nlyr(subsurfaceStorage) > 1){
+    if(file.exists(subsurface_path)){
       meltedMoistureContent <- meltStack(subsurfaceStorage, timevalues = xvalues) # subsurface % fill through time
       # Create an animated ggplot - Subsurface Storage
       subsurface_plot <- animateStack(meltedMoistureContent,
@@ -295,6 +317,8 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
       #gganimate::animate(subsurface_plot)
       # store the animated GIF
       gganimate::anim_save(filename = paste0(date, "-moisture-content.gif"), path = ModelFolder, animation = subsurface_plot, fps = 10, renderer = gganimate::gifski_renderer())
+    }else{
+      cat("Could not find not find soil raster.")
     }
 
 
