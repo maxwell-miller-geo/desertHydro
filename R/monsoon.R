@@ -12,6 +12,50 @@
 #                     restart = F,
 #                     gif = F,
 #                     land_cover = "nlcd_characteristics.xlsx"){
+#' Complete Model Runs
+#'
+#' Function that allows multiple model runs and has the ability to work on
+#' cluster nodes. Note: The functionality of the script is based upon original work
+#' and is not flexible enough for everyday use.
+#'
+#' @param ModelFolder Path to folder to put output files
+#' @param date Date string of event in format "YYYY-MM-DD", default
+#' @param model_type Sets infiltration and size parameters, default = "default"
+#' Other options include:
+#' "l-runoff" = large scale model with no infiltration,
+#' "s-runoff" = small scale model with no infiltration,
+#' "l-infiltration" = large scale model with infiltration,
+#' "s-infiltration" = small scale model with infiltration
+#' @param rain_method type of rainfall to be used. default = "gauges" from gauge
+#' data found within the Watershed folder path.
+#' Other options include:
+#' "spatial" = spatially distributed rainfall based on gauge placements
+#' "goes" = satellite derived rainfall estimates obtained from AWS servers for current
+#' spatial extent of model
+#' @param courant the distance information travels within a mesh network. Values
+#' should range between 0.1 and 1.0. The smaller the Courant number, the shorter
+#' the time steps will be, which leads to more numerical stability. Default value is
+#' 0.8; however, research has shown that for arid regions Courant values as low as
+#' 0.1 are needed. The smaller the Courant number the longer simulations will take.
+#' @param time Default NaN, which will calculate the length of the simulation based
+#' upon the discharge and rainfall input data. Setting time (minutes) to an explicit value
+#' will have the simulation run for only that amount of time. Helpful in testing
+#' parameters without performing an entire rainfall simulation.
+#' @param overwrite Default NA, will change depending on which model_type was selected
+#' @param ... Additional parameters (advanced)
+#'
+#' @return returns path to Model Folder
+#' @export
+#'
+#' @examples \dontrun{
+#' # Change this to output folder
+#' ModelFolder <- "Rainfall-2021-07-22"
+#' model_output <- monsoon(ModelFolder = ModelFolder,
+#'                         date = "2021-07-22",
+#'                         model_type = "l-runoff",
+#'                         rain_method ="gauges",
+#'                         courant = 0.3)
+#' }
 monsoon <- function(ModelFolder = NULL, date = "2021-07-22", model_type = "default", rain_method = "gauges", courant = 0.8, time = NaN, overwrite = NA,...){
   if(is.null(ModelFolder)){
     ModelFolder <- tempdir()

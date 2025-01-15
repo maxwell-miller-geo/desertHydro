@@ -22,6 +22,7 @@ Depends:
 LazyData: true
 StagedInstall: false
 Imports:
+    aws.s3,
     data.table,
     dplyr,
     future,
