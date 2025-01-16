@@ -60,6 +60,9 @@ monsoon <- function(ModelFolder = NULL, date = "2021-07-22", model_type = "defau
   if(is.null(ModelFolder)){
     ModelFolder <- tempdir()
   }
+  if(!file.exists(ModelFolder)){
+    dir.create(ModelFolder)
+  }
   if(model_type == "default"){
     model1 <- infil_model(ModelFolder)
     model1@key <- "MUSYM"

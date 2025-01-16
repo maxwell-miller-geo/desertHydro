@@ -216,7 +216,7 @@ for(t in simulation_values){
   in_to_cm <- 2.54
   # rainfall in cm / time step - which the time-step should be in minutes
   total_rain_cm <- rainfall_for_timestep * in_to_cm
-  print(total_rain_cm)
+  #print(total_rain_cm)
   # # Same amount of rain per time step
   # Check rainfall extent
   SoilStack$current_rainfall <- terra::ifel(is.finite(SoilStack$model_dem), total_rain_cm, NA) # rainfall distribution map
