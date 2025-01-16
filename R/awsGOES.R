@@ -1,7 +1,7 @@
 # AWS CLI interface with GOES Series
 
 get_GOES_Rainfall <- function(ModelFolder, date = "2021-07-22", region = "us-east-1",
-                              WatershedElements = model()@watershedPath, remove = T, all = F){
+                              WatershedElements = model()@watershedPath, remove = T, all = F, hours_adj = 1){
   # Calculate the day of the year
   date <- as.Date(date)
   year <- as.numeric(strftime(date, format = "%Y"))
@@ -40,9 +40,14 @@ get_GOES_Rainfall <- function(ModelFolder, date = "2021-07-22", region = "us-eas
 
   # Grab rainfall or discharge data
   table <- file.path(ModelFolder, "rain-discharge.csv")
+  if(!file.exists(table)){
+    rain <- rainfallFilter(date, ModelFolder, WatershedElements)
+    table <- dischargeCreate(date, ModelFolder,WatershedElements,rain_file = rain,discharge = T)
+  }
   times <- get_start_end_time(table)
-
-  if(all){
+  # Search two hours earlier
+  times$start <- times$start - 60*60* hours_adj#(secs*minutes*hours = 2 hours)
+  if(all | is.null(times)){
     start <- as.POSIXct(paste(date, "00:00"), tz = "MST")
     end <- start + 23 *60 *60
     times <- data.frame(start = start, end = end)

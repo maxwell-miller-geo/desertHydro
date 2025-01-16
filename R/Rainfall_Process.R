@@ -479,7 +479,7 @@ loadRain <- function(rain_file, rainfall_method = "gauges"){
     #rain_step <- mean(diff(rain$time)) # find the average time step
   } else if(rainfall_method == "goes"){
     rain <- rain_file
-    total_rain_duration <- (terra::nlyr(terra::rast(rain_file)) - 1) * 10 # duration in minutes
+    total_rain_duration <- (terra::nlyr(terra::rast(rain_file))) * 10 # duration in minutes
   }else{
     rain <- readr::read_csv(rain_file, show_col_types = F) # read in rain.csv file
     total_rain_duration <- max(rain$time)

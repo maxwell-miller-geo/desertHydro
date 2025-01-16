@@ -666,6 +666,9 @@ get_start_end_time <- function(table, time_col = "time", data_col = "Total_in", 
   if(is.character(table)){
     table <- data.table::fread(table)
   }
+  if(is.null(table)){
+    return(NULL)
+  }
 
   timeIndex <- grep(time_col, colnames(table), ignore.case = T)[[1]]
   dataIndex <- grep(data_col, colnames(table), ignore.case = T)[[1]]

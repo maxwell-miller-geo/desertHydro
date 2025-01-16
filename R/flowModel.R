@@ -78,6 +78,14 @@ flowModel <- function(ModelFolder,
   total_rain_duration <- rainList[[2]]
   #time_step <- 1 # set timestep to one minute for each rainfall period
   # Important set-up variables
+  # Check simulation length for GOES rainfall method
+  if(rainfall_method == "goes"){
+    # Check rainfall folder for rain-discharge.csv
+    rain_discharge <- filePresent("rain-discharge.csv", ModelFolder)
+    simulation_length <- as.numeric(difftime(get_start_end_time(rain_discharge)$end,
+             as.POSIXlt(names(terra::rast(rain))[1],tz = "MST"),
+             units = "mins"))
+  }
   simulation_duration <- seq(0, simulation_length, by = time_step) # minute duration of simulation
   # Create data frame with time information: Simulation length | Time-step | Simulation time
   simulationDF <- data.frame(simlength = simulation_length, timestep = time_step, simtime = 0)
