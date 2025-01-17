@@ -95,7 +95,7 @@ flowModel <- function(ModelFolder,
   tempStorage <- file.path(ModelFolder, "tempStorage.tif") # soils data
 
   # Obtain the discharge for the outflow cell
-  out_discharge <- data.table::data.table(time = 0, height_cm = 0, discharge = 0)
+  out_discharge <- data.table::data.table(time = 0, height_cm = 0, discharge_m3_s = 0)
   #write.csv(simulationDF, file = simulationProgress)ra
   #readin <- read.csv(simulationProgress)
   if(file.exists(tempStorage) & file.exists(simulationProgress) & restartModel){ # if model was cutoff during simulation - restart option
@@ -130,8 +130,8 @@ flowModel <- function(ModelFolder,
   }else{
     volumes <- data.table::data.table(Time_min = 0, time_elapsed_s = 0, mean_rain_cm = 0, mean_surface_depth_cm = 0,
                                      mean_infiltration_cm = 0, gauge_height_cm = 0, gauge_velocity_cm_s = 0,
-                                     gauge_discharge_m3_s = 0, mean_total_rain_cm = 0, total_volume_out_cm = 0,
-                                     volume_difference = 0)
+                                     gauge_discharge_m3_s = 0, mean_total_rain_cm = 0, total_height_out_cm = 0,
+                                     total_infiltrated_water_cm = 0, volume_difference_mean_cm = 0, cumulative_outflow_percent = 0, cumulative_infiltration_percent = 0)
     # volumeOut <- data.table::data.table(timestep = 0, volume = 0, discharge = 0)
     # data.table::fwrite(volumeOut, file.path(ModelFolder, "volumeOut.csv"))
     # volumeIn <- data.table::data.table(timestep = 0, total_rain_cm = 0) # Sum all of the rainfall during a rainfall event
@@ -178,6 +178,8 @@ flowModel <- function(ModelFolder,
   simulation_values <- 1:(length(simulation_duration)-1)
   # Determine the outflow cell
   outflow_cell <- drainCells$cell[1]
+  # Velocity cell - second to last cell that feeds the outflow cell
+  velocity_cell <- drainCells$cell[2]
   # Set infiltration to zero for runoff only
   if(impervious){
     SoilStack$infiltration_cmhr <- 0
@@ -356,13 +358,16 @@ for(t in simulation_values){
       # Adjust the outflow height -- here in cm
       outflow <- surfaceStack$surfaceWater[outflow_cell][[1]]
       # Add outflow discharge here
-      out_discharge <- rbind(out_discharge, list(end_time, outflow, outflow))
+      # Height/100 * cellsize^2 / time elapsed = Q (m3/s)
+      outflow_discharge <- outflow/100 * cellsize^2 / time_delta_s
+      # Bind data for time-step
+      out_discharge <- rbind(out_discharge, list(end_time, outflow, outflow_discharge))
       # Write output discharge
       data.table::fwrite(out_discharge, file = file.path(ModelFolder, "out-discharge.csv"))
       # Remove water from outflow cell
       SoilStack$surfaceWater[outflow_cell] <- surfaceStack$surfaceWater[outflow_cell] <- 0
 
-      out_velocity <- velocity[outflow_cell][[1]]
+      out_velocity <- velocity[velocity_cell][[1]]
       # Write checks to tables
 
       # Calculate maximum cell value and location
@@ -374,17 +379,36 @@ for(t in simulation_values){
                                                 max_height_cm = maxHeight[1],
                                                 height_cellnumber = maxHeight[2]))
 
-      volumes <- rbind(volumes, list(Time_min = end_time,
-                                     time_elapsed_s = time_delta_s,
-                                     mean_rain_cm = sumCells(rain_depth_cm)/activeCells,
-                                     mean_surface_depth_cm = sumCells(SoilStack$surfaceWater)/activeCells,
-                                     mean_infiltration_cm = sumCells(infiltration_depth_cm)/activeCells,
-                                     gauge_height_cm = outflow,
-                                     gauge_velocity_cm_s = out_velocity,
-                                     gauge_discharge_m3_s = round(outflow*cellsize/time_delta_s,4), # hard-coded
-                                     mean_total_rain_cm = sum(volumes[, "mean_rain_cm"]),
-                                     total_volume_out_cm  = sum(volumes[, "gauge_height_cm"]),
-                                     volume_difference = 0))
+      mean_rain_cm <- sumCells(rain_depth_cm)/activeCells
+      mean_surface_depth_cm <- sumCells(SoilStack$surfaceWater)/(activeCells)
+      mean_infiltration_cm <- sumCells(infiltration_depth_cm)/activeCells
+      mean_total_rain_cm <- sum(volumes[, "mean_rain_cm"])+ mean_rain_cm
+      total_height_out_cm <- sum(volumes[, "gauge_height_cm"])+ outflow
+      total_infiltrated_water_cm <- sum(volumes[, "total_infiltrated_water_cm"]) + mean_infiltration_cm
+
+      volume_difference_mean_cm <- mean_total_rain_cm -
+        total_height_out_cm/activeCells +
+        total_infiltrated_water_cm +
+        mean_surface_depth_cm
+      cumulative_outflow_percent <- (total_height_out_cm/activeCells)/mean_total_rain_cm
+      cumulative_infiltration_percent <- (total_infiltrated_water_cm)/mean_total_rain_cm
+
+
+      volumes <- rbind(volumes,
+                       list(Time_min = end_time,
+                            time_elapsed_s = time_delta_s,
+                            mean_rain_cm = mean_rain_cm,
+                            mean_surface_depth_cm = mean_surface_depth_cm,
+                            mean_infiltration_cm = mean_infiltration_cm,
+                            gauge_height_cm = outflow,
+                            gauge_velocity_cm_s = out_velocity,
+                            gauge_discharge_m3_s = round(outflow/100*cellsize^2/time_delta_s,4),
+                            mean_total_rain_cm = mean_total_rain_cm,
+                            total_height_out_cm  = total_height_out_cm,
+                            total_infiltrated_water_cm = total_infiltrated_water_cm,
+                            volume_difference_mean_cm = volume_difference_mean_cm,
+                            cumulative_outflow_percent = cumulative_outflow_percent,
+                            cumulative_infiltration_percent = cumulative_infiltration_percent))
 
     # Increment the runoff counter be elapsed time (s)
      runoff_counter <- runoff_counter + round(time_delta_s,4)

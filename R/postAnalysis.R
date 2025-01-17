@@ -126,7 +126,6 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, discharge = F, sto
     surface_height_cm <- terra::extract(surfaceStorage, cross_section, method = "simple") # surface height in cm
     #surface_velocity <- terra::extract(velocityStorage, cross_section) # velocity at given time (m/s)
 
-
     # cm_to_m2 <- .01 * 10 # conversion factor - Conversion to m time grid size
     # m3_to_ft3 <- 35.3147 # convert meters3 to feet3
     discharge_save <- data.table::data.table() # save empty data table because of loop scope
