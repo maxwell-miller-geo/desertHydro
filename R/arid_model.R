@@ -149,7 +149,7 @@ arid_model <- function(ModelFolder,
 
   ## Rainfall
   ##--------------------------------------
-
+ # browser()
   ## 2b. Weather - Rain data
   # Read in the rainfall data from a saved file, normalize it, and create a
   rain_file <- suppressWarnings(rainfallCreation(ModelFolder, WatershedElements,
@@ -187,6 +187,13 @@ arid_model <- function(ModelFolder,
   # Set simulation length
   if(is.nan(simulation_length)){
     simulation_length <- max(rain_discharge$time) # Simulation length derived from the discharge data
+    if(tolower(rainfall_method) == "goes"){
+      # Adjust simulation duration to rainfall
+      rain_start <- as.POSIXct(names(terra::rast(rain_file))[1])
+      get_tz <- lubridate::tz(rain_start)
+      rain_end <- lubridate::force_tz(as.POSIXct(tail(rain_discharge[,1],1)[[1]]), tzone = get_tz)
+      simulation_length <- as.numeric(difftime(rain_end, rain_start, units ="mins"))
+    }
   }
 
   files_recommended <- c(time_step, simulation_length)

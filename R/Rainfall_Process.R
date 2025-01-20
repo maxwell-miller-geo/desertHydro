@@ -160,7 +160,7 @@ rainfallAccum <- function(rain, beginning_time, end_time, rainfall_method = "gau
       return(rainfall_for_timestep)
     }else{
       layerSelection <- ceiling(beginning_time/10)+1
-      mm_to_in <- 0.0393701
+      mm_to_in <- 1/25.4
       timeElapsed <- end_time - beginning_time
       rainfall_for_timestep <- goes[[layerSelection]] / (10/timeElapsed) * mm_to_in # rain fallen in inches
       return(rainfall_for_timestep)
@@ -326,6 +326,7 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", total_col = 
 # Function select data from a given rainfall date - built from rainTotalRainfall() function - second or minute level
 
 rainfallForEvent <- function(rainDF, eventDate, remove = T){
+
   filteredDF <- rainDF |> # filters recorded rainfall by given date "YYYY-MM-DD"
     dplyr::filter(lubridate::date(rainDF[,1]) == eventDate) #|>
     #dplyr::filter(dplyr::row_number() <= dplyr::n()-1) # Why is this here?

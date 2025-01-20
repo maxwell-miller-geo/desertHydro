@@ -114,58 +114,89 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, discharge = F, sto
   #velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
   #subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
   #gauge_locations = file.path(WatershedElements, "stream_gauge.shp")
+  #browser()
   x_sections_path <- gauge_locations
-  if(file.exists(x_sections_path) & discharge){
-    print(paste("Creating discharge figures..."))
-    rain_discharge <- readr::read_csv(file.path(ModelFolder, "rain-discharge.csv"), show_col_types = F)
-    # Create rain-discharge excel sheet
+  if(discharge & file.exists(file.path(ModelFolder, "rain-discharge.csv"))){
+  # Determine discharge from volumes file
+  discharge_file <- data.table::fread(file.path(ModelFolder, "volumes.csv"))
+  surface_discharge <- stream_gauge_discharge(discharge_file$gauge_height_cm, discharge_file$time_elapsed_s, units = "cm", raster = surfaceStorage)
+  # Determine volumes
+  rain_discharge <- data.table::fread(file.path(ModelFolder, "rain-discharge.csv"))
+  estimated <- data.frame(time = discharge_file$Time_min, predDis = surface_discharge) # estimated discharge
+  # Combined discharges for comparisons
+  compareDis <- compareDischarge(rain_discharge, estimated) # outputs: time|recDis|predDis
+  # save discharge
+  discharge_save <- data.table::data.table(time = compareDis[,1], observed = compareDis[,2], xsection_1 = compareDis[,3])
+  # Determine efficiency
+  method <- "NSE"
+  modelScore <- modelEfficiency(compareDis, method = method)
+  print(paste("Model efficiency via", method, "is", modelScore))
+  dischargePlot <- ggplot2::ggplot() +
+    ggplot2::geom_line(ggplot2::aes(x = compareDis$time, y = compareDis$recDis, color = "Recorded")) +
+    ggplot2::geom_line(ggplot2::aes(x = compareDis$time, y = compareDis$predDis, color = "Predicted")) +
+    ggplot2::labs(title = paste0("Predicted Discharge from Rainfall Event: ",  date),
+                  x = paste0("Time (minutes)"),
+                  y = paste0("Discharge (ft\u00b3/s)"),
+                  color = "Legend")
 
-    #x_sections_path <- file.path(ModelElements, "Cross_Section_lines.shp")
-    cross_section <- terra::vect(x_sections_path) # bring vector into R
-    # # Extract the height from the surface stack
-    surface_height_cm <- terra::extract(surfaceStorage, cross_section, method = "simple") # surface height in cm
-    #surface_velocity <- terra::extract(velocityStorage, cross_section) # velocity at given time (m/s)
-
-    # cm_to_m2 <- .01 * 10 # conversion factor - Conversion to m time grid size
-    # m3_to_ft3 <- 35.3147 # convert meters3 to feet3
-    discharge_save <- data.table::data.table() # save empty data table because of loop scope
-    for(x in 1:nrow(surface_height_cm)){
-      # Calculate discharge
-      #surface_discharge <- as.numeric(surface_height_cm[x,2:ncol(surface_height_cm)]* cm_to_m2 * m3_to_ft3 / time_elapsed)
-      height <- as.numeric(surface_height_cm[x, 2:ncol(surface_height_cm)])
-      xvalues <- round(as.numeric(colnames(surface_height_cm[x,2:ncol(surface_height_cm)])),4)
-      surface_discharge <- stream_gauge_discharge(height, time_elapsed, units = "cm", raster = surfaceStorage)
-      estimated <- data.frame(time = xvalues, predDis = surface_discharge)
-      # Combined discharges for comparisons
-      compareDis <- compareDischarge(rain_discharge, estimated) # outputs: time|recDis|predDis
-      if(x == 1){
-        discharge_save <- data.table::data.table(time = compareDis[,1], observed = compareDis[,2], xsection_1 = compareDis[,3])
-      }else{ # save the observed discharges to be saved to a excel sheet
-        discharge_save[, xsection_next := compareDis[,3]]
-        lastname <- length(names(discharge_save))
-        names(discharge_save)[lastname] <- paste0("xsection_", x)
-      }
-      method <- "NSE"
-      modelScore <- modelEfficiency(compareDis, method = method)
-      print(paste("Model efficiency via", method, "is", modelScore))
-      dischargePlot <- ggplot2::ggplot() +
-        ggplot2::geom_line(ggplot2::aes(x = compareDis$time, y = compareDis$recDis, color = "Recorded")) +
-        ggplot2::geom_line(ggplot2::aes(x = compareDis$time, y = compareDis$predDis, color = "Predicted")) +
-        ggplot2::labs(title = paste0("Predicted Discharge from Rainfall Event: ",  date),
-             x = paste0("Time (minutes)"),
-             y = paste0("Discharge (ft\u00b3/s)"),
-             color = "Legend")
-
-      dischargePlot
-      if(store){
-        ggplot2::ggsave(filename = file.path(ModelFolder, paste0("compare-discharge-xsection-", x, "-", date,".png")),
-               plot = dischargePlot, width = 5.5, height = 4)
-      }
-      if(x == nrow(surface_height_cm)){ # save the
-        data.table::fwrite(discharge_save, file = file.path(ModelFolder, "discharge-raw.csv"))
-      }
-    }
-  }else if(file.exists(x_sections_path)){
+  dischargePlot
+  if(store){
+    ggplot2::ggsave(filename = file.path(ModelFolder, paste0("Discharge-Outlet", date,".png")),
+                    plot = dischargePlot, width = 5.5, height = 4)
+  }
+  data.table::fwrite(discharge_save, file = file.path(ModelFolder, "discharge-raw.csv"))
+  # if(file.exists(x_sections_path) & discharge){
+  #   print(paste("Creating discharge figures..."))
+  #   rain_discharge <- readr::read_csv(file.path(ModelFolder, "rain-discharge.csv"), show_col_types = F)
+  #   # Create rain-discharge excel sheet
+  #
+  #   #x_sections_path <- file.path(ModelElements, "Cross_Section_lines.shp")
+  #   cross_section <- terra::vect(x_sections_path) # bring vector into R
+  #   # # Extract the height from the surface stack
+  #   surface_height_cm <- terra::extract(surfaceStorage, cross_section, method = "simple") # surface height in cm
+  #   #surface_velocity <- terra::extract(velocityStorage, cross_section) # velocity at given time (m/s)
+  #
+  #   # cm_to_m2 <- .01 * 10 # conversion factor - Conversion to m time grid size
+  #   # m3_to_ft3 <- 35.3147 # convert meters3 to feet3
+  #   discharge_save <- data.table::data.table() # save empty data table because of loop scope
+  #   for(x in 1:nrow(surface_height_cm)){
+  #     # Calculate discharge
+  #     #surface_discharge <- as.numeric(surface_height_cm[x,2:ncol(surface_height_cm)]* cm_to_m2 * m3_to_ft3 / time_elapsed)
+  #     height <- as.numeric(surface_height_cm[x, 2:ncol(surface_height_cm)])
+  #     xvalues <- round(as.numeric(colnames(surface_height_cm[x,2:ncol(surface_height_cm)])),4)
+  #     surface_discharge <- stream_gauge_discharge(height, time_elapsed, units = "cm", raster = surfaceStorage)
+  #     estimated <- data.frame(time = xvalues, predDis = surface_discharge)
+  #     # Combined discharges for comparisons
+  #     compareDis <- compareDischarge(rain_discharge, estimated) # outputs: time|recDis|predDis
+  #     if(x == 1){
+  #       discharge_save <- data.table::data.table(time = compareDis[,1], observed = compareDis[,2], xsection_1 = compareDis[,3])
+  #     }else{ # save the observed discharges to be saved to a excel sheet
+  #       discharge_save[, xsection_next := compareDis[,3]]
+  #       lastname <- length(names(discharge_save))
+  #       names(discharge_save)[lastname] <- paste0("xsection_", x)
+  #     }
+  #     method <- "NSE"
+  #     modelScore <- modelEfficiency(compareDis, method = method)
+  #     print(paste("Model efficiency via", method, "is", modelScore))
+  #     dischargePlot <- ggplot2::ggplot() +
+  #       ggplot2::geom_line(ggplot2::aes(x = compareDis$time, y = compareDis$recDis, color = "Recorded")) +
+  #       ggplot2::geom_line(ggplot2::aes(x = compareDis$time, y = compareDis$predDis, color = "Predicted")) +
+  #       ggplot2::labs(title = paste0("Predicted Discharge from Rainfall Event: ",  date),
+  #            x = paste0("Time (minutes)"),
+  #            y = paste0("Discharge (ft\u00b3/s)"),
+  #            color = "Legend")
+  #
+  #     dischargePlot
+  #     if(store){
+  #       ggplot2::ggsave(filename = file.path(ModelFolder, paste0("compare-discharge-xsection-", x, "-", date,".png")),
+  #              plot = dischargePlot, width = 5.5, height = 4)
+  #     }
+  #     if(x == nrow(surface_height_cm)){ # save the
+  #       data.table::fwrite(discharge_save, file = file.path(ModelFolder, "discharge-raw.csv"))
+  #     }
+  #   }
+  # }
+    }else if(file.exists(x_sections_path)){
     print(paste("Creating discharge figures..."))
     #x_sections_path <- file.path(ModelElements, "Cross_Section_lines.shp")
     cross_section <- terra::vect(x_sections_path) # bring vector into R

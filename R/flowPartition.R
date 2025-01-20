@@ -777,6 +777,7 @@ adjust_mannings <- function(slope){
 }
 
 surfaceRouting <- function(surfaceStack,  time_delta_s, velocity = NULL, cellsize = NULL, rain_step_min = 1, infiltration = T){
+  # Units should be in the seconds for calculations
   # Cannot be negative depths
   if(is.null(velocity)){
     velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater, surfaceStack$slope, length = NULL)
@@ -805,7 +806,7 @@ surfaceRouting <- function(surfaceStack,  time_delta_s, velocity = NULL, cellsiz
   # the rainfall period. For each time step
   #source_water_cm <- source_water_cm_hr * hr_to_s * time_delta_s
   # Calculate total water infiltrated per time step
-  # Maximum amount of water to be infiltrated
+  # Maximum amount of water to be infiltrated in a given time-step
   max_infiltrated_water_cm <-  max_infiltration_rate_cm_hr * hr_to_s * time_delta_s
   # Amount of rainfall for given time-step
   rainfall_water_cm <- rainfall_rate_cm_hr * hr_to_s * time_delta_s
@@ -829,22 +830,29 @@ surfaceRouting <- function(surfaceStack,  time_delta_s, velocity = NULL, cellsiz
   # New height cannot be negative!! Negative depths are bad
   # Determine the infiltrated water per cell
   if(infiltration){
+  # Add up all potential water
   possible_surface_water <- h_current - flow_water_cm + rainfall_water_cm
-  infiltration_overflow <- max_infiltrated_water_cm - possible_surface_water
-  all_surface_infiltrated <- terra::ifel(infiltration_overflow >= 0, 1, 0) * possible_surface_water
-  partial_surface_infiltrated <- terra::ifel(infiltration_overflow < 0, 1, 0) * max_infiltrated_water_cm
-  potential_infiltration_cm <- all_surface_infiltrated + partial_surface_infiltrated
+  potential_infiltration_cm <- terra::ifel(max_infiltrated_water_cm < possible_surface_water,
+                                   max_infiltrated_water_cm,
+                                   possible_surface_water)
+  # all_surface_infiltrated <- terra::ifel(infiltration_overflow >= 0, 1, 0) * possible_surface_water
+  # partial_surface_infiltrated <- terra::ifel(infiltration_overflow < 0, 1, 0) * max_infiltrated_water_cm
+  #potential_infiltration_cm <- all_surface_infiltrated + partial_surface_infiltrated
   # Check if storage is exceeded
-  current_storage <- surfaceStack$currentSoilStorage
-  potential_storage_cm <- surfaceStack$currentSoilStorage + potential_infiltration_cm
-  storage_check <- surfaceStack$maxSoilStorageAmount - potential_storage_cm
+  temp_soil_storage <- surfaceStack$currentSoilStorage + potential_infiltration_cm
+  # Check to see if the water exceed storage
+  storage_difference <- surfaceStack$maxSoilStorageAmount - temp_soil_storage
+  # Calculate the excess water infiltrated - taken care of in routing
+  excess_water <- terra::ifel(storage_difference < 0, abs(storage_difference), 0)
+  # Calculate actual infiltrated water
+  actual_infiltration_cm <- potential_infiltration_cm - excess_water
   # If the amount of water that could be infiltrated is greater than the soil capacity,
   # set the soil storage to max capacity
-  max_storage_cells <- terra::ifel(storage_check <= 0, 1, 0) * surfaceStack$maxSoilStorageAmount
-  partial_storage_cells <- terra::ifel(storage_check > 0, 1, 0) * potential_storage_cm
-  soil_storage <- max_storage_cells + partial_storage_cells # adjust the soil - stack
-  surfaceStack$currentSoilStorage <- soil_storage
-  actual_infiltration_cm <- soil_storage - current_storage
+  # max_storage_cells <- terra::ifel(storage_check <= 0, 1, 0) * surfaceStack$maxSoilStorageAmount
+  # partial_storage_cells <- terra::ifel(storage_check > 0, 1, 0) * potential_storage_cm
+  # soil_storage <- max_storage_cells + partial_storage_cells # adjust the soil - stack
+  # surfaceStack$currentSoilStorage <- soil_storage
+  # actual_infiltration_cm <- soil_storage - current_storage
   #partial_infiltration <- terra::ifel()
   # Add infiltrated water to soil? do afterwaterds...
   #soil_level <- terra::ifel(SoilStack$maxSoilStorageAmount - SoilStack$currentSoilStorage + infiltrated_water_cm < 0,
@@ -857,7 +865,7 @@ surfaceRouting <- function(surfaceStack,  time_delta_s, velocity = NULL, cellsiz
   # Calculate new height
   h_0 <- h_current - flow_water_cm + (rainfall_water_cm - actual_infiltration_cm)
   # If infiltrated water is greater than water present
-  h_new <- terra::ifel(h_0 < 0, 0, h_0)
+  h_new <- terra::ifel(h_0 > 0, h_0, 0)
   # Check this makes sense
   # New surface depth
   return(list(h_new,actual_infiltration_cm,rainfall_water_cm))
@@ -898,7 +906,8 @@ time_delta <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant
     cellsize <- grid_size(surfaceStack)
   }
   # Velocity calculation
-  velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater, surfaceStack$slope, length = cellsize, units = "cm/s")
+  velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater,
+                               surfaceStack$slope, length = cellsize, units = "cm/s")
   # Bring in the trouble areas - should be brought in first
   # if(trouble){
   #   trouble_cells <- terra::rast(file.path(ModelFolder, "trouble-cells.tif"))

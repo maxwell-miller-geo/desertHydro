@@ -116,7 +116,7 @@ small_infiltration <- function(ModelFolder){
   object@ModelFolder <- ModelFolder
   object@LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
   object@key <- "MUSYM"
-  object@impervious <- T
+  object@impervious <- F
   object@demFile <- "dem-test.tif"
   object@overwrite <- F
   object@restartModel <- F

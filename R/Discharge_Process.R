@@ -18,6 +18,7 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file = NU
   # Load in the filtered rainfall file
   rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
   rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
+
   print("Processing discharge data...")
   if(discharge){
     if(file.exists(rain_discharge_file) & file.exists(rainFiltered_file)){
@@ -420,8 +421,10 @@ days_of_discharge <- function(discharge_csv){
 
 ## ------------------------ Height -> discharge
 stream_gauge_discharge <- function(height, time_elapsed, units = "cm", cellsize = NULL, raster = NULL){
-  if(!is.null(raster))
+  if(!is.null(raster)){
     cellsize <- grid_size(raster)
+  }
+
   # Height adjustments
   height <- as.numeric(height)
   length_diff <- length(height) - length(time_elapsed)
@@ -437,7 +440,7 @@ stream_gauge_discharge <- function(height, time_elapsed, units = "cm", cellsize 
   if(units == "cm"){
     cm_to_m <- .01 # conversion factor - Conversion to m
     m3_to_ft3 <- 35.3147
-    Q <- (height * cm_to_m * cellsize* m3_to_ft3) / time_elapsed
+    Q <- (height * cm_to_m * cellsize^2* m3_to_ft3) / time_elapsed
   }
   return(round(Q,3))
 }
