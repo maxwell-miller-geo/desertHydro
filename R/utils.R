@@ -535,10 +535,8 @@ Rcpp::cppFunction('NumericVector gradientCpp(NumericVector x, NumericMatrix ni) 
                   }')
 # Sum the values of all of the cells within a raster layer
 sumCells <- function(raster){
-  if(class(raster) != "SpatRaster"){
-    return(0)
-  }
-  return(sum(terra::values(raster, na.rm = T)))
+  return(terra::global(raster, "sum", na.rm = TRUE)$sum)
+  #return(sum(terra::values(raster, na.rm = T)))
 }
 
 # Determine the number of cells with values

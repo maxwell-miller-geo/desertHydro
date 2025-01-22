@@ -799,12 +799,6 @@ surfaceRouting <- function(surfaceStack,  time_delta_s, velocity = NULL, cellsiz
     max_infiltration_rate_cm_hr <- 0
   }
 
-  # Calculate source water term
-  #source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
-
-  # Calculate the source term: (rainfall rate - infiltration rate) * time elapsed
-  # the rainfall period. For each time step
-  #source_water_cm <- source_water_cm_hr * hr_to_s * time_delta_s
   # Calculate total water infiltrated per time step
   # Maximum amount of water to be infiltrated in a given time-step
   max_infiltrated_water_cm <-  max_infiltration_rate_cm_hr * hr_to_s * time_delta_s
@@ -934,7 +928,7 @@ time_delta <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant
   time_step_hr <- courant_condition / max(terra::values(source_water_cm_hr, na.rm = T))
   time_step_sec <- floor(time_step_hr * 3600) # convert hours to seconds - needs to be changed
   # Calculate time delta or the time-step for this step in seconds
-  if(time_step_sec > 0 & time_step_sec < time_step_min * 60){
+  if(time_step_sec > 0 && time_step_sec < time_step_min * 60){
     time_delta_s <- time_step_sec
   }else{
     time_delta_s <- time_step_min * 60
@@ -947,7 +941,8 @@ time_delta <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant
   # dt = C(courant number) * distance traveled (cm) / velocity (cm/s)
   # (1000/1000) is to leave 2 decimal places for hundreths of a second to elapse
   # browser()
-  dt <- floor(min(terra::values(courant_condition * cellsize * 100 / velocity, na.rm = T))*1000)/1000
+  dt <- floor(min(terra::values(
+    courant_condition * cellsize * 100/ velocity, na.rm = T))*1000)/1000
   # Change the time step, if the conditions require it
   if(dt < time_delta_s){
     time_delta_s <- dt

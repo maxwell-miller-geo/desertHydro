@@ -195,18 +195,21 @@ flowModel <- function(ModelFolder,
     goes <- NA
   }
 # Loop through time
+  #browser()
+
 for(t in simulation_values){
   utils::setTxtProgressBar(progressBar, t)
   beginning_time <- simulation_duration[t]
   end_time <- simulation_duration[t+1]
   timeElapsed <- end_time - beginning_time # time elapsed in minutes
   simulationTimeSecs <- timeElapsed * 60 # time elapse in minutes * seconds
+
   ## [1] Rainfall
   ## - Calculates the amount of rainfall in a given time step
   if(simulation_duration[t] < total_rain_duration){ # could cut off rainfall if not careful
     rainfall_for_timestep <- rainfallAccum(rain, beginning_time, end_time, rainfall_method = rainfall_method, ModelFolder = ModelFolder, goes = goes)
-   if(rainfall_method == "goes" & inherits(rainfall_for_timestep, "SpatRaster")){
-     if(terra::ext(rainfall_for_timestep) != terra::ext(SoilStack)){
+   if(rainfall_method == "goes" && inherits(rainfall_for_timestep, "SpatRaster")){
+     if (!(terra::ext(rainfall_for_timestep) == terra::ext(SoilStack))){
        # Potentially scale up - later on - should be rainfall over a minute
        rainfall_for_timestep <- terra::crop(rainfall_for_timestep, terra::ext(SoilStack))
    }
@@ -218,6 +221,8 @@ for(t in simulation_values){
   in_to_cm <- 2.54
   # rainfall in cm / time step - which the time-step should be in minutes
   total_rain_cm <- rainfall_for_timestep * in_to_cm
+  # Memory removal
+  rm(rainfall_for_timestep)
   #print(total_rain_cm)
   # # Same amount of rain per time step
   # Check rainfall extent
@@ -266,6 +271,8 @@ for(t in simulation_values){
   #print(names(SoilStack))
   # Create surface stack to pass only the important surface variables
   #browser()
+  # Copies a stack
+
   surfaceStack <- c(SoilStack$surfaceWater,
                     SoilStack$mannings_n,
                     SoilStack$throughfall,
@@ -330,6 +337,7 @@ for(t in simulation_values){
                                  infiltration = !impervious)
     # Save new depth
     surfaceStack$surfaceWater <- SoilStack$surfaceWater <- depth_list[[1]]
+
     # Adjust the slope for next time-step
     new_dem <- surfaceStack$surfaceWater/100 + surfaceStack$model_dem # assumes meters
     slope_temp <- terra::terrain(new_dem, v = "slope", neighbors = 8, unit = "degrees")
@@ -422,7 +430,7 @@ for(t in simulation_values){
 
   ##---------------- Save step-------------
 # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
-  if(counter %% saveRate == 0 | t == length(simulation_duration)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
+  if(counter %% 5 == 0 | t == length(simulation_duration)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
     if(!impervious){
       rasterCompile(ModelFolder, "soil", remove = T, overwrite = F)
     }
@@ -439,12 +447,15 @@ for(t in simulation_values){
     temporary <- SoilStack + 0 # create temporary Soil Stack
 
     terra::writeRaster(temporary, filename = tempStorage, overwrite = T)
+    rm(temporary)
+    gc()
     #terra::writeRaster(flowStack, file.path(ModelFolder, "AdjustedFlowMaps.tif"), overwrite = T)
   }
  ##------------------------------------##
   ### give a name to the current storage based upon iteration
-  counter <- counter + 1
+  counter <- counter + 1 # End of loop
 }
+
 print(paste("The model took: ", paste0(difftime(Sys.time(), start_time))))
 
 # close(progressBar)
