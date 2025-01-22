@@ -25,7 +25,7 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
   # set coordinate system
   terra::set.crs(raster, coordinateSystem)
   # Temporary raster name/filepath
-  temp_rast <- "temp_rast.tif"
+  temp_rast <- tempfile("raster",fileext = ".tif")
   # write temporary raster
   terra::writeRaster(raster, temp_rast, overwrite = T)
   # Load in temporary raster
