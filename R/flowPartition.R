@@ -776,8 +776,9 @@ adjust_mannings <- function(slope){
   return(n)
 }
 
-surfaceRouting <- function(surfaceStack,  time_delta_s, velocity = NULL, cellsize = NULL, rain_step_min = 1, infiltration = T){
+surfaceRouting <- function(surfaceStack, surfaceWater, time_delta_s, velocity = NULL, cellsize = NULL, rain_step_min = 1, infiltration = T){
   # Units should be in the seconds for calculations
+  # mannings_n, surfaceWater, slope, throughfall, infiltration_cmhr, flow_direction, currentSoilStorage, maxSoilStorage
   # Cannot be negative depths
   if(is.null(velocity)){
     velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater, surfaceStack$slope, length = NULL)
@@ -805,7 +806,7 @@ surfaceRouting <- function(surfaceStack,  time_delta_s, velocity = NULL, cellsiz
   # Amount of rainfall for given time-step
   rainfall_water_cm <- rainfall_rate_cm_hr * hr_to_s * time_delta_s
 
-  h_current <- surfaceStack$surfaceWater
+  h_current <- surfaceWater
   # Calculate flow lengths - m * 100 = cm
   flow_units <- flowLength(surfaceStack$flow_direction) * cellsize * 100 # cm
   # Discharge out of every cell - normalized by distance
@@ -895,7 +896,65 @@ deltaX <- function(discharge_in_sep){
 # }
 ## ---------------------------- Flow Routing fixed
 # Check the limiting conditions of flow
-time_delta <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T, impervious = F){
+time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm_hr, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T, impervious = F){
+  # Layers needed
+  #mannings_n,surfaceWater,slope, throughfall, (infiltration_cm_hr)
+  if(is.null(cellsize)){
+    cellsize <- grid_size(surfaceWater)
+  }
+  # Velocity calculation
+
+  # Bring in the trouble areas - should be brought in first
+  # if(trouble){
+  #   trouble_cells <- terra::rast(file.path(ModelFolder, "trouble-cells.tif"))
+  #   adjustment <- terra::ifel(trouble_cells > 40, trouble_cells, 1)
+  #   adjusted_cells <- trouble_cells * stream_extracted
+  # }
+  # Check the source term
+  min_to_hour <- 60
+  time_adjustment <- time_step_min/ min_to_hour # time per hour - h^-1
+  # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand for
+  # other rainfall methods
+  rainfall_rate_cm_hr <- throughfall/time_adjustment
+
+  # Calculate source water term
+  source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
+  ### Stability check on rainfall magnitude
+  # Find the maximum rainfall intensity
+  time_step_hr <- courant_condition / max(terra::values(source_water_cm_hr, na.rm = T))
+  time_step_sec <- floor(time_step_hr * 3600) # convert hours to seconds - needs to be changed
+  # Calculate time delta or the time-step for this step in seconds
+  if(time_step_sec > 0 && time_step_sec < time_step_min * 60){
+    time_delta_s <- time_step_sec
+  }else{
+    time_delta_s <- time_step_min * 60
+  }
+  # Time delta rounded
+  time_delta_s <- round(time_delta_s, 2) # round down to nearest second
+
+  ## Courant stability of flow
+  # velocity * time / distance < 1 or
+  # dt = C(courant number) * distance traveled (cm) / velocity (cm/s)
+  # (1000/1000) is to leave 2 decimal places for hundreths of a second to elapse
+  # browser()
+  dt <- floor(min(terra::values(
+    courant_condition * cellsize * 100/ velocity, na.rm = T))*1000)/1000
+  # Change the time step, if the conditions require it
+  if(dt < time_delta_s){
+    time_delta_s <- dt
+  }
+  # Round down for seconds
+  if(time_delta_s > 1){
+    time_delta_s <- floor(time_delta_s)
+  }
+  if(vel){
+    return(list(time_delta_s, velocity))
+  }
+  return(time_delta_s)
+}
+time_delta2 <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T, impervious = F){
+  # Layers needed
+  #mannings_n,surfaceWater,slope, throughfall, (infiltration_cm_hr)
   if(is.null(cellsize)){
     cellsize <- grid_size(surfaceStack)
   }

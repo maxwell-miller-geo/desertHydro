@@ -115,9 +115,9 @@ flowModel <- function(ModelFolder,
     subsurfacePath <- file.path(ModelFolder, "soilStorage.tif")
     surfacePath <- file.path(ModelFolder, "surfaceStorage.tif")
     velocityPath <- file.path(ModelFolder, "velocityStorage.tif")
-    distancePath <- file.path(ModelFolder, "distanceStorage.tif")
+    #distancePath <- file.path(ModelFolder, "distanceStorage.tif")
     # runoffDepthPath <- file.path(ModelFolder, "runoffDepth.tif")
-    flowMapPath <- file.path(ModelFolder, "flowMap.tif")
+    #flowMapPath <- file.path(ModelFolder, "flowMap.tif")
     # drainMapPath <- file.path(ModelFolder, "drainMap.tif")
     #velocityMax_df <- as.data.frame(terra::vect(file.path(ModelFolder, "max-velocity.shp")))
     #depthMaxDF <- as.data.frame(terra::vect(file.path(ModelFolder, "max-depth.shp")))
@@ -143,17 +143,17 @@ flowModel <- function(ModelFolder,
     velocityPath <- initializeRaster(SoilStack$mannings_n*0, "velocityStorage", ModelFolder, zero = T)
 
     # Create distance storage
-    SoilStack$distStorage <- SoilStack$mannings_n * 0 # Creates new layer
-    distancePath <- initializeRaster(SoilStack$distStorage, "distanceStorage", ModelFolder)
+    #SoilStack$distStorage <- SoilStack$mannings_n * 0 # Creates new layer
+    #distancePath <- initializeRaster(SoilStack$distStorage, "distanceStorage", ModelFolder)
 
     # Create runoff Depth before loop
-    runoffDepth <- SoilStack$distStorage
-    runoffDepthPath <- initializeRaster(SoilStack$mannings_n*0, "runoffDepth", ModelFolder)
+    #runoffDepth <- SoilStack$distStorage
+    #runoffDepthPath <- initializeRaster(SoilStack$mannings_n*0, "runoffDepth", ModelFolder)
 
     # Empty flow map
-    flowMapPath <- initializeRaster(SoilStack$distStorage, "flowMap", ModelFolder)
+   # flowMapPath <- initializeRaster(SoilStack$distStorage, "flowMap", ModelFolder)
     # Empty Drain Map
-    drainMapPath <- initializeRaster(SoilStack$mannings_n*0, "drainMap", ModelFolder)
+    #drainMapPath <- initializeRaster(SoilStack$mannings_n*0, "drainMap", ModelFolder)
     #SoilStack$flowMap <- SoilStack$currentSoilStorage * 0
 
     # Stores the Amount of time elapse for each iteration
@@ -197,7 +197,39 @@ flowModel <- function(ModelFolder,
 # Loop through time
   #browser()
 
+# Initialize  size of things beforehand
+# Things to initialize
+  surfaceStack <- c(SoilStack$surfaceWater,
+                    SoilStack$mannings_n,
+                    SoilStack$throughfall,
+                    SoilStack$slope,
+                    SoilStack$model_dem,
+                    SoilStack$flow_direction)
+  if(!impervious){
+    # Add subsurface stack
+    surfaceStack <- c(surfaceStack, SoilStack$infiltration_cmhr,
+                      SoilStack$currentSoilStorage,
+                      SoilStack$maxSoilStorageAmount)
+    currentSoilStorage <- surfaceStack$currentSoilStorage # Create individual adj layers
+  }else{
+    surfaceStack <- c(surfaceStack, SoilStack$infiltration_cmhr*0)
+  }
+  adjustable_layers <- c(SoilStack$surfaceWater, SoilStack$currentSoilStorage,
+                          SoilStack$slope)
+
+  # Individual layers that will be adjusted
+  surfaceWater <- surfaceStack$surfaceWater
+  slope <- surfaceStack$slope
+  mannings_n <- surfaceStack$mannings_n
+
+  # Write the Surface Stack
+  terra::writeRaster(surfaceStack, file.path(ModelFolder, "surface-Stack.tif"), overwrite = T)
+
 for(t in simulation_values){
+  # Values to be read in
+  #surfaceWater, mannings_n, infiltration_rate_cm_hr, slope, model_dem
+  # Modified layers
+  # surfaceWater, slope, currentSoilStorage, (mannigns_n)
   utils::setTxtProgressBar(progressBar, t)
   beginning_time <- simulation_duration[t]
   end_time <- simulation_duration[t+1]
@@ -222,12 +254,12 @@ for(t in simulation_values){
   # rainfall in cm / time step - which the time-step should be in minutes
   total_rain_cm <- rainfall_for_timestep * in_to_cm
   # Memory removal
-  rm(rainfall_for_timestep)
+
   #print(total_rain_cm)
   # # Same amount of rain per time step
   # Check rainfall extent
-  SoilStack$current_rainfall <- terra::ifel(is.finite(SoilStack$model_dem), total_rain_cm, NA) # rainfall distribution map
-
+  #SoilStack$current_rainfall <- terra::ifel(is.finite(SoilStack$model_dem), total_rain_cm, NA) # rainfall distribution map
+  current_rainfall <- terra::ifel(is.finite(surfaceWater), total_rain_cm, NA) # rainfall distribution map
   # Rain volume calculations
   # totalDepthCM <- sum(terra::values(SoilStack$current_rainfall), na.rm = T) # Sum of all depths
   # area <- terra::expanse(SoilStack$current_rainfall, unit = "m")[[2]] # area with non-zeros
@@ -240,7 +272,8 @@ for(t in simulation_values){
   # SoilStack$current_canopy_storage <- SoilStack$maxCanopyStorageAmount
 
   # Calculate throughfall
-  SoilStack$throughfall <- SoilStack$current_rainfall
+  #SoilStack$throughfall <- SoilStack$current_rainfall
+  throughfall <- current_rainfall
   # Temporary set up - assuming all rainfall is throughfall
   # After the water has made its way through the canopy it is now throughfall
   ## ----------- Not set up ------------------
@@ -273,25 +306,21 @@ for(t in simulation_values){
   #browser()
   # Copies a stack
 
-  surfaceStack <- c(SoilStack$surfaceWater,
-                    SoilStack$mannings_n,
-                    SoilStack$throughfall,
-                    SoilStack$slope,
-                    SoilStack$model_dem,
-                    SoilStack$flow_direction)
-  if(!impervious){
-    # Add subsurface stack
-    surfaceStack <- c(surfaceStack, SoilStack$infiltration_cmhr,
-                                     SoilStack$currentSoilStorage,
-                                    SoilStack$maxSoilStorageAmount)
-  }
-
   runoff_counter <- 0
   time_remaining <- simulationTimeSecs
   # Loop over 60 seconds
   while(runoff_counter != simulationTimeSecs){
     # # Calculate the time delta
-    limits <- time_delta(surfaceStack, cellsize = cellsize, time_step_min = 1, courant_condition = courant, vel = T, impervious = impervious)
+    # Calculate potential velocity
+    velocity <- manningsVelocity(mannings_n, surfaceWater, slope, length = cellsize, units = "cm/s")
+    limits <- time_delta(surfaceWater = surfaceWater,
+                         velocity = velocity,
+                         throughfall = throughfall,
+                         infiltration_rate_cm_hr = surfaceStack$infiltration_cmhr,
+                         cellsize = cellsize, time_step_min = 1,
+                         courant_condition = courant, vel = T,
+                         impervious = impervious)
+
     time_delta_s <- limits[[1]]
     if(time_delta_s < 0){
       stop("Error: Negative time step occured, please check input variables")
@@ -329,47 +358,54 @@ for(t in simulation_values){
     }
 
     # Calculate new surface (cm)
+    # mannings_n, surfaceWater, slope, throughfall, infiltration_cmhr, flow_direction, currentSoilStorage, maxSoilStorage
     depth_list <- surfaceRouting(surfaceStack = surfaceStack,
+                                 surfaceWater = surfaceWater,
                                  time_delta_s = time_delta_s,
                                  velocity = velocity,
                                  cellsize = cellsize,
                                  rain_step_min = 1,
                                  infiltration = !impervious)
     # Save new depth
-    surfaceStack$surfaceWater <- SoilStack$surfaceWater <- depth_list[[1]]
-
+    #surfaceStack$surfaceWater <- SoilStack$surfaceWater <- depth_list[[1]]
+    surfaceWater <- depth_list[[1]]
     # Adjust the slope for next time-step
-    new_dem <- surfaceStack$surfaceWater/100 + surfaceStack$model_dem # assumes meters
+    #new_dem <- surfaceStack$surfaceWater/100 + surfaceStack$model_dem # assumes meters
+    new_dem <- surfaceWater/100 + surfaceStack$model_dem # assumes meters
     slope_temp <- terra::terrain(new_dem, v = "slope", neighbors = 8, unit = "degrees")
     new_slope <- terra::merge(slope_temp, model_slope) # opened earlier
     #new_slope <- slope_edge(new_dem, slope_temp, cellsize = cellsize)
     names(new_slope) <- "slope"
-    surfaceStack$slope <- SoilStack$slope <- new_slope
-
+    #surfaceStack$slope <- SoilStack$slope <- new_slope
+    slope <- new_slope
     # Return infiltration depth
     infiltration_depth_cm <- depth_list[[2]]
     rain_depth_cm <- depth_list[[3]]
 
     # Add infiltration to subsurface
-    surfaceStack$currentSoilStorage <- surfaceStack$currentSoilStorage + infiltration_depth_cm
-
+    #surfaceStack$currentSoilStorage <- surfaceStack$currentSoilStorage + infiltration_depth_cm
+    currentSoilStorage <- currentSoilStorage + infiltration_depth_cm
     # Calculate the time in minutes after each time-step
     end_time <- beginning_time + round((runoff_counter + time_delta_s) / 60, 5) # min
+
+    # Adjust layers
 
     # Write raster to file at every minute
     if(end_time %% 1 == 0){
       if(!impervious){
-        rasterWrite(round(SoilStack$currentSoilStorage,3), ModelFolder, end_time, layername = "soil")
+        rasterWrite(round(currentSoilStorage,3), ModelFolder, end_time, layername = "soil")
         }
       # Write surface depth for time-step
-      rasterWrite(round(surfaceStack$surfaceWater,3), ModelFolder, end_time, layername = "surface")
+      rasterWrite(round(surfaceWater,3), ModelFolder, end_time, layername = "surface")
       # Write velocity for time-step
       rasterWrite(round(velocity,3), ModelFolder, end_time, layername = "velocity")
     }
-      maxHeight <- max_in_raster(round(surfaceStack$surfaceWater,3)) # max height cm
+      #maxHeight <- max_in_raster(round(surfaceStack$surfaceWater,3)) # max height cm
+      maxHeight <- max_in_raster(round(surfaceWater,3)) # max height cm
       # Save the outflow cell
       # Adjust the outflow height -- here in cm
-      outflow <- surfaceStack$surfaceWater[outflow_cell][[1]]
+      #outflow <- surfaceStack$surfaceWater[outflow_cell][[1]]
+      outflow <- surfaceWater[outflow_cell][[1]]
       # Add outflow discharge here
       # Height/100 * cellsize^2 / time elapsed = Q (m3/s)
       outflow_discharge <- outflow/100 * cellsize^2 / time_delta_s
@@ -377,8 +413,11 @@ for(t in simulation_values){
       out_discharge <- rbind(out_discharge, list(end_time, outflow, outflow_discharge))
       # Write output discharge
       data.table::fwrite(out_discharge, file = file.path(ModelFolder, "out-discharge.csv"))
+
       # Remove water from outflow cell
-      SoilStack$surfaceWater[outflow_cell] <- surfaceStack$surfaceWater[outflow_cell] <- 0
+      #SoilStack$surfaceWater[outflow_cell] <- surfaceStack$surfaceWater[outflow_cell] <- 0
+      surfaceWater[outflow_cell] <- 0
+
       # Velocity of outflow -feeder cell
       out_velocity <- velocity[velocity_cell][[1]]
 
@@ -392,16 +431,18 @@ for(t in simulation_values){
                                                 height_cellnumber = maxHeight[2]))
 
       mean_rain_cm <- sumCells(rain_depth_cm)/activeCells
-      mean_surface_depth_cm <- sumCells(SoilStack$surfaceWater)/(activeCells)
+      #mean_surface_depth_cm <- sumCells(SoilStack$surfaceWater)/(activeCells)
+      mean_surface_depth_cm <- sumCells(surfaceWater)/(activeCells)
       mean_infiltration_cm <- sumCells(infiltration_depth_cm)/activeCells
       mean_total_rain_cm <- sum(volumes[, "mean_rain_cm"])+ mean_rain_cm
       total_height_out_cm <- sum(volumes[, "gauge_height_cm"])+ outflow
       total_infiltrated_water_cm <- sum(volumes[, "total_infiltrated_water_cm"]) + mean_infiltration_cm
-
+      # Determine the volume difference in average cm per cell
       volume_difference_mean_cm <- mean_total_rain_cm -
         total_height_out_cm/activeCells +
         total_infiltrated_water_cm +
         mean_surface_depth_cm
+
       cumulative_outflow_percent <- (total_height_out_cm/activeCells)/mean_total_rain_cm
       cumulative_infiltration_percent <- total_infiltrated_water_cm/mean_total_rain_cm
 
