@@ -82,13 +82,12 @@ dischargeTotal <- function(discharge_file, write = F, WatershedElements = ""){
     date_time <- height <- discharge <- temp_c <- stream <-  NULL
     stream <- data.table::fread(discharge_file) # reads tsv and csv files
 
-
     #stream_data <- readr::read_tsv(discharge_file, show_col_types = FALSE)
     # Filter data with recorded discharge values- case sensitive
     timeIndex <- stringMatch(stream, guessName = "time", string = F)
     heightIndex <- stringMatch(stream, guessName = "Height", string = F)
     dischIndex <- stringMatch(stream, guessName = "Discharge", string = F)
-    tempIndex <- stringMatch(stream, guessName = "temp", string = F)
+    #tempIndex <- stringMatch(stream, guessName = "temp", string = F)
 
     #filt <- zoo::na.approx(stream[, ..tempIndex]) # filter out NA values
     # print(length(filter))
@@ -97,11 +96,10 @@ dischargeTotal <- function(discharge_file, write = F, WatershedElements = ""){
     #stream[,tempIndex:=zoo::na.approx(stream[tempIndex])] # filter out NA values
 
     observable_discharge <- as.data.frame(stream) |>
-      dplyr::mutate(date_time = stream[, timeIndex],
-                    height = stream[, heightIndex],
-                    discharge = stream[, dischIndex],
-                    temp_c = stream[, tempIndex]) |>
-      dplyr::select(date_time, height, discharge, temp_c) |>
+      dplyr::mutate(date_time = stream[, ..timeIndex],
+                    height = stream[, ..heightIndex],
+                    discharge = stream[, ..dischIndex]) |>
+      dplyr::select(date_time, height, discharge) |>
       #dplyr::mutate(temp_c = ifelse(temp_c < -50, NA, temp_c)) |> # deal with values less then possible (-999)
       dplyr::filter(discharge > 0) # filter out all the discharge greater than 0
 
@@ -117,9 +115,11 @@ dischargeTotal <- function(discharge_file, write = F, WatershedElements = ""){
 # # Function that resamples the data to different time scales - mean approximation
 # # date_time, height, discharge, temp_c
 dischargeResample <- function(dischargeDF, ModelFolder = NULL, units = "day", write = F){
+  # Mutate columns
+
   resampledDF <- dischargeDF |>
-    stats::aggregate(cbind(discharge, temp_c) ~ lubridate::floor_date(date_time, unit = units), FUN = max) |>
-    purrr::set_names(units, "maxDischarge", "temp_c") # want the peaks
+    stats::aggregate(discharge ~ lubridate::floor_date(date_time, unit = units), FUN = max) |>
+    purrr::set_names(units, "maxDischarge") # want the peaks
   if(write){
     filename <- paste0("max-discharge-per-", units, ".csv")
     readr::write_csv(resampledDF, file.path(ModelFolder, filename))

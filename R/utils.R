@@ -667,7 +667,12 @@ get_start_end_time <- function(table, time_col = "time", data_col = "Total_in", 
   if(is.null(table)){
     return(NULL)
   }
-
+  if(inherits(table, "SpatRaster")){
+    # Assumes time proceeds forwards
+    starts <- as.POSIXct(names(table)[1], tz = timezone)
+    ends <- as.POSIXct(names(table)[terra::nlyr(table)], tz = timezone)
+    return(data.frame(start = starts, end = ends))
+  }
   timeIndex <- grep(time_col, colnames(table), ignore.case = T)[[1]]
   dataIndex <- grep(data_col, colnames(table), ignore.case = T)[[1]]
 

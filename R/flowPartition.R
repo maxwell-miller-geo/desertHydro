@@ -776,7 +776,7 @@ adjust_mannings <- function(slope){
   return(n)
 }
 
-surfaceRouting <- function(surfaceStack, surfaceWater, time_delta_s, velocity = NULL, cellsize = NULL, rain_step_min = 1, infiltration = T){
+surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s, velocity = NULL, cellsize = NULL, rain_step_min = 1, infiltration = T){
   # Units should be in the seconds for calculations
   # mannings_n, surfaceWater, slope, throughfall, infiltration_cmhr, flow_direction, currentSoilStorage, maxSoilStorage
   # Cannot be negative depths
@@ -792,13 +792,12 @@ surfaceRouting <- function(surfaceStack, surfaceWater, time_delta_s, velocity = 
   # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand for
   # other rainfall methods
   # Rainfall rate over 1 minute - depth of rain (cm)
-  rainfall_rate_cm_hr <- surfaceStack$throughfall/time_adjustment # cm/hr
+  #rainfall_rate_cm_hr <- surfaceStack$throughfall/time_adjustment # cm/hr
+  #rainfall_rate_cm_hr <- surfaceStack$throughfall/time_adjustment # cm/hr
+  rainfall_rate_cm_hr <- throughfall/time_adjustment # cm/hr
   # Add infiltration rate here --- cm/hr - rate should already be in cm/hr
-  if(infiltration){
-    max_infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr
-  }else{
-    max_infiltration_rate_cm_hr <- 0
-  }
+  max_infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr
+
 
   # Calculate total water infiltrated per time step
   # Maximum amount of water to be infiltrated in a given time-step
@@ -806,7 +805,7 @@ surfaceRouting <- function(surfaceStack, surfaceWater, time_delta_s, velocity = 
   # Amount of rainfall for given time-step
   rainfall_water_cm <- rainfall_rate_cm_hr * hr_to_s * time_delta_s
 
-  h_current <- surfaceWater
+  h_current <- adjustStack$surfaceWater
   # Calculate flow lengths - m * 100 = cm
   flow_units <- flowLength(surfaceStack$flow_direction) * cellsize * 100 # cm
   # Discharge out of every cell - normalized by distance
@@ -834,7 +833,9 @@ surfaceRouting <- function(surfaceStack, surfaceWater, time_delta_s, velocity = 
   # partial_surface_infiltrated <- terra::ifel(infiltration_overflow < 0, 1, 0) * max_infiltrated_water_cm
   #potential_infiltration_cm <- all_surface_infiltrated + partial_surface_infiltrated
   # Check if storage is exceeded
-  temp_soil_storage <- surfaceStack$currentSoilStorage + potential_infiltration_cm
+  #temp_soil_storage <- surfaceStack$currentSoilStorage + potential_infiltration_cm
+  # Check if storage is exceeded
+  temp_soil_storage <- adjustStack$currentSoilStorage + potential_infiltration_cm
   # Check to see if the water exceed storage
   storage_difference <- surfaceStack$maxSoilStorageAmount - temp_soil_storage
   # Calculate the excess water infiltrated - taken care of in routing

@@ -42,7 +42,7 @@ get_GOES_Rainfall <- function(ModelFolder, date = "2021-07-22", region = "us-eas
   table <- file.path(ModelFolder, "rain-discharge.csv")
   if(!file.exists(table)){
     rain <- rainfallFilter(date, ModelFolder, WatershedElements)
-    table <- dischargeCreate(date, ModelFolder,WatershedElements,rain_file = rain,discharge = T)
+    table <- dischargeCreate(date, ModelFolder,WatershedElements, rain_file = rain,discharge = T)
   }
   times <- get_start_end_time(table)
   # Search two hours earlier

@@ -260,6 +260,9 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
   surface_path <- file.path(ModelFolder, "surfaceStorage.tif")
   velocity_path <- file.path(ModelFolder, "velocityStorage.tif")
   subsurface_path <- file.path(ModelFolder, "soilStorage.tif")
+  # if(rain_method == "goes"{
+  #   #rain <-
+  # })
   # Check if stacks and files exist
   # Surface
   if(file.exists(surface_path)){

@@ -668,13 +668,65 @@ resizeImagery <- function(imagery, outline, targetRaster, method = "near"){
   return(clipRaster)
 }
 
-# Imagery file
-# imagery <- terra::rast("OR_ABI-L2-RRQPEF-M6_G17_s20212030050319_e20212030059386_c20212030059481.nc")
-# # Watershed/ outline
-# outline <- terra::vect("Example/WatershedElements/waterholes_shape.shp")
-# # Grid size file
-# targetRaster <- terra::rast("Example/WatershedElements/model_dem.tif")
-# # Test script
-# resizeImagery(imagery, outline, targetRaster)
+compare_rainfall <- function(gauge, goes, gauge_coords){
+  # Read in the data
+  if(inherits(gauge, "character")){
+    gauge <- data.table::fread(gauge)
+  }
+  if(inherits(goes, "character")){
+    goes <- terra::rast(goes)
+  }
+  # Gauge coordinates
+  if(inherits(gauge_coords, "character")){
+    if(file.exists(gauge_coords)){
+      gauge_coords <- terra::vect(gauge_coords)
+    }else{
+      cat("Could not find", gauge_select, "\n Using example gauges")
+      gauge_coords <- terra::vect(file.path(model()@watershedPath, "rain_gauges_waterholes.shp"))
+    }
+  }
+  # Get gauge time
+  gauge_time <- get_start_end_time(gauge, time_col = "Time_minute", data_col = "Total_in")
+  # Get timezone of gauges
+  timezone <- attr(gauge_time[[1]], "tzone")
+  # Get goes time
+  goes_time <- get_start_end_time(goes, timezone = timezone)
+  specific_gauges <- c("WATER_1", "WATER_2", "WATER_G")
+  time_col <- "Time_minute"
+  # Select only the time and gauge columns - static column selection
+  # browser()
+  gauge_select <- gauge[,c("Time_minute","WATER_1", "WATER_2", "WATER_G")]
+  gauge_select[, Time := as.POSIXct(floor(as.numeric(Time_minute) / 600) * 600,
+                                        origin = "1970-01-01", tz = "UTC")]
+  # in_mm - assumes inches
+  in_mm <- 25.4
+  gauge_mm <- gauge_select[, .(WATER_1_mm = sum(WATER_1, na.rm = TRUE)*in_mm,
+                            WATER_2_mm = sum(WATER_2, na.rm = TRUE)*in_mm,
+                            WATER_G_mm = sum(WATER_G, na.rm = TRUE)*in_mm),
+                            by = Time]
+  # Extract values in GOES Rainfall Estimate
+  goes_time_values <- names(goes)
+  goes_values <- terra::extract(goes, gauge_coords, ID = F, raw = F)
+  goes_mm <- as.data.frame(t(goes_values))*(10/60) # mm/hr *1hr/60mins * 10 mins = mm
+  goes_mm$Time <- as.POSIXct(goes_time_values, tz = "UTC")
+  names(goes_mm) <- c(specific_gauges, "Time")
 
-# Process rainfall data to obtain dates
+  # Merge the two
+  merged_rain <- merge(gauge_mm, goes_mm, by = "Time", all.x = T, all.y = T)
+  # Fill NA
+  merged_rain[is.na(merged_rain)] <- 0
+  # Drop all of the rows that contains zeros at the end
+  last_idx <- max(which(rowSums(merged_rain[,2:ncol(merged_rain)] == 0) < 6))
+  merged_rain <- merged_rain[1:last_idx,]
+  print(cor(merged_rain[,-1]))
+  return(merged_rain)
+}
+
+# Dates
+goes_dates <- c("")
+# Correlate
+download_rain <- function(date){
+
+}
+
+
