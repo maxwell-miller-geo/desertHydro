@@ -56,10 +56,7 @@ flowModel <- function(ModelFolder,
   start_time <- Sys.time()
   # Load soil stack
   SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
-  adjustStack <- c(SoilStack$surfaceWater,
-                   SoilStack$currentSoilStorage,
-                    SoilStack$slope,
-                   SoilStack$mannings_n)
+
 
   model_slope <- terra::rast(file.path(ModelFolder, "model_slope.tif"))
   flowStackMethod <- file.path(ModelFolder, "stack_flow.tif")
@@ -133,12 +130,29 @@ flowModel <- function(ModelFolder,
     # volumeIn <- data.table::fread(file.path(ModelFolder, "volumeIn.csv"))
 
   }else{
-    volumes <- data.table::data.table(Time_min = 0, time_elapsed_s = 0, mean_rain_cm = 0, mean_surface_depth_cm = 0,
-                                     mean_infiltration_cm = 0, gauge_height_cm = 0, gauge_velocity_cm_s = 0,
-                                     gauge_discharge_m3_s = 0, mean_total_rain_cm = 0, total_height_out_cm = 0,
-                                     total_infiltrated_water_cm = 0, volume_difference_mean_cm = 0, cumulative_outflow_percent = 0,
-                                     cumulative_infiltration_percent = 0)
-
+    volumes <- data.table::data.table(Time_min = 0, time_elapsed_s = 0, total_rain_cm = 0, total_surface_depth_cm = 0,
+                                      total_infiltration_cm = 0, gauge_height_cm = 0, gauge_velocity_cm_s = 0,
+                                     gauge_discharge_m3_s = 0, mean_total_rain_cm = 0,
+                                     volume_difference_cm = 0, cumulative_infiltrated_water_cm = 0, cumulative_rain_cm = 0,
+                                     cumulative_height_out_cm = 0, cumulative_outflow_percent = 0,cumulative_infiltration_percent = 0,
+                                     cumulative_surface_percent = 0)
+    # Time_min = end_time,
+    # time_elapsed_s = time_delta_s,
+    # total_rain_cm = total_rain_cm,
+    # total_surface_depth_cm = total_surface_depth_cm,
+    # total_infiltration_cm = total_infiltration_cm,
+    # gauge_height_cm = outflow,
+    # gauge_velocity_cm_s = out_velocity,
+    # gauge_discharge_m3_s = round(outflow/100*cellsize^2/time_delta_s,4),
+    # mean_total_rain_cm = total_rain_cm/activeCells,
+    # total_height_out_cm  = total_height_out_cm,
+    # volume_difference_cm = volume_difference_cm,
+    # cumulative_infiltrated_water_cm = cumulative_infiltrated_water_cm,
+    # cumulative_rain_cm = cumulative_rain_cm,
+    # cumulative_height_out_cm = cumulative_height_out_cm,
+    # cumulative_outflow_percent = cumulative_outflow_percent,
+    # cumulative_infiltration_percent = cumulative_infiltration_percent,
+    # cumulative_surface_percent = cumulative_surface_percent
     # Create initial rasters for outputs
     if(!impervious){
       subsurfacePath <- initializeRaster(SoilStack$mannings_n*0, "soilStorage", ModelFolder, zero = T)
@@ -190,12 +204,21 @@ flowModel <- function(ModelFolder,
 # Things to initialize
   staticStack <- c(SoilStack$model_dem,
                     SoilStack$flow_direction)
+
+  adjustStack <- c(SoilStack$surfaceWater,
+                   SoilStack$slope,
+                   SoilStack$mannings_n)
+  #browser()
   if(!impervious){
     # Add subsurface stack
     staticStack <- c(staticStack, SoilStack$infiltration_cmhr, SoilStack$maxSoilStorageAmount)
+    adjustStack <- c(adjustStack,SoilStack$currentSoilStorage)
   }else{
     infiltration_cmhr <- SoilStack$infiltration_cmhr*0
     staticStack <- c(staticStack, infiltration_cmhr)
+    currentSoilStorage <- infiltration_cmhr
+    names(currentSoilStorage) <- "currentSoilStorage"
+    adjustStack <- c(adjustStack, currentSoilStorage)
   }
 
   # Individual layers that will be adjusted
@@ -414,40 +437,57 @@ for(t in simulation_values){
                                                 vel_cellnumber = maxVel[2],
                                                 max_height_cm = maxHeight[1],
                                                 height_cellnumber = maxHeight[2]))
+      # Model step totals
+      total_rain_cm <- sumCells(rain_depth_cm) # current rain totals
+      total_infiltration_cm <- sumCells(infiltration_depth_cm) # current infiltration
+      total_surface_depth_cm <- sumCells(surfaceWater) # current surface depths - temporary source
 
-      mean_rain_cm <- sumCells(rain_depth_cm)/activeCells
+      # Cumulative totals
+      cumulative_infiltrated_water_cm <- sum(volumes[, "total_infiltration_cm"]) + total_infiltration_cm
+      cumulative_rain_cm <- sum(volumes[, "total_rain_cm"])+ total_rain_cm # total rain input
+      cumulative_height_out_cm <- sum(volumes[, "gauge_height_cm"]) + outflow
+
+      #mean_rain_cm <- sumCells(rain_depth_cm)/activeCells
       #mean_surface_depth_cm <- sumCells(SoilStack$surfaceWater)/(activeCells)
-      mean_surface_depth_cm <- sumCells(surfaceWater)/(activeCells)
-      mean_infiltration_cm <- sumCells(infiltration_depth_cm)/activeCells
-      mean_total_rain_cm <- sum(volumes[, "mean_rain_cm"])+ mean_rain_cm
-      total_height_out_cm <- sum(volumes[, "gauge_height_cm"])+ outflow
-      total_infiltrated_water_cm <- sum(volumes[, "total_infiltrated_water_cm"]) + mean_infiltration_cm
+      #mean_surface_depth_cm <- sumCells(surfaceWater)/(activeCells)
+      #mean_infiltration_cm <- sumCells(infiltration_depth_cm)/activeCells
+      #mean_total_rain_cm <- sum(volumes[, "mean_rain_cm"])+ mean_rain_cm
+
+
 
       # Determine the volume difference in average cm per cell
-      volume_difference_mean_cm <- mean_total_rain_cm -
-        total_height_out_cm/activeCells +
-        total_infiltrated_water_cm +
-        mean_surface_depth_cm
+      volume_difference_cm <- cumulative_rain_cm -
+        (cumulative_height_out_cm +
+        cumulative_infiltrated_water_cm +
+        total_surface_depth_cm)
 
-      cumulative_outflow_percent <- (total_height_out_cm/activeCells)/mean_total_rain_cm
-      cumulative_infiltration_percent <- total_infiltrated_water_cm/mean_total_rain_cm
+      # Determine the volume difference in average cm per cell
+      # volume_difference_mean_cm <- mean_total_rain_cm -
+      #   total_height_out_cm/activeCells +
+      #   total_infiltrated_water_cm +
+      #   mean_surface_depth_cm
 
+      cumulative_outflow_percent <- round((cumulative_height_out_cm/cumulative_rain_cm)*100,2)
+      cumulative_infiltration_percent <- round((cumulative_infiltrated_water_cm/cumulative_rain_cm),2)
+      cumulative_surface_percent <- round((total_surface_depth_cm/cumulative_rain_cm)*100,2)
 
       volumes <- rbind(volumes,
                        list(Time_min = end_time,
                             time_elapsed_s = time_delta_s,
-                            mean_rain_cm = mean_rain_cm,
-                            mean_surface_depth_cm = mean_surface_depth_cm,
-                            mean_infiltration_cm = mean_infiltration_cm,
+                            total_rain_cm = total_rain_cm,
+                            total_surface_depth_cm = total_surface_depth_cm,
+                            total_infiltration_cm = total_infiltration_cm,
                             gauge_height_cm = outflow,
                             gauge_velocity_cm_s = out_velocity,
                             gauge_discharge_m3_s = round(outflow/100*cellsize^2/time_delta_s,4),
-                            mean_total_rain_cm = mean_total_rain_cm,
-                            total_height_out_cm  = total_height_out_cm,
-                            total_infiltrated_water_cm = total_infiltrated_water_cm,
-                            volume_difference_mean_cm = volume_difference_mean_cm,
+                            mean_total_rain_cm = total_rain_cm/activeCells,
+                            volume_difference_cm = volume_difference_cm,
+                            cumulative_infiltrated_water_cm = cumulative_infiltrated_water_cm,
+                            cumulative_rain_cm = cumulative_rain_cm,
+                            cumulative_height_out_cm = cumulative_height_out_cm,
                             cumulative_outflow_percent = cumulative_outflow_percent,
-                            cumulative_infiltration_percent = cumulative_infiltration_percent))
+                            cumulative_infiltration_percent = cumulative_infiltration_percent,
+                            cumulative_surface_percent = cumulative_surface_percent))
 
     # Increment the runoff counter be elapsed time (s)
      runoff_counter <- runoff_counter + round(time_delta_s,4)

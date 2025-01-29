@@ -672,6 +672,8 @@ compare_rainfall <- function(gauge, goes, gauge_coords){
   # Read in the data
   if(inherits(gauge, "character")){
     gauge <- data.table::fread(gauge)
+  }else if(!inherits(gauge, "data.table")){
+    gauge <- data.table::as.data.table(gauge) # make it a data.table
   }
   if(inherits(goes, "character")){
     goes <- terra::rast(goes)
@@ -704,6 +706,7 @@ compare_rainfall <- function(gauge, goes, gauge_coords){
                             WATER_2_mm = sum(WATER_2, na.rm = TRUE)*in_mm,
                             WATER_G_mm = sum(WATER_G, na.rm = TRUE)*in_mm),
                             by = Time]
+
   # Extract values in GOES Rainfall Estimate
   goes_time_values <- names(goes)
   goes_values <- terra::extract(goes, gauge_coords, ID = F, raw = F)
@@ -718,15 +721,42 @@ compare_rainfall <- function(gauge, goes, gauge_coords){
   # Drop all of the rows that contains zeros at the end
   last_idx <- max(which(rowSums(merged_rain[,2:ncol(merged_rain)] == 0) < 6))
   merged_rain <- merged_rain[1:last_idx,]
+  # Get date
+  #browser()
+  date_of <- substr(gauge_select$Time_minute[1], 1, 10)
+  cat("Correlation Matrix for:", date_of, "\n")
   print(cor(merged_rain[,-1]))
   return(merged_rain)
 }
 
 # Dates
-goes_dates <- c("")
-# Correlate
-download_rain <- function(date){
+goes_dates <- c("2021-07-22", "2021-07-23", "2021-09-01",
+                "2021-09-11", "2022-07-05", "2022-07-15",
+                "2022-07-24", "2022-07-28", "2022-07-29",
+                "2022-07-30", "2022-08-27", "2022-09-14")
+# Correlate rainfall
+download_rain <- function(date, rainfall_method = "goes"){
+  ModelFolder <- paste0("Results/Rainfall/", date,"-GOES")
+  #WatershedElements <- model()@watershedPath
+  if(!file.exists(ModelFolder)){
+    dir.create(ModelFolder)
+  }
+  # Check if goes file exists
+  rain_file <- file.path(ModelFolder, paste0(date, "-goes.tif"))
+  if(!file.exists(rain_file)){
+    rain_file <- suppressWarnings(rainfallCreation(ModelFolder, WatershedElements,
+                                                   date = date, method = rainfall_method,
+                                                   overwrite = T))
+  }
 
+  rain_discharge <- dischargeCreate(date = date, ModelFolder, WatershedElements,
+                                   discharge = T)
+
+  combined_rain <- compare_rainfall(rain_discharge, rain_file,
+                   gauge_coords = file.path(WatershedElements, "rain_gauges_waterholes.shp"))
+  return(combined_rain)
 }
+# Get all of the rain
+# goes_rain_all <- lapply(goes_dates, download_rain)
 
 

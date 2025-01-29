@@ -92,9 +92,10 @@ get_GOES_Rainfall <- function(ModelFolder, date = "2021-07-22", region = "us-eas
 }
 
 hour_sequence <- function(hour_start, hour_end, days, day){
-  if(hour_start > hour_end & day == 1){
+  #browser()
+  if(hour_start >= hour_end & day == 1){ # added equals
     hours <- seq(hour_start, 23) # Sequences first day to the end
-  }else if(hour_start > hour_end & day != 1){
+  }else if(hour_start >= hour_end & day != 1){
     # Second to nth day ideally
     if(day == length(days)){ # If last day
       hours <- seq(0, hour_end)
@@ -104,6 +105,7 @@ hour_sequence <- function(hour_start, hour_end, days, day){
   }else if(hour_start < hour_end & length(days) == 1){ # if only one day
     hours <- seq(hour_start, hour_end)
   }
+  cat("Processing day", day, "of", length(days), "\n")
   return(as.numeric(sprintf("%02d", hours)))
 }
 
@@ -155,7 +157,9 @@ retrieve_and_order_GOES <- function(day, days, hour_start, hour_end, bucket, pat
   # Save necessary files
   save_files <- lapply(selected_files, function(x){
     path <- file.path(ModelFolder, tail(strsplit(x$Key, "/")[[1]],1))
-    aws.s3::save_object(x, file = path)
+    if(!file.exists(path)){
+      aws.s3::save_object(x, file = path) # other get it when needed
+    }
     return(path)
   })
   # Sort the selected files by time
