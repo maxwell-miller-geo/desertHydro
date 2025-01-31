@@ -248,21 +248,18 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, discharge = F, sto
 #' @param date String: Optional, will display the rainfall totals in GIF
 #' @param discharge T/F: If T, will incorporate discharge data
 #' @param saveGraph T/F: If T, will save graph to ModelFolder
-#'
+#' @param rainfall_only T/F: If TRUE, will only create rainfall GIF
 #' @return Returns list containing surface and velocity GIFS.
 #' @export
 #'
 #' @examples \dontrun{
 #' gifCreation(ModelFolder, saveGraph = T)
 #' }
-gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharge = F, saveGraph = T){
+gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharge = F, saveGraph = T, rainfall_only = F){
   # paths to storage layers
   surface_path <- file.path(ModelFolder, "surfaceStorage.tif")
   velocity_path <- file.path(ModelFolder, "velocityStorage.tif")
   subsurface_path <- file.path(ModelFolder, "soilStorage.tif")
-  # if(rain_method == "goes"{
-  #   #rain <-
-  # })
   # Check if stacks and files exist
   # Surface
   if(file.exists(surface_path)){
@@ -291,9 +288,10 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
   }else{
     cat(surface_path, "does not exist \n")
   }
+
+  if(!rainfall_only){
   # Check rainfall method
   rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method = rainfall_method)
-
   # Determine points taken by raster stack
   xvalues <- as.vector(stats::na.omit(as.numeric(names(surfaceStorage))))
   # Determine how rainfall is read in
@@ -301,8 +299,8 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
     print("Retrieving rainfall data from simulation: rain_discharge")
     rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
     rainFiltered <- readr::read_csv(rainFiltered_file, show_col_types = F)
-    total_rain <- round(sum(rainFiltered$Total_in),3)
-    total_rain_duration <- as.numeric((utils::tail(rainFiltered$Time_minute, n = 1) - rainFiltered$Time_minute[1]))
+    total_rain <- round(sum(rainFiltered$Total_in), 3) # in inches
+    total_rain_duration <- as.numeric((utils::tail(rainFiltered$Time_minute, n = 1) - rainFiltered$Time_minute[1])) # in hours
     rain <- readr::read_csv(rain_file, show_col_types = F)
   }else if(rainfall_method == "goes"){
     rain <- terra::rast(rain_file)
@@ -315,6 +313,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
     total_rain_duration <- as.numeric((utils::tail(rain$time, n = 1) - rain$time[1]))
   }
 
+    # Surface DEPTH
     print(paste("Creating surface depth animation..."))
     # Load in surface storage
     #surfaceStorage <- rast(file.path(ModelFolder, "Surface_Storage.tif"))
@@ -371,7 +370,76 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
     if(saveGraph){
       gganimate::anim_save(filename = paste0(date,"-velocity.gif"), path = ModelFolder, animation = velocity_plot, fps = 10, renderer = gganimate::gifski_renderer())
     }
-    return(list(surface_plot, velocity_plot))
+}
+    # Rainfall
+    if(rainfall_method == "goes"){
+      # find potential goes files
+      rain_options <- grep("-goes.tif", list.files(ModelFolder), value = T)
+      # Select shortest one - over the .aux file
+      rain_path <- file.path(ModelFolder, rain_options[which.min(nchar(rain_options))])
+      if(file.exists(rain_path)){
+        rain_surface <- terra::rast(rain_path)/6 # mm/hr *1hr/60mins * 10 mins
+        xvalues <- 10*seq(terra::nlyr(rain_surface))
+        #units <-  "Rainfall (mm hr\u207b\u00b9)"
+        units <- "Rainfall (mm)"
+        total_rain_duration <- tail(xvalues, 1)
+        caption <- paste0("Rainfall intensity over ", round(total_rain_duration, 2)," minutes.")
+      }else{
+        stop("Could not find GOES rainfall file. Should by in 'ModelFolder' with format YYYY-MM-DD-goes.tif")
+      }
+    }
+    if(rainfall_method == "gauges"){
+      # Take the average of all the rainfall
+      rain_per_time <- rainFiltered[,c("Time_minute","Total_in")]
+      start_end <- get_start_end_time(rain_per_time)
+      time_range <- difftime(start_end$end, start_end$start, units = "mins")[[1]]
+      range <- data.frame(normalized_time = seq(0, time_range))
+      rain_per_time$normalized_time <- as.numeric(difftime(rain_per_time$Time_minute, rain_per_time[1,1][[1]], units = "mins"))
+      rain_per_time <- merge(range, rain_per_time,by = "normalized_time", all = T)
+      rain_per_time[is.na(rain_per_time)] <- 0
+      # select only two columns
+      rain_df <- rain_per_time[, c("normalized_time", "Total_in")]
+      # Create raster stack of values from the surface stack
+      xvalues <- rain_df$normalized_time
+      rain_surface <- (surfaceStorage[[1]] + 1)*rain_df$Total_in*25.4 # output in mm
+      units <- "Rain (mm)"
+      caption <- paste0("Rainfall from gauges over ", round(time_range, 2)," minutes.")
+    }
+    if(rainfall_method == "spatial"){
+      rain_per_time <- rainFiltered[,c("Time_minute","WATER-1", "WATER-2", "WATER-G")]
+      time_range <- difftime(tail(rain_per_time$Time_minute,1), rain_per_time$Time_minute[1], units = "mins")[[1]]
+      range <- data.frame(normalized_time = seq(0, time_range))
+      rain_per_time$normalized_time <- as.numeric(difftime(rain_per_time$Time_minute, rain_per_time[1,1][[1]], units = "mins"))
+      rain_per_time <- merge(range, rain_per_time,by = "normalized_time", all = T)
+      rain_per_time[is.na(rain_per_time)] <- 0
+      # select only two columns
+      rain_df <- rain_per_time[, c("normalized_time", "WATER-1", "WATER-2", "WATER-G")]
+      # Janky way to load in the voronoi shapefile
+      rain_regions <- terra::vect(filePresent("voronoi.shp", model()@watershedPath))
+      gauges <- rain_df[,c("WATER-1", "WATER-2", "WATER-G")]*25.4
+      rain_surface <- do.call(c, apply(gauges, MARGIN = 1, FUN = rasterizeRainfall, rain_regions, surfaceStorage[[1]]))
+      xvalues <- rain_df$normalized_time
+      units <- "Rain (mm)"
+      caption <- paste0("Rainfall from gauges over ", round(time_range, 2)," minutes.")
+    }
+
+    # Check if file exists
+    print(paste("Creating rainfall animation..."))
+    # Use custom function to melt the raster stack into a dataframe for plotting
+    meltedSurface <- meltStack(rain_surface, timevalues = xvalues) # Surface depths through time
+
+    # Create an animated ggplot - Surface Storage
+    rain_plot <- animateStack(meltedSurface,
+                                 title = paste("Rainfall", date),
+                                 units = units,
+                                 caption = caption)
+    # Display the animation
+    gganimate::animate(rain_plot)
+    # store the animated GIF
+    if(saveGraph){
+      gganimate::anim_save(filename = paste0(date,"-rain-Depth.gif"), path = ModelFolder, animation = rain_plot, fps = 10, renderer = gganimate::gifski_renderer())
+    }
+    return(NULL)
 
 }
 # Test

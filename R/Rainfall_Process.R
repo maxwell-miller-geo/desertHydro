@@ -150,8 +150,8 @@ rainfallAccum <- function(rain, beginning_time, end_time, rainfall_method = "gau
     # Get rainfall from shape
     rainForGauges <- cumulativeRain(rain, left = beginning_time, right = end_time, spatial = T)
     # Could adjust voronoi
-    rainfall_for_timestep <- rasterizeRainfall(voronoi_shape = file.path(ModelFolder, "voronoi.shp"),
-                                               rainAtGauges = rainForGauges,
+    rainfall_for_timestep <- rasterizeRainfall(rainAtGauges = rainForGauges,
+                                               voronoi_shape = file.path(ModelFolder, "voronoi.shp"),
                                                rainfallRaster = terra::rast(file.path(ModelFolder, "model_soil_stack.tif")))
     return(rainfall_for_timestep)
   }else if(rainfall_method == "goes" & !is.logical(goes)){
@@ -549,9 +549,13 @@ cumulativeRain <- function(rainDF, left, right, spatial = F){
 # Test - no test currently
 #voronoi
 # Function uses Watershed voronoi shapefile, recorded rainfall amounts - outputs rasterized rainfall
-rasterizeRainfall <- function(voronoi_shape, rainfallRaster, rainAtGauges){
+rasterizeRainfall <- function(rainAtGauges, voronoi_shape, rainfallRaster){
     # Order must be the same: WATERHOLES-1, WATERHOLES-2, WATERHOLES-G
-    shape <- terra::vect(voronoi_shape)
+    if(inherits(voronoi_shape, "character")){
+      shape <- terra::vect(voronoi_shape)
+    }else{
+      shape <- voronoi_shape
+    }
     # Pull out the values and convert to a dataframe
     df <- as.data.frame(terra::values(shape))
     df$rain <- NA
@@ -730,10 +734,10 @@ compare_rainfall <- function(gauge, goes, gauge_coords){
 }
 
 # Dates
-goes_dates <- c("2021-07-22", "2021-07-23", "2021-09-01",
-                "2021-09-11", "2022-07-05", "2022-07-15",
-                "2022-07-24", "2022-07-28", "2022-07-29",
-                "2022-07-30", "2022-08-27", "2022-09-14")
+# goes_dates <- c("2021-07-22", "2021-07-23", "2021-09-01",
+#                 "2021-09-11", "2022-07-05", "2022-07-15",
+#                 "2022-07-24", "2022-07-28", "2022-07-29",
+#                 "2022-07-30", "2022-08-27", "2022-09-14")
 # Correlate rainfall
 download_rain <- function(date, rainfall_method = "goes"){
   ModelFolder <- paste0("Results/Rainfall/", date,"-GOES")
@@ -754,9 +758,10 @@ download_rain <- function(date, rainfall_method = "goes"){
 
   combined_rain <- compare_rainfall(rain_discharge, rain_file,
                    gauge_coords = file.path(WatershedElements, "rain_gauges_waterholes.shp"))
+  data.table::fwrite(combined_rain, file.path(ModelFolder, "rain-goes-compare.csv"))
   return(combined_rain)
 }
 # Get all of the rain
-# goes_rain_all <- lapply(goes_dates, download_rain)
+#goes_rain_all <- lapply(goes_dates, download_rain)
 
 
