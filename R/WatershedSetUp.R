@@ -110,7 +110,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
 
   # Create flow direction map to add to watershed stack
   flow_direction <- file.path(ModelFolder, "flow_direction.tif")
-  whitebox::wbt_d8_pointer(model_dem, flow_direction)
+  whitebox::wbt_d8_pointer(model_dem, flow_direction, esri_pntr = T)
   crsAssign(flow_direction, get_crs(model_dem))
   # Stack them all up
   WatershedStack <- c(terra::rast(model_dem),

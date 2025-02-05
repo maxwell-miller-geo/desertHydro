@@ -56,8 +56,6 @@ flowModel <- function(ModelFolder,
   start_time <- Sys.time()
   # Load soil stack
   SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
-
-
   model_slope <- terra::rast(file.path(ModelFolder, "model_slope.tif"))
   flowStackMethod <- file.path(ModelFolder, "stack_flow.tif")
   if(file.exists(flowStackMethod)){
@@ -258,65 +256,18 @@ for(t in simulation_values){
   in_to_cm <- 2.54
   # rainfall in cm / time step - which the time-step should be in minutes
   total_rain_cm <- rainfall_for_timestep * in_to_cm
-  # Memory removal
-
-  #print(total_rain_cm)
-  # # Same amount of rain per time step
-  # Check rainfall extent
   #SoilStack$current_rainfall <- terra::ifel(is.finite(SoilStack$model_dem), total_rain_cm, NA) # rainfall distribution map
   current_rainfall <- terra::ifel(is.finite(surfaceWater), total_rain_cm, NA) # rainfall distribution map
   # Rain volume calculations
-  # totalDepthCM <- sum(terra::values(SoilStack$current_rainfall), na.rm = T) # Sum of all depths
-  # area <- terra::expanse(SoilStack$current_rainfall, unit = "m")[[2]] # area with non-zeros
-  # volumeM3 <- totalDepthCM/100 * area # cubic meters
-  # mean_rain_depth_cm <- sumCells(SoilStack$current_rainfall) / activeCells
-  #
-  # # Not implemented
-  ## [2] Canopy
-  # Evaluate canopy storage - (current-storage + rainfall)
-  # SoilStack$current_canopy_storage <- SoilStack$maxCanopyStorageAmount
-
   # Calculate throughfall
   #SoilStack$throughfall <- SoilStack$current_rainfall
   throughfall <- current_rainfall
-  # Temporary set up - assuming all rainfall is throughfall
-  # After the water has made its way through the canopy it is now throughfall
-  ## ----------- Not set up ------------------
-  ## [3] Subsurface - Surface
-  # Subsurface Lateral Flow
-  # Lateral flow is based on Darcy's Law, with gradient equal to land slope, and direction maps
-  # Calculated from the elevation model - flow partitioned
-  # Diversions and tile drains are assumed to effectively divert the lateral flow, so that it goes directly into the stream rather than downhill?? - Not in here
-  # Calculate the amount of runoff - based on the difference between the throughfall and current soil storage amount
-  # Effective conductivity function for subsurface flow for unsaturated, saturated, and at fields capacity.
-    # Adjustments
-    #SoilStack$effectiveInfiltrationRate <- SoilStack$surfaceWater * .4 # Infiltration rate is 40% of surface water
-    # Infiltration rate
-    # soilAdjustments <- infiltration(SoilStack, simulationTimeSecs)
-    # SoilStack$surfaceWater <- soilAdjustments[[1]]
-    # SoilStack$currentSoilStorage <- soilAdjustments[[2]]
-
-    # Effective conductivity function for subsurface flow for unsaturated, saturated, and at fields capacity.
-    # Rate of m/s
-    # SoilStack$currentSoilStorage <- subsurfaceFlow(SoilStack, simulationTimeSecs, flowStack_file)
-
-
-    #SoilStack$surfaceWater <- SoilStack$surfaceWater + SoilStack$throughfall # water not infiltrated
-  # Calculates the current storage of the throughfall and current soil storage - adjust for rate of infiltration?
- #becomes surface water
-
-  ## [4] Surface Runoff
-  #print(names(SoilStack))
-  # Create surface stack to pass only the important surface variables
-  #browser()
-  # Copies a stack
-
   runoff_counter <- 0
   time_remaining <- simulationTimeSecs
-  # Loop over 60 seconds
+  # Loop over 60 seconds - checking that simulation runs up to 60 seconds
   while(runoff_counter != simulationTimeSecs){
     # # Calculate the time delta
-    # Calculate potential velocity
+    # Calculate potential ve!=locity
     velocity <- manningsVelocity(mannings_n, surfaceWater, slope, length = cellsize, units = "cm/s")
     limits <- time_delta(surfaceWater = surfaceWater,
                          velocity = velocity,
@@ -330,36 +281,14 @@ for(t in simulation_values){
     if(time_delta_s < 0){
       stop("Error: Negative time step occured, please check input variables")
     }
-    # Adjust infiltration rate based upon water infiltrated
-    # of remaining water
-    # if(!impervious){
-    #   # Insert method for infiltration here or earlier
-    #   #SoilStack$infiltration_cmhr <- SoilStack$infiltration_cmhr * 1
-    #   time_hours <- time_delta_s / 3600
-    #   # Look at throughfall
-    #   water_infiltrated_cm <- SoilStack$infiltration_cmhr * time_hours
-    #   # Hope this works
-    #   water_infiltrated_cm <- terra::ifel(water_infiltrated_cm < surfaceStack$throughfall,
-    #                               water_infiltrated_cm,
-    #                               surfaceStack$throughfall)
-    #   # Adjust amount of water stored in the soil
-    #   SoilStack$currentSoilStorage <- SoilStack$currentSoilStorage + water_infiltrated_cm
-    #   # Check to see if the water exceed storage
-    #   difference <- SoilStack$maxSoilStorageAmount - SoilStack$currentSoilStorage
-    #   # Calculate the excess water infiltrated - taken care of in routing
-    #   excess_water <- terra::ifel(difference < 0, abs(difference), 0)
-    #   SoilStack$currentSoilStorage <- SoilStack$currentSoilStorage - excess_water
-    #   # Adjust soil infiltration rate for next time step -- to-do
-    # }
-
-    #print(paste("Time calculate:", time_delta_s))
+     #print(paste("Time calculate:", time_delta_s))
     # Calculate the velocity over the timestep
     velocity <- limits[[2]]
     #print(paste("Time remaining:", time_remaining))
     time_remaining <- time_remaining - time_delta_s
     #print(paste("Time remaining:", time_remaining))
-    if(time_remaining < 0){
-      time_delta_s <- time_remaining + time_delta_s
+    if(runoff_counter + time_delta_s > simulationTimeSecs){
+      time_delta_s <- simulationTimeSecs - runoff_counter
     }
 
     # Calculate new surface (cm)
@@ -491,6 +420,9 @@ for(t in simulation_values){
 
     # Increment the runoff counter be elapsed time (s)
      runoff_counter <- runoff_counter + round(time_delta_s,4)
+     if(abs(runoff_counter-simulationTimeSecs) < 0.1){
+       runoff_counter <- simulationTimeSecs
+     }
      # Adjust the raster depth for the outflow cell and save it
      #print(paste("Runoff Counter:", runoff_counter))
     }

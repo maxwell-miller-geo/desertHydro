@@ -80,10 +80,10 @@ monsoon <- function(ModelFolder = NULL, date = "2021-07-22", model_type = "defau
     model1 <- small_infiltration(ModelFolder)
     model1@key <- "MUSYM"
   }
-  # Create log file
-  my_log <- file(file.path(ModelFolder, "log.txt"))
-  sink(my_log, append = TRUE, type = "output") # Writing console output to log file
-  on.exit(sink())
+  # Create log file - optional
+  # my_log <- file(file.path(ModelFolder, "log.txt"))
+  # sink(my_log, append = TRUE, type = "output") # Writing console output to log file
+  # on.exit(sink())
   # Insert function to mess with the default options through additional inputs
   # Added stuff - should be passed as arguments
 

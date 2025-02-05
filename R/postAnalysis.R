@@ -371,7 +371,9 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
       gganimate::anim_save(filename = paste0(date,"-velocity.gif"), path = ModelFolder, animation = velocity_plot, fps = 10, renderer = gganimate::gifski_renderer())
     }
 }
-    # Rainfall
+    # Rainfall - need date to do
+    rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
+    rainFiltered <- readr::read_csv(rainFiltered_file, show_col_types = F)
     if(rainfall_method == "goes"){
       # find potential goes files
       rain_options <- grep("-goes.tif", list.files(ModelFolder), value = T)

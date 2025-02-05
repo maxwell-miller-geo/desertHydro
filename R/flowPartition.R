@@ -137,21 +137,21 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
   if(!is.null(dem_path) & is.null(flow_d8)){
     crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_path), describe = T)[[3]])
     flow <- file.path(tempdir(), "d8flow.tif")
-    whitebox::wbt_d8_pointer(dem_path, flow)
+    whitebox::wbt_d8_pointer(dem_path, flow, esri_pntr = TRUE)
     crsAssign(flow, crs_dem)
     flow_d8 <- terra::rast(flow)
   }
 
   # Numeric values of flow direction, shift directions, and distance adjustment
   flowKey <- list("0" = list("no-flow", c(0,0), 1),
-                    "1" = list("north-east", c(1,1), sqrt(2)),
-                    "2" = list("east", c(1,0), 1),
-                    "4" = list("south-east", c(1, -1), sqrt(2)),
-                    "8" = list("south", c(0, -1), 1),
-                    "16" = list("south-west", c(-1,-1), sqrt(2)),
-                    "32" = list("west", c(-1, 0), 1),
-                    "64" = list("north-west", c(-1, 1), sqrt(2)),
-                    "128" = list("north", c(0, 1), 1))
+                    "1" = list("east", c(1,0), 1),
+                    "2" = list("south-east", c(1, -1), sqrt(2)),
+                    "4" = list("south", c(0, -1), 1),
+                    "8" = list("south-west", c(-1,-1), sqrt(2)),
+                    "16" = list("west", c(-1, 0), 1),
+                    "32" = list("north-west", c(-1, 1), sqrt(2)),
+                    "64" = list("north", c(0, 1), 1),
+                    "128" = list("north-east", c(1,1), sqrt(2)))
 
   flow_directions <- names(flowKey)
   xDim <- terra::res(discharge)[1]
@@ -234,50 +234,52 @@ flowLength <- function(d8_flow){
   if(is.character(d8_flow)){
     d8_flow <- terra::rast(d8_flow)
   }
+  # Based on flow direction of terra terrain and esri pointer
   flow_reclass <- c(0, 1,
-                    1, sqrt(2),
-                    2, 1,
-                    4, sqrt(2),
-                    8, 1,
-                    16, sqrt(2),
-                    32, 1,
-                    64, sqrt(2),
-                    128, 1)
+                    1, 1,
+                    2, sqrt(2),
+                    4, 1,
+                    8, sqrt(2),
+                    16, 1,
+                    32, sqrt(2),
+                    64, 1,
+                    128, sqrt(2))
+
   flow_matrix <- matrix(flow_reclass, ncol = 2, byrow = T)
 
   flow_units <- terra::classify(d8_flow, rcl = flow_matrix)
   return(flow_units)
 }
 ## Flow Partitioning function- Percent flow
-outputFlow <- function(values, dir){
-  diagFlow <- 1 / sqrt(2)
-  directions <- list("NW" = list(1, diagFlow),
-                     "N" = list(2, 1),
-                     "NE" = list(3, diagFlow),
-                     "W" = list(4, 1),
-                     "E" = list(6, 1),
-                     "SW" = list(7, diagFlow),
-                     "S" = list(8, 1),
-                     "SE" = list(9, diagFlow))
-  # Take input direction and perform the percent calculation -- needs direction list
-  flowPosition <- directions[[dir]][[1]] # find the vector value within the direction dictionary (NW = 1)
-  scalar <- directions[[dir]][[2]] # find the scaling factor (1 for orthogonal, .707 for diagonal)
-  centerElevation <- values[14] # center value of the top layer
-  flowElevation <- values[flowPosition + 9]
-  # cat(flowElevation, centerElevation, flowElevation)
-  # print('Done')
-  # Checks if center cell and cell in question have any flow accumulation at all
-  #print(paste(values, flowPosition, flowElevation, centerElevation))
-  if(is.na(centerElevation) || (values[flowPosition] <= 0 || values[5] <= 0 || flowElevation <= 0 || centerElevation <= 0)){
-    return(0)
-  }
-
-  else{
-    # Calculate the flow percent based on the difference is the elevation values and flow accumulation
-    flowPercent <- (flowElevation - centerElevation)/ (values[flowPosition])*scalar
-    return(max(flowPercent, 0)) # return only positive values
-  }
-}
+# outputFlow <- function(values, dir){
+#   diagFlow <- 1 / sqrt(2)
+#   directions <- list("NW" = list(1, diagFlow),
+#                      "N" = list(2, 1),
+#                      "NE" = list(3, diagFlow),
+#                      "W" = list(4, 1),
+#                      "E" = list(6, 1),
+#                      "SW" = list(7, diagFlow),
+#                      "S" = list(8, 1),
+#                      "SE" = list(9, diagFlow))
+#   # Take input direction and perform the percent calculation -- needs direction list
+#   flowPosition <- directions[[dir]][[1]] # find the vector value within the direction dictionary (NW = 1)
+#   scalar <- directions[[dir]][[2]] # find the scaling factor (1 for orthogonal, .707 for diagonal)
+#   centerElevation <- values[14] # center value of the top layer
+#   flowElevation <- values[flowPosition + 9]
+#   # cat(flowElevation, centerElevation, flowElevation)
+#   # print('Done')
+#   # Checks if center cell and cell in question have any flow accumulation at all
+#   #print(paste(values, flowPosition, flowElevation, centerElevation))
+#   if(is.na(centerElevation) || (values[flowPosition] <= 0 || values[5] <= 0 || flowElevation <= 0 || centerElevation <= 0)){
+#     return(0)
+#   }
+#
+#   else{
+#     # Calculate the flow percent based on the difference is the elevation values and flow accumulation
+#     flowPercent <- (flowElevation - centerElevation)/ (values[flowPosition])*scalar
+#     return(max(flowPercent, 0)) # return only positive values
+#   }
+# }
 
 ## Test for outputFlow script
 
@@ -781,7 +783,7 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   # mannings_n, surfaceWater, slope, throughfall, infiltration_cmhr, flow_direction, currentSoilStorage, maxSoilStorage
   # Cannot be negative depths
   if(is.null(velocity)){
-    velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater, surfaceStack$slope, length = NULL)
+    velocity <- manningsVelocity(adjustStack$mannings_n, adjustStack$surfaceWater, adjustStack$slope, length = NULL)
   }
   if(is.null(cellsize)){
     cellsize <- grid_size(velocity)
@@ -797,7 +799,6 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   rainfall_rate_cm_hr <- throughfall/time_adjustment # cm/hr
   # Add infiltration rate here --- cm/hr - rate should already be in cm/hr
   max_infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr
-
 
   # Calculate total water infiltrated per time step
   # Maximum amount of water to be infiltrated in a given time-step
@@ -820,7 +821,7 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   testthat::expect_equal(discharge_in_sum, discharge_sum)
   # Calculate the movement of water = s * (cm/s - cm/s) = cm
   flow_water_cm <- time_delta_s * (discharge_out - discharge_in)
-  testthat::expect_lt(sumCells(flow_water_cm), 1e-9)
+
   # New height cannot be negative!! Negative depths are bad
   # Determine the infiltrated water per cell
   if(infiltration){

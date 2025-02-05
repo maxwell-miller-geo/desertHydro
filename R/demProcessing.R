@@ -109,7 +109,7 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
   # Calculate D8 points
   d8_pntr <- file.path(ModelFolder, "fd8_pntr.tif")
   file_removal(d8_pntr, overwrite)
-  whitebox::wbt_d8_pointer(model_dem, d8_pntr)
+  whitebox::wbt_d8_pointer(model_dem, d8_pntr, esri_pntr = TRUE)
 
   # RasterStreams to Vector
   file_removal(vect_stream, overwrite)
@@ -207,12 +207,12 @@ streamCreate <- function(flowRasterPath, model_dem, Outpath, threshold = 100){
 
   if(!file.exists(flow_direction)){
     if(file.exists(demFile)){
-      whitebox::wbt_d8_pointer(demFile, flow_direction)
+      whitebox::wbt_d8_pointer(demFile, flow_direction, esri_pntr = T)
       crsAssign(flow_direction, terra::crs(terra::rast(demFile))) # flow direction
 
     }else if(file.exists(dem_alternate)){
       print("Using DEM alternate...")
-      whitebox::wbt_d8_pointer(dem_alternate, flow_direction) # flow direction
+      whitebox::wbt_d8_pointer(dem_alternate, flow_direction, esri_pntr = T) # flow direction
       crsAssign(flow_direction, terra::crs(terra::rast(dem_alternate))) # coords
 
     }else{

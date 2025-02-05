@@ -8,7 +8,7 @@ test_that("Create flow maps", {
   # Test with larger map area
   dem_path <- file.path(a@watershedPath,"dem.tif")
   flow_d8 <- file.path(tempdir(), "temp-flow.tif")
-  whitebox::wbt_d8_pointer(dem_path, output = flow_d8)
+  whitebox::wbt_d8_pointer(dem_path, output = flow_d8, esri_pntr = T)
   crsAssign(flow_d8)
   discharge <- terra::rast(dem_path)/terra::rast(dem_path)
   flowMaps <- flowMap1D(discharge, terra::rast(flow_d8))
@@ -42,7 +42,7 @@ test_that("Water is flowing in all directions", {
   dem_adjustment(dem_path, model_dem)
 
   flow_d8 <- file.path(tempdir(), "fd8.tif")
-  whitebox::wbt_d8_pointer(model_dem, flow_d8)
+  whitebox::wbt_d8_pointer(model_dem, flow_d8, esri_pntr = T)
   crsAssign(flow_d8, get_crs(model_dem))
   flow <- terra::rast(flow_d8)
   example_discharge <- terra::rast(model_dem) / terra::rast(model_dem)
@@ -69,7 +69,7 @@ test_that("Mini-flow map works", {
   terra::writeRaster(dem, dem_path, overwrite=T)
   # D8 flow direction
   d8_flow <- file.path(tempdir(), "d8_flow.tif")
-  whitebox::wbt_d8_pointer(dem_path, d8_flow)
+  whitebox::wbt_d8_pointer(dem_path, d8_flow, esri_pntr = T)
   crsAssign(d8_flow, "epsg:26911")
   flow <- terra::rast(d8_flow)
   names(flow) <- "flow_direction"
