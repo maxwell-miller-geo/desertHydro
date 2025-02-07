@@ -126,6 +126,7 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
 
   ClassificationMap <- model_landcover # adjusted/cropped classification map - must be named correctly
   # Overwrites Soil Stack
+
   initial_soil_conditions(LandCoverCharacteristics = LandCoverCharacteristics,
                           ClassificationMap = ClassificationMap,
                           WatershedStack = WatershedStack,

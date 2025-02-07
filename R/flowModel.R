@@ -214,7 +214,7 @@ flowModel <- function(ModelFolder,
   }else{
     infiltration_cmhr <- SoilStack$infiltration_cmhr*0
     staticStack <- c(staticStack, infiltration_cmhr)
-    currentSoilStorage <- infiltration_cmhr
+    currentSoilStorage <- infiltration_cmhr # assign soils storage to 0
     names(currentSoilStorage) <- "currentSoilStorage"
     adjustStack <- c(adjustStack, currentSoilStorage)
   }

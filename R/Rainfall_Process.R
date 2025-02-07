@@ -159,7 +159,7 @@ rainfallAccum <- function(rain, beginning_time, end_time, rainfall_method = "gau
       rainfall_for_timestep <- 0
       return(rainfall_for_timestep)
     }else{
-      layerSelection <- ceiling(beginning_time/10)+1
+      layerSelection <- ceiling(beginning_time/10)
       mm_to_in <- 1/25.4
       timeElapsed <- end_time - beginning_time
       rainfall_for_timestep <- goes[[layerSelection]] / (10/timeElapsed) * mm_to_in # rain fallen in inches

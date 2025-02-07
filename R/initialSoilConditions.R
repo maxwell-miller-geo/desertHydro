@@ -95,7 +95,7 @@ createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
 initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap, WatershedStack,
                                     ModelFolder, WatershedElements = "", key = "NLCD_Key", outline = "",
                                     depthAdj = T, saturatedPercentage = 0.2, overwrite = T){
-
+  #browser()
   soilstack_file <- file.path(ModelFolder, "model_soil_stack.tif")
   if(file.exists(soilstack_file) & overwrite == F){
     print("Found model soil file..")
