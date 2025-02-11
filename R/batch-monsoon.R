@@ -1,21 +1,34 @@
-# Run monsoon batch files
-#require(desertHydro)
-# Expect multiple arguments from command line
-#args <- commandArgs(trailingOnly = T)
-# Expected argument order
-# date <- as.character(args[1])
-# model_type <- as.character(args[2])
-# rain_method <- as.character(args[3])
-# courant <- as.numeric(args[4])
-## Uncomment here
-# date <- "2022-07-15"
-# rain_method <- "spatial"
-# model_type <- "default"
+# # Run monsoon batch files
+# require(desertHydro)
+# require(devtools)
+# # Expect multiple arguments from command line
+# args <- commandArgs(trailingOnly = T)
+# # Expected argument order
+# date <- as.character(args[1]) # date
+# model_type <- as.character(args[2]) # infiltration methods
+# rain_method <- as.character(args[3]) # rain method
+# surface_method <- as.character(args[4]) # surface roughness method
+# infiltration_method <- as.character(args[5]) # infiltration method
+#
+# # Additional methods
+# rain_adj <- as.numeric(args[6]) # rainfall adjustment
+# surface_adj <- as.numeric(args[7]) # surface adjustment percent
+# infiltration_adj <- as.numeric(args[8]) # infiltration method percent adj
+#
+# modifiers <- list(rain_adj =  rain_adj,
+#                   surface_method = surface_method,
+#                   surface_adj = surface_adj,
+#                   infiltration_method = infiltration_method,
+#                   infiltration_adj = infiltration_adj)
+# # courant <- as.numeric(args[4])
+# #run <- paste0("st",substr(Sys.time(), 1, 10), "-h", substr(Sys.time(), 12, 13),"-")
+# run <- paste0(date, "-", model_type, "-", rain_method, "-adj-", rain_adj, "-",
+#               surface_method, "-adj-", surface_adj, "-", infiltration_method, "-adj-", infiltration_adj)
 # # Hard coded right now
-# time <- 5
-# overwrite <- F
+# time <- NaN
+# overwrite <- T
 # courant <- 0.8
-# folderName <- file.path("Results", paste0(date,"-", rain_method, "-c-", courant))
+# folderName <- paste0(run, date,"-", rain_method, "-",model_type, "-c-", courant)
 #
 # desertHydro:::monsoon(folderName,
 #                       date = date,
@@ -24,5 +37,3 @@
 #                       overwrite = overwrite,
 #                       courant = courant,
 #                       time = time)
-
-# print("Finished!")

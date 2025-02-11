@@ -120,6 +120,24 @@ monsoon <- function(ModelFolder = NULL, date = "2021-07-22", model_type = "defau
     gifs <- desertHydro::gifCreation(model1@ModelFolder, model1@rainMethod, date = model1@date,
                                      discharge = model1@discharge, saveGraph = T)
   }
+
+  # Output directory
+  outputs <- file.path(ModelFolder, paste0("Outputs-", basename(ModelFolder)))
+
+  # Grab files needed
+  output_files <- c("simulation_time.txt",
+                    paste0(date, "-velocity.gif"),
+                    paste0(date, "-surface-Depth.gif"),
+                    paste0(date, "-moisture-content.gif"),
+                    paste0(date, "-rain-Depth.gif"),
+                    paste0("discharge_rain_", date, ".png"),
+                    paste0("Discharge-Outlet-",date, ".png"),
+                    "volumes.csv",
+                    "model-checks.csv",
+                    "Starting_Soil_Characteristics.csv")
+  # Copy files to Output folder, if they exists
+  lapply(file.path(ModelFolder, output_files), FUN = copy_if_exists, outputs)
+
   return(ModelFolder)
 }
 

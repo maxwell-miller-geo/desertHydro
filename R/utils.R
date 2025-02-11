@@ -706,3 +706,22 @@ order_by_time <- function(file_list) {
 
   return(ordered_list)
 }
+
+copy_if_exists <- function(source_file, destination_folder) {
+  # Check if the file exists
+  if (file.exists(source_file)) {
+    # Create the destination folder if it doesn't exist
+    if (!dir.exists(destination_folder)) {
+      dir.create(destination_folder, recursive = TRUE)
+    }
+
+    # Define the destination path for the file
+    destination_file <- file.path(destination_folder, basename(source_file))
+
+    # Copy file over
+    file.copy(source_file, destination_folder, overwrite = T)
+    return(T)
+  }else{
+    return(F)
+  }
+}
