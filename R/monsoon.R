@@ -56,7 +56,20 @@
 #'                         rain_method ="gauges",
 #'                         courant = 0.3)
 #' }
-monsoon <- function(ModelFolder = NULL, date = "2021-07-22", model_type = "default", rain_method = "gauges", courant = 0.8, time = NaN, overwrite = NA,...){
+monsoon <- function(ModelFolder = NULL,
+                    date = "2021-07-22",
+                    model_type = "default",
+                    rain_method = "gauges",
+                    surface_method = "nlcd",
+                    infiltration_method = "nlcd+soils",
+                    rain_adj = 1,
+                    surface_adj = 1,
+                    infiltration_adj = 1,
+                    courant = 0.8,
+                    time = NaN,
+                    overwrite = NA,
+                    ...){
+
   if(is.null(ModelFolder)){
     ModelFolder <- tempdir()
   }
@@ -80,6 +93,34 @@ monsoon <- function(ModelFolder = NULL, date = "2021-07-22", model_type = "defau
     model1 <- small_infiltration(ModelFolder)
     model1@key <- "MUSYM"
   }
+  if(surface_method == "nlcd"){
+
+  }
+  if(surface_method == "nlcd+geology"){
+
+  }
+  if(infiltration_method == "nlcd+soils"){
+
+  }
+  if(infiltration_method == "nlcd+soils+geology"){
+
+  }
+  # Adjustments
+  if(rain_adj != 1){
+
+  }
+  if(surface_adj != 1){
+
+  }
+  if(infiltration_adj !=1){
+
+  }
+
+  # surface_method = surface_method,
+  # infiltration_method = infiltration_method,
+  # rain_adj = rain_adj,
+  # surface_adj = surface_adj,
+  # infiltration_adj = infiltration_adj,
   # Create log file - optional
   # my_log <- file(file.path(ModelFolder, "log.txt"))
   # sink(my_log, append = TRUE, type = "output") # Writing console output to log file
@@ -114,7 +155,12 @@ monsoon <- function(ModelFolder = NULL, date = "2021-07-22", model_type = "defau
                   simulation_length = model1@simulation_length,
                   overwrite = model1@overwrite,
                   write = model1@write,
-                  restartModel = model1@restartModel
+                  restartModel = model1@restartModel,
+                  surface_method = surface_method,
+                  infiltration_method = infiltration_method,
+                  rain_adj = rain_adj,
+                  surface_adj = surface_adj,
+                  infiltration_adj = infiltration_adj
                   )
   if(model1@gif){
     gifs <- desertHydro::gifCreation(model1@ModelFolder, model1@rainMethod, date = model1@date,

@@ -69,6 +69,11 @@ arid_model <- function(ModelFolder,
                        write = T,
                        restartModel = F,
                        courant = 0.8,
+                       surface_method = "nlcd",
+                       infiltration_method = "nlcd+soils",
+                       rain_adj = 1,
+                       surface_adj = 1,
+                       infiltration_adj = 1,
                        ...){
 
   if(!file.exists(ModelFolder)){ # Create Model folder, if it doesn't exist

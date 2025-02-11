@@ -155,11 +155,12 @@ rainfallAccum <- function(rain, beginning_time, end_time, rainfall_method = "gau
                                                rainfallRaster = terra::rast(file.path(ModelFolder, "model_soil_stack.tif")))
     return(rainfall_for_timestep)
   }else if(rainfall_method == "goes" & !is.logical(goes)){
-    if(beginning_time == 1){
+    if(beginning_time == 0){
       rainfall_for_timestep <- 0
       return(rainfall_for_timestep)
     }else{
       layerSelection <- ceiling(beginning_time/10)
+      print(layerSelection)
       mm_to_in <- 1/25.4
       timeElapsed <- end_time - beginning_time
       rainfall_for_timestep <- goes[[layerSelection]] / (10/timeElapsed) * mm_to_in # rain fallen in inches

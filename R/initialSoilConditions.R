@@ -92,9 +92,21 @@ createSoilRasters <- function(ClassMapFile, soilTable, key = "MUSYM"){
 # soilRaster <- createSoilRasters(ClassificationMap, LandCoverCharacteristics)
 
 
-initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap, WatershedStack,
-                                    ModelFolder, WatershedElements = "", key = "NLCD_Key", outline = "",
-                                    depthAdj = T, saturatedPercentage = 0.2, overwrite = T){
+initial_soil_conditions <- function(LandCoverCharacteristics,
+                                    ClassificationMap,
+                                    WatershedStack,
+                                    ModelFolder,
+                                    WatershedElements = "",
+                                    key = "NLCD_Key",
+                                    outline = "",
+                                    depthAdj = T,
+                                    saturatedPercentage = 0.2,
+                                    surface_method = "nlcd",
+                                    infiltration_method = "nlcd+soils",
+                                    rain_adj = 1,
+                                    surface_adj = 1,
+                                    infiltration_adj = 1,
+                                    overwrite = T){
   #browser()
   soilstack_file <- file.path(ModelFolder, "model_soil_stack.tif")
   if(file.exists(soilstack_file) & overwrite == F){
@@ -103,41 +115,42 @@ initial_soil_conditions <- function(LandCoverCharacteristics, ClassificationMap,
   }
 
   LCC <- readxl::read_xlsx(LandCoverCharacteristics) # reads excel file with soil characteristics
-  if(key != "ID"){ # ID is the key for nlcd only maps - runoff only no soil char.{
-
+  # Determine infiltration characteristics
+  if(key != "ID" && grepl("soils", infiltration_method)){ # ID is the key for nlcd only maps - runoff only no soil char.{
+  # Get the Max Soil Depth,
   #day_to_min <- 1 * 24 * 60 # adjust day to minutes
-  hour_to_sec <- 1 * 60 * 60 # adjust conductivity rates to cm/second
-
-  # Adjust Hydraulic conductivity layers from day - minute, not very DRY
-  LCC$saturatedHydraulicMatrix <- LCC$saturatedHydraulicMatrix / hour_to_sec
-  LCC$verticalHydraulicConductivity <- LCC$verticalHydraulicConductivity / hour_to_sec
-  LCC$hydraulicConductivityRestrictiveLayer <- LCC$hydraulicConductivityRestrictiveLayer / hour_to_sec
-
-  LCC$fieldCapacityAmount <- LCC$soilDepthCM * (LCC$fieldCapacityMoistureContent - LCC$residualMoistureContent)
-
-  # Calculate starting canopy storage amount
-  LCC$currentCanopyStorage <- 0.0
-
-  LCC$fieldCapacityAmount <- LCC$soilDepthCM * (LCC$fieldCapacityMoistureContent - LCC$residualMoistureContent)
-
-  # Create conductivity at field capacity (Kfc)
-  # Field Capacity Conductivity = Ksat * exp((-13.0/Sat_mc)*(sat_mc_1 -fieldcapt_amt/soilDepth))
-  LCC$conductivityAtFieldCapacity <- hydraulicFieldConductivity(
-    LCC$saturatedHydraulicMatrix,
-    LCC$saturatedMoistureContent,
-    LCC$fieldCapacityAmount,
-    LCC$soilDepthCM)
-  # Calculate maximum storage amount
-  LCC$maxSoilStorageAmount <- storage_amount(LCC)
-  # Calculate starting soil storage amount
-  LCC$currentSoilStorage <- saturatedPercentage * LCC$maxSoilStorageAmount
-
-  # Adjust the filed capacity amount if less than zero
-  LCC$fieldCapacityAmount[LCC$fieldCapacityAmount < 0] <- 0
-
-  LCC$wiltingPointAmount <- LCC$wiltingPointMoistureContent * LCC$soilDepthCM
-
-  LCC$ET_Reduction <- LCC$fieldCapacityAmount * 0.8 / LCC$soilDepthCM
+  # hour_to_sec <- 1 * 60 * 60 # adjust conductivity rates to cm/second
+  #
+  # # Adjust Hydraulic conductivity layers from day - minute, not very DRY
+  # LCC$saturatedHydraulicMatrix <- LCC$saturatedHydraulicMatrix / hour_to_sec
+  # LCC$verticalHydraulicConductivity <- LCC$verticalHydraulicConductivity / hour_to_sec
+  # LCC$hydraulicConductivityRestrictiveLayer <- LCC$hydraulicConductivityRestrictiveLayer / hour_to_sec
+  #
+  # LCC$fieldCapacityAmount <- LCC$soilDepthCM * (LCC$fieldCapacityMoistureContent - LCC$residualMoistureContent)
+  #
+  # # Calculate starting canopy storage amount
+  # LCC$currentCanopyStorage <- 0.0
+  #
+  # LCC$fieldCapacityAmount <- LCC$soilDepthCM * (LCC$fieldCapacityMoistureContent - LCC$residualMoistureContent)
+  #
+  # # Create conductivity at field capacity (Kfc)
+  # # Field Capacity Conductivity = Ksat * exp((-13.0/Sat_mc)*(sat_mc_1 -fieldcapt_amt/soilDepth))
+  # LCC$conductivityAtFieldCapacity <- hydraulicFieldConductivity(
+  #   LCC$saturatedHydraulicMatrix,
+  #   LCC$saturatedMoistureContent,
+  #   LCC$fieldCapacityAmount,
+  #   LCC$soilDepthCM)
+  # # Calculate maximum storage amount
+  # LCC$maxSoilStorageAmount <- storage_amount(LCC)
+  # # Calculate starting soil storage amount
+  # LCC$currentSoilStorage <- saturatedPercentage * LCC$maxSoilStorageAmount
+  #
+  # # Adjust the filed capacity amount if less than zero
+  # LCC$fieldCapacityAmount[LCC$fieldCapacityAmount < 0] <- 0
+  #
+  # LCC$wiltingPointAmount <- LCC$wiltingPointMoistureContent * LCC$soilDepthCM
+  #
+  # LCC$ET_Reduction <- LCC$fieldCapacityAmount * 0.8 / LCC$soilDepthCM
 
   # Convert excel sheet to a raster format
   # print(ClassificationMap)

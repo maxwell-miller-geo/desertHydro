@@ -1,4 +1,4 @@
-# # Run monsoon batch files
+# Run monsoon batch files
 # require(desertHydro)
 # require(devtools)
 # # Expect multiple arguments from command line
@@ -34,6 +34,11 @@
 #                       date = date,
 #                       model_type = model_type,
 #                       rain_method = rain_method,
+#                       surface_method = surface_method,
+#                       infiltration_method = infiltration_method,
+#                       rain_adj = rain_adj,
+#                       surface_adj = surface_adj,
+#                       infiltration_adj = infiltration_adj,
 #                       overwrite = overwrite,
 #                       courant = courant,
 #                       time = time)

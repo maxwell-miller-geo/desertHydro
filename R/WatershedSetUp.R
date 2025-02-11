@@ -6,7 +6,21 @@
 # 4 - Voronoi polygons
 # Some of the scripts are created in external functions
 
-watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watershed_shape_path, LandCoverCharacteristics, landCoverFile, landcovername = "landcover_soil.tif", key = "MUSYM", overwrite = T, cellsize = NULL){ # DEM should be unaltered
+watershedElementsCreate <- function(ModelFolder,
+                                    WatershedElements,
+                                    DEM,
+                                    watershed_shape_path,
+                                    LandCoverCharacteristics,
+                                    landCoverFile,
+                                    landcovername = "landcover_soil.tif",
+                                    key = "MUSYM",
+                                    overwrite = T,
+                                    surface_method = "nlcd",
+                                    infiltration_method = "nlcd+soils",
+                                    rain_adj = 1,
+                                    surface_adj = 1,
+                                    infiltration_adj = 1,
+                                    cellsize = NULL){ # DEM should be unaltered
   #requireNamespace("terra")
   # DEM adjustments
   # Adjust the input DEM with the watershed shapefile.
@@ -134,7 +148,12 @@ watershedElementsCreate <- function(ModelFolder, WatershedElements, DEM, watersh
                           ModelFolder = ModelFolder,
                           WatershedElements = WatershedElements,
                           key = key,
-                          overwrite = overwrite
+                          overwrite = overwrite,
+                          surface_method = surface_method,
+                          infiltration_method = infiltration_method,
+                          rain_adj = rain_adj,
+                          surface_adj = surface_adj,
+                          infiltration_adj = infiltration_adj
                           )
   # Doesn't return anything...
   SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
