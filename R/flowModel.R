@@ -203,7 +203,7 @@ flowModel <- function(ModelFolder,
   adjustStack <- c(SoilStack$surfaceWater,
                    SoilStack$slope,
                    SoilStack$mannings_n)
-  #browser()
+
   if(!impervious){
     # Add subsurface stack
     staticStack <- c(staticStack,
@@ -235,11 +235,13 @@ flowModel <- function(ModelFolder,
   # Write the Surface Stack
   terra::writeRaster(adjustStack+0, tempStorage, overwrite = T)
   #browser()
+  rm(SoilStack)
 for(t in simulation_values){
   # Values to be read in
   #surfaceWater, mannings_n, infiltration_rate_cm_hr, slope, model_dem
   # Modified layers
   # surfaceWater, slope, currentSoilStorage, (mannigns_n)
+  terra::tmpFiles(remove=TRUE)  # Clears unused temp raster files
 
   utils::setTxtProgressBar(progressBar, t)
   beginning_time <- simulation_duration[t]
@@ -252,9 +254,9 @@ for(t in simulation_values){
   if(simulation_duration[t] < total_rain_duration){ # could cut off rainfall if not careful
     rainfall_for_timestep <- rainfallAccum(rain, beginning_time, end_time, rainfall_method = rainfall_method, ModelFolder = ModelFolder, goes = goes)
    if(rainfall_method == "goes" && inherits(rainfall_for_timestep, "SpatRaster")){
-     if (!(terra::ext(rainfall_for_timestep) == terra::ext(SoilStack))){
+     if (!(terra::ext(rainfall_for_timestep) == terra::ext(adjustStack))){
        # Potentially scale up - later on - should be rainfall over a minute
-       rainfall_for_timestep <- terra::crop(rainfall_for_timestep, terra::ext(SoilStack))
+       rainfall_for_timestep <- terra::crop(rainfall_for_timestep, terra::ext(adjustStack))
    }
   }
     }else{
@@ -284,6 +286,8 @@ for(t in simulation_values){
                                        theta_i = staticStack$initial_sat_content,
                                        F_0 = infiltrated_water_cm)
 
+    }else{
+      staticStack$infiltration_cmhr <- staticStack$infiltration_cmhr
     }
 
     limits <- time_delta(surfaceWater = surfaceWater,
@@ -448,7 +452,7 @@ for(t in simulation_values){
 
   ##---------------- Save step-------------
 # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
-  if(counter %% 5 == 0 || t == length(simulation_duration) || tail(simulation_duration) == t){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
+  if(counter %% 5 == 0 || t == length(simulation_duration) || t == tail(simulation_duration,1)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
     if(!impervious){
       rasterCompile(ModelFolder, "soil", remove = T, overwrite = F)
     }
@@ -494,11 +498,11 @@ print(paste("The model took: ", paste0(difftime(Sys.time(), start_time))))
   # rasterCompile(ModelFolder, "surface", remove = F)
   # rasterCompile(ModelFolder, "velocity", remove = F)
 
-# Save simulation time as text
-end_time <- Sys.time()
-duration <- difftime(end_time, start_time)
-out_duration <- paste("Simulation took", round(duration[[1]], 2),  units(duration), "to run.")
-writeLines(out_duration, file.path(ModelFolder, "simulation_time.txt"))
+  # Save simulation time as text
+  end_time <- Sys.time()
+  duration <- difftime(end_time, start_time)
+  out_duration <- paste("Simulation took", round(duration[[1]], 2),  units(duration), "to run.")
+  writeLines(out_duration, file.path(ModelFolder, "simulation_time.txt"))
 # print("Got through it!")
 #return(surfaceStorage)
 }

@@ -7,6 +7,16 @@ compareDischarge <- function(recorded_discharge_df, estimated_discharge_df){
   recorded <- data.frame(time = recorded_discharge_df$time, recDis = recorded_discharge_df$discharge)
   interpret <- stats::approx(recorded$time, recorded$recDis, xout = seq(0, max(recorded$time))) # interpolated
   recorded <- data.frame(time = interpret$x, recDis = interpret$y) # save interpolated data
+
+  # Find the maximum time in estimated
+  simulation_length <- max(estimated_discharge_df$time)
+  recorded_length <- max(recorded$time)
+  time_offset <- simulation_length - recorded_length
+  if(time_offset < 0){
+    time_offset <- 0
+  }
+  # Janky way of adjusting the time values
+  estimated_discharge_df$time <- estimated_discharge_df$time - time_offset
   # Join the data
   discharge_DF <- dplyr::left_join(x = recorded, y = estimated_discharge_df, by = dplyr::join_by("time")) # Currently left join, could be others
   # Fill the first predicted discharge with 0. Assumes Prediction in 1st row, 3rd column is 0
@@ -108,17 +118,19 @@ totalVolume <- function(time, discharge){
 #' }
 #'
 dischargeAnalysis <- function(ModelFolder, WatershedElements, discharge = F, store = T, date = NULL, gauge_locations = file.path(WatershedElements, "stream_gauge.shp"), units = "cm/s",...){
+
   time <- Total_in <- xsection_next <- NULL # keep the global variables at bay
   surfaceStorage <- terra::rast(file.path(ModelFolder, "surfaceStorage.tif"))
   time_elapsed <- extract_time(surfaceStorage) # time elapsed - seconds
   #velocityStorage <- terra::rast(file.path(ModelFolder, "velocityStorage.tif"))
   #subsurfaceStorage <- terra::rast(file.path(ModelFolder, "soilStorage.tif"))
   #gauge_locations = file.path(WatershedElements, "stream_gauge.shp")
-  #browser()
   x_sections_path <- gauge_locations
   if(discharge & file.exists(file.path(ModelFolder, "rain-discharge.csv"))){
   # Determine discharge from volumes file
   discharge_file <- data.table::fread(file.path(ModelFolder, "volumes.csv"))
+  # Determine extra length of discharge file
+  simulation_duration <- max(discharge_file$Time_min)
   surface_discharge <- stream_gauge_discharge(discharge_file$gauge_height_cm, discharge_file$time_elapsed_s, units = "cm", raster = surfaceStorage)
   # Determine volumes
   rain_discharge <- data.table::fread(file.path(ModelFolder, "rain-discharge.csv"))

@@ -60,8 +60,10 @@ monsoon <- function(ModelFolder = NULL,
                     date = "2021-07-22",
                     model_type = "default",
                     rain_method = "gauges",
-                    surface_method = "nlcd",
-                    infiltration_method = "nlcd+soils",
+                    depth_adjusted = "slope",
+                    surface_method = "soils+stream+geo",
+                    infiltration_method = "soils+geo+green",
+                    initial_soil_conditions = "normal",
                     rain_adj = 1,
                     surface_adj = 1,
                     infiltration_adj = 1,
@@ -92,28 +94,6 @@ monsoon <- function(ModelFolder = NULL,
   if(model_type == "s-infil"){
     model1 <- small_infiltration(ModelFolder)
     model1@key <- "MUSYM"
-  }
-  if(surface_method == "nlcd"){
-
-  }
-  if(surface_method == "nlcd+geology"){
-
-  }
-  if(infiltration_method == "nlcd+soils"){
-
-  }
-  if(infiltration_method == "nlcd+soils+geology"){
-
-  }
-  # Adjustments
-  if(rain_adj != 1){
-
-  }
-  if(surface_adj != 1){
-
-  }
-  if(infiltration_adj !=1){
-
   }
 
   # surface_method = surface_method,
@@ -158,10 +138,12 @@ monsoon <- function(ModelFolder = NULL,
                   restartModel = model1@restartModel,
                   surface_method = surface_method,
                   infiltration_method = infiltration_method,
+                  initial_soil_conditions = initial_soil_conditions,
                   rain_adj = rain_adj,
                   surface_adj = surface_adj,
                   infiltration_adj = infiltration_adj
                   )
+
   if(model1@gif){
     gifs <- desertHydro::gifCreation(model1@ModelFolder, model1@rainMethod, date = model1@date,
                                      discharge = model1@discharge, saveGraph = T)

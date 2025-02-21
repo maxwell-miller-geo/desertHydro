@@ -151,7 +151,6 @@ watershedElementsCreate <- function(ModelFolder,
                           overwrite = overwrite,
                           surface_method = surface_method,
                           infiltration_method = infiltration_method,
-                          rain_adj = rain_adj,
                           surface_adj = surface_adj,
                           infiltration_adj = infiltration_adj
                           )
@@ -213,7 +212,7 @@ createVoronoi <- function(coords, combined, shapefile, write = F){ # Not run
 # writeVector(z, "voronoi-test.shp", filetype = "ESRI Shapefile", overwrite = T)
 # plot(vect("voronoi-test.shp"))
 ## ---------------------------- Function to process landcover
-geologyProcess <- function(landCoverShape, SoilStack, WatershedElements, ModelFolder, key = "GEOFNT24K", infiltration_adj = 1, surface_adj = 1){
+geologyProcess <- function(landCoverShape, SoilStack, WatershedElements, ModelFolder, key = "GEOFNT24K"){
 
   if(is.character(landCoverShape)){
     landCoverShape <- terra::vect(landCoverShape)

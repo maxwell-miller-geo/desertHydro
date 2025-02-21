@@ -276,15 +276,33 @@ rainfall_discharge_combine <- function(rainfallDF, dischargeDF, outpath, store =
 # # Rain
 #
 # # # Plot rainfall - discharge
-plot_rainfall_discharge <- function(rain_discharge_DF, date, store = T, outpath = ""){
+plot_rainfall_discharge <- function(rain_discharge_DF, date, store = T, outpath = "", gauge_prefix = "WATER"){
   # Clean up variables
   Time_minute <- discharge <- Total_in <- NULL
-  # Change the x-axis from time to Time_minute
-  rain_plot <- ggplot2::ggplot(rain_discharge_DF) +
-    ggplot2::geom_col(mapping = ggplot2::aes(x = Time_minute, y = Total_in)) +
-    ggplot2::labs(title = paste("Rainfall at Waterholes Watershed, AZ:", date), x = "", y = "Measured Rainfall (in)") +
+  # Widen the data of rainfall with the melt, which will take the gauge columns and
+  # Create categories under the "Gauge" column and keep the values in a new column called
+  # "Rain_depths" and preserve the "Time_minute" column
+  # Find gauges with "Water"
+  gauges <- grep(gauge_prefix, colnames(rain_discharge_DF), ignore.case = T, value = T)
+  meltedDF <- data.table::melt(data.table::as.data.table(rain_discharge_DF),
+                               id.vars = "Time_minute",
+                               measure.vars = gauges,
+                               variable.name = "Gauge",
+                               value.name = "Rain_in")
+
+  # Determine how malny gauges there are
+  rain_plot <- ggplot2::ggplot(meltedDF, mapping = ggplot2::aes(x = Time_minute, y = Rain_in, fill = Gauge)) +
+    ggplot2::geom_bar(stat = "identity") +
+    ggplot2::labs(title = paste("Rainfall at Waterholes Watershed, AZ:", date),
+                  x = "", y = "Measured Rainfall (in)") +
     ggplot2::theme_bw() +
-    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),
+                   legend.position = c(1, 1),               # Moves legend to top-right
+                   legend.justification = c(1, 1),          # Aligns top-right corner of legend box
+                   legend.background = ggplot2::element_rect(fill = "white", color = "black"),  # Adds visible border
+                   legend.margin = ggplot2::margin(2, 2, 2, 2),
+                   legend.title.align = 0.5) +       # Ensures padding inside legend box)+  # Add background for clarity +
+    ggplot2::scale_fill_viridis_d()
 
 
   discharge_plot <- ggplot2::ggplot(rain_discharge_DF) +

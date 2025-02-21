@@ -98,29 +98,40 @@ initial_soil_conditions <- function(LandCoverCharacteristics,
                                     WatershedElements = "",
                                     key = "NLCD_Key",
                                     outline = "",
-                                    depthAdj = T,
-                                    saturatedPercentage = 0.2,
-                                    surface_method = "nlcd",
-                                    infiltration_method = "nlcd+soils",
+                                    depth_adjusted = "slope",
+                                    surface_method = "soils+stream",
+                                    infiltration_method = "soils+geo",
+                                    initial_soil_conditions = "normal",
                                     surface_adj = 1,
                                     infiltration_adj = 1,
                                     overwrite = T,
                                     ...){
-  #browser()
+  # Things that can be adjusted
+  #----------------------------
+  # Soil Depth based on slope
+  # Surface based upon stream
+  # Soil conditions: normal | dry (initial_soil_conditions)
+  # Infiltration methods: soils | geo
+  # Surface methods: stream | geo | soils (default)
+
   soilstack_file <- file.path(ModelFolder, "model_soil_stack.tif")
   if(file.exists(soilstack_file) & overwrite == F){
     print("Found model soil file..")
     return(0)
   }
+
   #LandCoverCharacteristics <- "C:/Thesis/desertHydro/inst/extdata/LandCoverCharacteristics_Soils.xlsx"
   LCC <- as.data.frame(readxl::read_xlsx(LandCoverCharacteristics)) # reads excel file with soil characteristics
 
   # Determine infiltration characteristics
   LCC$wilting_percent <- LCC[, grep("wilting_", names(LCC))] / 100
-
+  # Extract field capacity in decimal form
   LCC$field_capacity_percent <- LCC[,grep("field_", names(LCC))]/100 # initial saturation often
-
-  initial_soil_conditions <- "normal"
+  # Extract saturation percentage
+  LCC$saturation_percent <- LCC[,grep("saturation_per", names(LCC))]/ 100 # maximum saturation
+  # Built on data from SPAW - USDA Infiltration calculator based on soil texture
+  LCC$Ksat_cm_hr <- LCC[,grep("Ksat_in_hr", names(LCC))]* 2.54
+  LCC$soil_depth_cm <- LCC[,grep("soil_depth", names(LCC))]* 2.54
   # Set initial conditions of soil saturation
   if(initial_soil_conditions == "normal"){
     LCC$initial_sat_content <- LCC$field_capacity_percent
@@ -128,24 +139,22 @@ initial_soil_conditions <- function(LandCoverCharacteristics,
   if(initial_soil_conditions == "dry"){
     LCC$initial_sat_content <- LCC$wiltingPointMoistureContent
   }
-  # Built on data from SPAW - USDA Infiltration calculator based on soil texture
-  LCC$saturation_percent <-  LCC[,grep("saturation_", names(LCC))]/100
-  LCC$Ksat_cm_hr <- LCC[,grep("Ksat_in_hr", names(LCC))]* 2.54
-  LCC$soil_depth_cm <- LCC[,grep("soil_depth", names(LCC))]* 2.54
 
+  # if(grepl("nlcd", infiltration_method)){
+  # POTENTIAL nlcd iniltration style infiltration
+  # }
   if(key != "ID" && grepl("soils", infiltration_method)){ # ID is the key for nlcd only maps - runoff only no soil char.{
   # Get the Max Soil Depth,
   #day_to_min <- 1 * 24 * 60 # adjust day to minutes
   hour_to_sec <- 1 * 60 * 60 # adjust conductivity rates to cm/second
   # # Calculate maximum storage amount
-  rock_percent <- LCC$rockPercent
   LCC$maxSoilStorageAmount <- storage_amount(soil_depth_cm = LCC$soil_depth_cm,
                                         saturated_moisture_content = LCC$saturation_percent,
-                                        rock_percent = rock_percent)
+                                        rock_percent = LCC$rockPercent)
 
   # # Calculate starting soil storage amount - variable
   saturatedPercentage <- LCC$initial_sat_content
-
+  # Current soil storage
   LCC$currentSoilStorage <- saturatedPercentage * LCC$maxSoilStorageAmount
 
   #
@@ -178,6 +187,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics,
   # LCC$ET_Reduction <- LCC$fieldCapacityAmount * 0.8 / LCC$soilDepthCM
   }
 
+  # Convert Soil table into Stacked raster
   SoilStack <- createSoilRasters(ClassMapFile = ClassificationMap, soilTable = LCC, key = key)
   # Select necesary Soil Stack Layers
   # Don't combine flow stacks
@@ -201,76 +211,90 @@ initial_soil_conditions <- function(LandCoverCharacteristics,
   SoilStack$infiltrated_water_cm <- SoilStack$slope * 0
   names(SoilStack$infiltrated_water_cm) <- "infiltrated_water_cm"
 
-  # From - to classification of soil depth from slope
-  reclassTable <- c(0, 10, 1,
-                    10, 20, .98,
-                    20, 30, .95,
-                    30, 40, .80,
-                    40, 45, .50,
-                    45, 90, .01)
-
-  reclassMatrix <- matrix(reclassTable, ncol = 3, byrow = T)
-  depthModifier <- terra::classify(SoilStack$slope, reclassMatrix, include.lowest = T)
-
   # Adjust certain characteristics base upon slope
-  adjust_depth <- T
-  if(depthAdj && key != "ID"){
+  if(grepl("slope", depth_adjusted) && key != "ID"){
+    # From - to classification of soil depth from slope
+    reclassTable <- c(0, 10, 1,
+                      10, 20, .98,
+                      20, 30, .95,
+                      30, 40, .80,
+                      40, 45, .50,
+                      45, 90, .01)
+
+    reclassMatrix <- matrix(reclassTable, ncol = 3, byrow = T)
+    depthModifier <- terra::classify(SoilStack$slope, reclassMatrix, include.lowest = T)
     SoilStack$soil_depth_cm <- SoilStack$soil_depth_cm * depthModifier
-    SoilStack$maxSoilStorageAmount <- storage_amount(SoilStack$soil_depth_cm,
-                                                     saturated_moisture_content = SoilStack$saturatedMoistureContent,
-                                                     rock_percent = SoilStack$rockPercent)
-
-    # Geo map adjustment
-    geologic_map <- file.path(WatershedElements, "geo_soils.shp")
-    # If geo-soils
-    if(file.exists(geologic_map) && (grepl("geo", infiltration_method) || grepl("geo", surface_method))){
-      print("Found geologic map: Adjusting hydraulic parameters")
-      adjustmentMaps <- geologyProcess(geologic_map, SoilStack, WatershedElements, ModelFolder, )
-     #int('original n')
-      #print(SoilStack$mannings_n)
-      ##print(adjustmentMaps$mannings_n)
-      # Adjust the manning's N coefficients
-      SoilStack$mannings_n <- SoilStack$mannings_n * adjustmentMaps$mannings_n
-     #rint(SoilStack$mannings_n)
-      # Adjust the soil depths simulation
-      SoilStack$soilDepthCM <- SoilStack$soilDepthCM * adjustmentMaps$SoilDepthAdj
-      # Adjust the hydraulic conductivity
-      SoilStack$saturatedHydraulicMatrix <- SoilStack$saturatedHydraulicMatrix *
-                                            adjustmentMaps$saturatedHydraulicMatrix
-    }
-
-    # Calculate Field capacity amount
-    SoilStack$fieldCapacityAmount <- SoilStack$soilDepthCM * (SoilStack$fieldCapacityMoistureContent -   SoilStack$residualMoistureContent)
-    # Field Capacity Conductivity = Ksat * exp((-13.0/Sat_mc)*(sat_mc_1 -fieldcapt_amt/soilDepth))
-    SoilStack$conductivityAtFieldCapacity <- hydraulicFieldConductivity(
-      SoilStack$saturatedHydraulicMatrix,
-      SoilStack$saturatedMoistureContent,
-      SoilStack$fieldCapacityAmount,
-      SoilStack$soilDepthCM, raster = T)
-
-    # Calculate starting soil storage amount
-    SoilStack$currentSoilStorage <- SoilStack$initial_sat_content * SoilStack$maxSoilStorageAmount
-
-    # Adjust the filed capacity amount if less than zero
-    SoilStack$fieldCapacityAmount[LCC$fieldCapacityAmount < 0] <- 0
-
-    SoilStack$wiltingPointAmount <- SoilStack$wiltingPointMoistureContent * SoilStack$soilDepthCM
-
-    SoilStack$ET_Reduction <- SoilStack$fieldCapacityAmount * 0.8 / SoilStack$soilDepthCM
   }
 
+  # Geo map adjustment
+  geologic_map <- file.path(WatershedElements, "geo_soils.shp")
+  # Adjust soil characteristics based upon geology
+  if(file.exists(geologic_map) && (grepl("geo", infiltration_method) || grepl("geo", surface_method))){
+    print("Found geologic map: Adjusting hydraulic parameters")
+    adjustmentMaps <- geologyProcess(geologic_map, SoilStack, WatershedElements, ModelFolder)
+    # Adjust the manning's N coefficients
+    if(grepl("geo", surface_method)){
+      SoilStack$mannings_n <- SoilStack$mannings_n * adjustmentMaps$mannings_n
+    }
+    if(grepl("geo", infiltration_method)){
+      # Adjust the soil depths (cm)
+      SoilStack$soil_depth_cm <- SoilStack$soil_depth_cm * adjustmentMaps$SoilDepthAdj
+      # Adjust the max storage amount
+      SoilStack$maxSoilStorageAmount <- storage_amount(SoilStack$soil_depth_cm,
+                                                       SoilStack$saturation_percent,
+                                                       SoilStack$rockPercent)
+      # Adjust the hydraulic conductivity
+      SoilStack$Ksat_cm_hr <- SoilStack$Ksat_cm_hr *adjustmentMaps$saturatedHydraulicMatrix
+    }
+  }
+
+  # Calculate Field capacity amount
+  SoilStack$fieldCapacityAmount <- SoilStack$soil_depth_cm *
+    (SoilStack$fieldCapacityMoistureContent -   SoilStack$residualMoistureContent)
+  # Field Capacity Conductivity = Ksat * exp((-13.0/Sat_mc)*(sat_mc_1 -fieldcapt_amt/soilDepth))
+  # NOT CURRENTLY USED
+  SoilStack$conductivityAtFieldCapacity <- hydraulicFieldConductivity(
+    SoilStack$saturatedHydraulicMatrix,
+    SoilStack$saturation_percent,
+    SoilStack$fieldCapacityAmount,
+    SoilStack$soil_depth_cm, raster = T)
+
+  # Calculate starting soil storage amount
+  SoilStack$currentSoilStorage <- SoilStack$initial_sat_content * SoilStack$maxSoilStorageAmount
+
+  # Adjust the filed capacity amount if less than zero
+  SoilStack$fieldCapacityAmount[LCC$fieldCapacityAmount < 0] <- 0
+
+  SoilStack$wiltingPointAmount <- SoilStack$wiltingPointMoistureContent * SoilStack$soil_depth_cm
+
+  SoilStack$ET_Reduction <- SoilStack$fieldCapacityAmount * 0.8 / SoilStack$soil_depth_cm
+
   # Stream extraction - adjust Manning's n in stream channel by 0.01
-  streamPath <- file.path(WatershedElements, "stream_extracted.tif")
+  streamPath <- file.path(ModelFolder, "stream_extracted.tif")
   # Increase the speed of water within stream network
-  if(file.exists(streamPath)){
+  if(file.exists(streamPath) && grepl("stream", surface_method)){
     print("Stream adjustments")
     stream_extracted <- terra::rast(streamPath)
     if(terra::ext(stream_extracted) != terra::ext(SoilStack$slope)){
       stream_extracted <- terra::crop(stream_extracted, SoilStack$slope)
     }
     extracted <- terra::ifel(is.nan(stream_extracted), 0, stream_extracted)
-    SoilStack$mannings_n <- abs(SoilStack$mannings_n - .0025*extracted)
+    new_stream <- abs(SoilStack$mannings_n - .0025*extracted)
+    SoilStack$mannings_n <- new_stream
   }
+
+  # Final adjustments based upon surface and infiltration
+  # Adjust surface roughness
+  SoilStack$mannings_n <- SoilStack$mannings_n * surface_adj
+  # Adjust infiltration rate
+  SoilStack$Ksat_cm_hr <- SoilStack$Ksat_cm_hr * infiltration_adj
+
+  # Adjust the maximum saturation amount (cm)
+  SoilStack$maxSoilStorageAmount <- storage_amount(SoilStack$soil_depth_cm,
+                                                   SoilStack$saturation_percent,
+                                                   SoilStack$rockPercent)
+  # Adjust the current soil storage
+  SoilStack$currentSoilStorage <- SoilStack$initial_sat_content * SoilStack$maxSoilStorageAmount
 
   # Save the starting soil characteristic layers
   readr::write_csv(LCC, file.path(ModelFolder, "Starting_Soil_Characteristics.csv"))

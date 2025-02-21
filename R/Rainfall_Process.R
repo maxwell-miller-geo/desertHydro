@@ -40,7 +40,6 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
       return(rain_file)
     }
   }
-  if(TRUE){
     # Synthetic rainfall method
     if(method == "synthetic" | is.null(date)){
       print("Using synthetic data")
@@ -92,7 +91,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
     # Normalize the rainfall data
     if(method == "gauges"){
       # Weight the input rainfall
-      if(weighted){
+      if(FALSE){
         # Weights from voronoi calculations order is: WATER-1, WATER-2, WATER-G
         weights <- c(.49254, .40299, .10448)
         #weights <- c(.33333, .33333, .33333) # equally weighted
@@ -134,8 +133,9 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
       print("Spatial Rainfall created...")
       return(rain_spatial_file)
     }
-
-  }
+    else{
+      stop(paste("Could not find rainfall method", method))
+    }
 }
 # Test
 # z <- rainfallCreation(ModelFolder = ModelFolder, WatershedElements = WatershedElements,
@@ -688,7 +688,7 @@ compare_rainfall <- function(gauge, goes, gauge_coords){
     if(file.exists(gauge_coords)){
       gauge_coords <- terra::vect(gauge_coords)
     }else{
-      cat("Could not find", gauge_select, "\n Using example gauges")
+      cat("Could not find", gauge_coords, "\n Using example gauges\n")
       gauge_coords <- terra::vect(file.path(model()@watershedPath, "rain_gauges_waterholes.shp"))
     }
   }
@@ -707,9 +707,9 @@ compare_rainfall <- function(gauge, goes, gauge_coords){
                                         origin = "1970-01-01", tz = "UTC")]
   # in_mm - assumes inches
   in_mm <- 25.4
-  gauge_mm <- gauge_select[, .(WATER_1_mm = sum(WATER_1, na.rm = TRUE)*in_mm,
-                            WATER_2_mm = sum(WATER_2, na.rm = TRUE)*in_mm,
-                            WATER_G_mm = sum(WATER_G, na.rm = TRUE)*in_mm),
+  gauge_mm <- gauge_select[, .(WATER_1_gauge = sum(WATER_1, na.rm = TRUE)*in_mm,
+                            WATER_2_gauge = sum(WATER_2, na.rm = TRUE)*in_mm,
+                            WATER_G_gauge = sum(WATER_G, na.rm = TRUE)*in_mm),
                             by = Time]
 
   # Extract values in GOES Rainfall Estimate
@@ -734,6 +734,59 @@ compare_rainfall <- function(gauge, goes, gauge_coords){
   return(merged_rain)
 }
 
+plot_rainfall_comparison <- function(rain_df, date, store = T, outpath = "", gauge_prefix = "WATER"){
+  # Clean up variables
+  Time_minute <- discharge <- Total_in <- NULL
+  # Widen the data of rainfall with the melt, which will take the gauge columns and
+  # Create categories under the "Gauge" column and keep the values in a new column called
+  # "Rain_depths" and preserve the "Time_minute" column
+  # Find gauges with "Water"
+  gauges <- grep(gauge_prefix, colnames(rain_df), ignore.case = T, value = T)
+  meltedDF <- data.table::melt(data.table::as.data.table(rain_df),
+                               id.vars = "Time",
+                               measure.vars = gauges,
+                               variable.name = "Gauge",
+                               value.name = "Rain_mm")
+  # Create two groups of gauges?
+  # Split the data.frame into two by gauge
+  labels <- c("WATER_1","WATER_2","WATER_G")
+  gauge_df <- meltedDF[Gauge %in% c("WATER_1_gauge", "WATER_2_gauge", "WATER_G_gauge")]
+  goes_df <- meltedDF[Gauge %in% labels]
+  # Determine how many gauges there are
+  gauge_plot <- ggplot2::ggplot(gauge_df, mapping = ggplot2::aes(x = Time, y = Rain_mm, fill = Gauge)) +
+    ggplot2::geom_bar(stat = "identity") +
+    ggplot2::labs(title = paste("Rainfall for Gauges:", date),
+                  x = "", y = "Measured Rainfall (mm)") +
+    ggplot2::theme_bw() +
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),
+                   legend.position = c(1, 1),               # Moves legend to top-right
+                   legend.justification = c(1, 1),          # Aligns top-right corner of legend box
+                   legend.background = element_rect(fill = "white", color = "black"),  # Adds visible border
+                   legend.margin = margin(2, 2, 2, 2),
+                   legend.title.align = 0.5) +       # Ensures padding inside legend box)+  # Add background for clarity +
+    ggplot2::scale_fill_viridis_d(labels = labels)
+
+  goes_plot <- ggplot2::ggplot(goes_df, mapping = ggplot2::aes(x = Time, y = Rain_mm, fill = Gauge)) +
+    ggplot2::geom_bar(stat = "identity") +
+    ggplot2::labs(title = paste("Rainfall for GOES:", date),
+                  x = "", y = "Measured Rainfall (mm)") +
+    ggplot2::theme_bw() +
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),
+                   legend.position = c(1, 1),               # Moves legend to top-right
+                   legend.justification = c(1, 1),          # Aligns top-right corner of legend box
+                   legend.background = element_rect(fill = "white", color = "black"),  # Adds visible border
+                   legend.margin = margin(2, 2, 2, 2),
+                   legend.title.align = 0.5) +       # Ensures padding inside legend box)+  # Add background for clarity +
+    ggplot2::scale_fill_viridis_d(labels = labels)
+
+  # Combine the two graphs
+  combined_plot <- gridExtra::grid.arrange(gauge_plot, goes_plot)
+  # store the graph for the date
+  if(store){
+    outputPlot <- paste0("rain_comparison_", date ,".png")
+    ggplot2::ggsave(file.path(outpath, outputPlot), plot = combined_plot, width = 6)
+  }
+}
 # Dates
 # goes_dates <- c("2021-07-22", "2021-07-23", "2021-09-01",
 #                 "2021-09-11", "2022-07-05", "2022-07-15",
