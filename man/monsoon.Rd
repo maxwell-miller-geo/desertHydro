@@ -9,6 +9,13 @@ monsoon(
   date = "2021-07-22",
   model_type = "default",
   rain_method = "gauges",
+  depth_adjusted = "slope",
+  surface_method = "soils+stream+geo",
+  infiltration_method = "soils+geo+green",
+  initial_soil_conditions = "normal",
+  rain_adj = 1,
+  surface_adj = 1,
+  infiltration_adj = 1,
   courant = 0.8,
   time = NaN,
   overwrite = NA,
@@ -33,6 +40,23 @@ Other options include:
 "spatial" = spatially distributed rainfall based on gauge placements
 "goes" = satellite derived rainfall estimates obtained from AWS servers for current
 spatial extent of model}
+
+\item{depth_adjusted}{Adjust the depth. Default "slope" method}
+
+\item{surface_method}{Methods for adjusting the surface roughness. Defaults
+"soils+stream+geo"}
+
+\item{infiltration_method}{Methods for infiltration. Adjusts the infiltration
+and chains with the method of infiltration. Often Green-Ampt method. Defaults
+"soils+geo+green"}
+
+\item{initial_soil_conditions}{Soil Saturation initially. Defaults "normal"}
+
+\item{rain_adj}{\% change in rainfall. Default 1 (100\%) of recorded values}
+
+\item{surface_adj}{\% change in surface roughness Default 1 (100\%) of recorded values}
+
+\item{infiltration_adj}{\% change in infiltration Default 1 (100\%) of recorded values}
 
 \item{courant}{the distance information travels within a mesh network. Values
 should range between 0.1 and 1.0. The smaller the Courant number, the shorter

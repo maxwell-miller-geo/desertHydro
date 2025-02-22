@@ -9,7 +9,8 @@ gifCreation(
   rainfall_method = "",
   date = NULL,
   discharge = F,
-  saveGraph = T
+  saveGraph = T,
+  rainfall_only = F
 )
 }
 \arguments{
@@ -23,6 +24,8 @@ the input rainfall method}
 \item{discharge}{T/F: If T, will incorporate discharge data}
 
 \item{saveGraph}{T/F: If T, will save graph to ModelFolder}
+
+\item{rainfall_only}{T/F: If TRUE, will only create rainfall GIF}
 }
 \value{
 Returns list containing surface and velocity GIFS.

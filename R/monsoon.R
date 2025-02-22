@@ -32,6 +32,16 @@
 #' "spatial" = spatially distributed rainfall based on gauge placements
 #' "goes" = satellite derived rainfall estimates obtained from AWS servers for current
 #' spatial extent of model
+#' @param depth_adjusted Adjust the depth. Default "slope" method
+#' @param surface_method Methods for adjusting the surface roughness. Defaults
+#' "soils+stream+geo"
+#' @param infiltration_method Methods for infiltration. Adjusts the infiltration
+#' and chains with the method of infiltration. Often Green-Ampt method. Defaults
+#' "soils+geo+green"
+#' @param initial_soil_conditions Soil Saturation initially. Defaults "normal"
+#' @param rain_adj % change in rainfall. Default 1 (100%) of recorded values
+#' @param surface_adj % change in surface roughness Default 1 (100%) of recorded values
+#' @param infiltration_adj % change in infiltration Default 1 (100%) of recorded values
 #' @param courant the distance information travels within a mesh network. Values
 #' should range between 0.1 and 1.0. The smaller the Courant number, the shorter
 #' the time steps will be, which leads to more numerical stability. Default value is

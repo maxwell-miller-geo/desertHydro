@@ -16,7 +16,7 @@ arid_model(
   impervious = F,
   rainfall_method = "gauges",
   store = T,
-  gif = T,
+  gif = F,
   discharge = F,
   time_step = 0.25,
   simulation_length = NA,
@@ -24,6 +24,12 @@ arid_model(
   write = T,
   restartModel = F,
   courant = 0.8,
+  depth_adjusted = "slope",
+  surface_method = "nlcd",
+  infiltration_method = "nlcd+soils",
+  rain_adj = 1,
+  surface_adj = 1,
+  infiltration_adj = 1,
   ...
 )
 }
