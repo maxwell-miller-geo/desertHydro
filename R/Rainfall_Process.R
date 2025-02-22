@@ -774,8 +774,8 @@ plot_rainfall_comparison <- function(rain_df, date, store = T, outpath = "", gau
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5),
                    legend.position = c(1, 1),               # Moves legend to top-right
                    legend.justification = c(1, 1),          # Aligns top-right corner of legend box
-                   legend.background = element_rect(fill = "white", color = "black"),  # Adds visible border
-                   legend.margin = margin(2, 2, 2, 2),
+                   legend.background = ggplot2::element_rect(fill = "white", color = "black"),  # Adds visible border
+                   legend.margin = ggplot2::margin(2, 2, 2, 2),
                    legend.title.align = 0.5) +       # Ensures padding inside legend box)+  # Add background for clarity +
     ggplot2::scale_fill_viridis_d(labels = labels)
 
