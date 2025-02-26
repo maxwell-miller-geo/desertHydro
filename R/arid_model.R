@@ -61,7 +61,7 @@ arid_model <- function(ModelFolder,
                        impervious = F,
                        rainfall_method = "gauges",
                        store = T,
-                       gif = T,
+                       gif = F,
                        discharge = F,
                        time_step = 0.25,
                        simulation_length = NA,
@@ -69,6 +69,7 @@ arid_model <- function(ModelFolder,
                        write = T,
                        restartModel = F,
                        courant = 0.8,
+                       depth_adjusted = "slope",
                        surface_method = "nlcd",
                        infiltration_method = "nlcd+soils",
                        rain_adj = 1,
@@ -80,6 +81,7 @@ arid_model <- function(ModelFolder,
     dir.create(ModelFolder)
     print("Folder created...")
   }
+  # Adding variables for a given model
   model_complete <- file.path(ModelFolder, "ModelComplete.txt")
   print("Checking if model is completed...")
   if(file.exists(model_complete) & !overwrite & !restartModel){ # check if model complete
@@ -88,6 +90,17 @@ arid_model <- function(ModelFolder,
     return(0)
   }
   print(paste0("Folder path for model: ", file.path(ModelFolder)))
+  inputs <- data.frame(rainfall_method = rainfall_method,
+                       impervious = impervious,
+                       depth_adjusted = depth_adjusted,
+                       courant = courant,
+                       surface_method = surface_method,
+                       infiltration_method = infiltration_method,
+                       rain_adj = rain_adj,
+                       surface_adj = surface_adj,
+                       infiltration_adj = infiltration_adj)
+
+  utils::write.csv(inputs, file.path(ModelFolder, "input-variables.csv"))
   # Preprocess - Create watershed
   ##------------------------------------
   # DEM
@@ -140,7 +153,11 @@ arid_model <- function(ModelFolder,
                                             ModelFolder = ModelFolder,
                                             LandCoverCharacteristics = LandCoverCharacteristics,
                                             key = key,
-                                            overwrite = overwrite)
+                                            overwrite = overwrite,
+                                            surface_method = surface_method,
+                                            infiltration_method = infiltration_method,
+                                            surface_adj = surface_adj,
+                                            infiltration_adj = infiltration_adj)
 
   # Initial conditions
   ##--------------------------------
@@ -178,6 +195,11 @@ arid_model <- function(ModelFolder,
 
   # store plots
   if(store & discharge){
+    # Compare goes rainfall to gauge rainfall
+    if(rainfall_method == "goes"){
+      goes_gauge_rain <- compare_rainfall(gauge = rain_discharge, rain_file, gauge_coords = "")
+      plot_rainfall_comparison(goes_gauge_rain, date = date, outpath = ModelFolder)
+    }
     plot_rainfall_discharge(rain_discharge, date = date, store = store, outpath = ModelFolder)
   }
   #
@@ -220,7 +242,8 @@ arid_model <- function(ModelFolder,
             impervious = impervious,
             gif = gif,
             restartModel = restartModel,
-            courant = courant
+            courant = courant,
+            infiltration_method = infiltration_method
   )
 
   print(paste0("Creating graphics in ", ModelFolder))
@@ -240,10 +263,10 @@ arid_model <- function(ModelFolder,
 
   print("Retrieving rainfall data for simulation")
   rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method)
-  # if(!gif){
-  #   print("Creating gifs")
-  #   gifCreation(ModelFolder, rainfall_method = rainfall_method, discharge = discharge, date = date)
-  # }
+  if(gif){
+    print("Creating gifs")
+    gifCreation(ModelFolder, rainfall_method = rainfall_method, discharge = discharge, date = date)
+  }
 
 
   print(paste0("End of script, thank you. You stuff is saved in ", ModelFolder))

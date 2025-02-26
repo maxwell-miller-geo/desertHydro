@@ -90,6 +90,9 @@ infiltration <- function(SoilStack, simulationTimeSecs){
   # SoilStack$currentSoilStorage
   # SoilStack$currentSoilStorage <- terra::ifel((SoilStack$throughfall + SoilStack$currentSoilStorage) > SoilStack$maxSoilStorageAmount, SoilStack$maxSoilStorageAmount)
 
+infiltration <- function(SoilStack, method = "", infiltration_adj = 1){
+
+}
 subsurfaceFlow <- function(SoilStack, simulationTimeSecs, flowStack_file){
   # Effective conductivity function for subsurface flow for unsaturated, saturated, and at fields capacity.
   # Rate of m/s

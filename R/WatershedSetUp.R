@@ -151,7 +151,6 @@ watershedElementsCreate <- function(ModelFolder,
                           overwrite = overwrite,
                           surface_method = surface_method,
                           infiltration_method = infiltration_method,
-                          rain_adj = rain_adj,
                           surface_adj = surface_adj,
                           infiltration_adj = infiltration_adj
                           )

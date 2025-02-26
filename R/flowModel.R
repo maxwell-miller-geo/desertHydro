@@ -43,6 +43,7 @@ flowModel <- function(ModelFolder,
                       restartModel = F,
                       courant = 0.8,
                       cellsize = NULL,
+                      infiltration_method = "green",
                       ...){
   gc()
   print(paste("Time step:", time_step))
@@ -96,7 +97,7 @@ flowModel <- function(ModelFolder,
   # Obtain the discharge for the outflow cell
   out_discharge <- data.table::data.table(time = 0, height_cm = 0, discharge_m3_s = 0)
 
-  if(file.exists(tempStorage) & file.exists(simulationProgress) & restartModel){ # if model was cutoff during simulation - restart option
+  if(file.exists(tempStorage) && file.exists(simulationProgress) && restartModel){ # if model was cutoff during simulation - restart option
     print("Picking up where model left off...")
     # Determine the time it left off - model simulation and overwrite the last step recorded
     simulationDF <- data.table::fread(simulationProgress)
@@ -180,10 +181,6 @@ flowModel <- function(ModelFolder,
   outflow_cell <- drainCells$cell[1]
   # Velocity cell - second to last cell that feeds the outflow cell
   velocity_cell <- drainCells$cell[2]
-  # Set infiltration to zero for runoff only
-  if(impervious){
-    SoilStack$infiltration_cmhr <- 0
-  }
   # Adjust manning's based on slope - not re-adjusted through time
   if(FALSE){
     SoilStack$mannings_n <- adjust_mannings(SoilStack$slope)
@@ -206,12 +203,21 @@ flowModel <- function(ModelFolder,
   adjustStack <- c(SoilStack$surfaceWater,
                    SoilStack$slope,
                    SoilStack$mannings_n)
-  #browser()
+
   if(!impervious){
     # Add subsurface stack
-    staticStack <- c(staticStack, SoilStack$infiltration_cmhr, SoilStack$maxSoilStorageAmount)
-    adjustStack <- c(adjustStack,SoilStack$currentSoilStorage)
+    staticStack <- c(staticStack,
+                     SoilStack$infiltration_cmhr,
+                     SoilStack$maxSoilStorageAmount,
+                     SoilStack$saturation_percent,
+                     SoilStack$initial_sat_content,
+                     SoilStack$Ksat_cm_hr)
+
+    adjustStack <- c(adjustStack,
+                     SoilStack$currentSoilStorage,
+                     SoilStack$infiltrated_water_cm)
   }else{
+    # Impervious conditions
     infiltration_cmhr <- SoilStack$infiltration_cmhr*0
     staticStack <- c(staticStack, infiltration_cmhr)
     currentSoilStorage <- infiltration_cmhr # assign soils storage to 0
@@ -224,15 +230,19 @@ flowModel <- function(ModelFolder,
   slope <- adjustStack$slope
   mannings_n <- adjustStack$mannings_n
   currentSoilStorage <- adjustStack$currentSoilStorage
+  infiltrated_water_cm <- adjustStack$infiltrated_water_cm
 
   # Write the Surface Stack
   terra::writeRaster(adjustStack+0, tempStorage, overwrite = T)
   #browser()
+  rm(SoilStack)
 for(t in simulation_values){
   # Values to be read in
   #surfaceWater, mannings_n, infiltration_rate_cm_hr, slope, model_dem
   # Modified layers
   # surfaceWater, slope, currentSoilStorage, (mannigns_n)
+  terra::tmpFiles(remove=TRUE)  # Clears unused temp raster files
+
   utils::setTxtProgressBar(progressBar, t)
   beginning_time <- simulation_duration[t]
   end_time <- simulation_duration[t+1]
@@ -244,9 +254,9 @@ for(t in simulation_values){
   if(simulation_duration[t] < total_rain_duration){ # could cut off rainfall if not careful
     rainfall_for_timestep <- rainfallAccum(rain, beginning_time, end_time, rainfall_method = rainfall_method, ModelFolder = ModelFolder, goes = goes)
    if(rainfall_method == "goes" && inherits(rainfall_for_timestep, "SpatRaster")){
-     if (!(terra::ext(rainfall_for_timestep) == terra::ext(SoilStack))){
+     if (!(terra::ext(rainfall_for_timestep) == terra::ext(adjustStack))){
        # Potentially scale up - later on - should be rainfall over a minute
-       rainfall_for_timestep <- terra::crop(rainfall_for_timestep, terra::ext(SoilStack))
+       rainfall_for_timestep <- terra::crop(rainfall_for_timestep, terra::ext(adjustStack))
    }
   }
     }else{
@@ -260,7 +270,6 @@ for(t in simulation_values){
   current_rainfall <- terra::ifel(is.finite(surfaceWater), total_rain_cm, NA) # rainfall distribution map
   # Rain volume calculations
   # Calculate throughfall
-  #SoilStack$throughfall <- SoilStack$current_rainfall
   throughfall <- current_rainfall
   runoff_counter <- 0
   time_remaining <- simulationTimeSecs
@@ -269,6 +278,18 @@ for(t in simulation_values){
     # # Calculate the time delta
     # Calculate potential ve!=locity
     velocity <- manningsVelocity(mannings_n, surfaceWater, slope, length = cellsize, units = "cm/s")
+    # Calculate infiltration rate
+    if(infiltration_method == "green" && !impervious){
+      # Returns infiltration in cm/hr
+      staticStack$infiltration_cmhr <- green_ampt_infil(Ksat_cm_hr = staticStack$Ksat_cm_hr,
+                                       theta_s = staticStack$saturation_percent,
+                                       theta_i = staticStack$initial_sat_content,
+                                       F_0 = infiltrated_water_cm)
+
+    }else{
+      staticStack$infiltration_cmhr <- staticStack$infiltration_cmhr
+    }
+
     limits <- time_delta(surfaceWater = surfaceWater,
                          velocity = velocity,
                          throughfall = throughfall,
@@ -301,7 +322,7 @@ for(t in simulation_values){
                                  cellsize = cellsize,
                                  rain_step_min = 1,
                                  infiltration = !impervious)
-    # Save new depth
+    # Save new depth to surface water
     #surfaceStack$surfaceWater <- SoilStack$surfaceWater <- depth_list[[1]]
     surfaceWater <- depth_list[[1]]
     # Adjust the slope for next time-step
@@ -320,6 +341,8 @@ for(t in simulation_values){
     # Add infiltration to subsurface
     #surfaceStack$currentSoilStorage <- surfaceStack$currentSoilStorage + infiltration_depth_cm
     currentSoilStorage <- currentSoilStorage + infiltration_depth_cm
+    infiltrated_water_cm <- infiltrated_water_cm + infiltration_depth_cm
+
     # Calculate the time in minutes after each time-step
     end_time <- beginning_time + round((runoff_counter + time_delta_s) / 60, 5) # min
 
@@ -353,7 +376,7 @@ for(t in simulation_values){
 
       # Adjust layers for next time through
       rm(adjustStack)
-      adjustStack <- c(surfaceWater, currentSoilStorage, slope, mannings_n)
+      adjustStack <- c(surfaceWater, currentSoilStorage, slope, mannings_n, infiltrated_water_cm)
 
       # Velocity of outflow -feeder cell
       out_velocity <- velocity[velocity_cell][[1]]
@@ -429,7 +452,7 @@ for(t in simulation_values){
 
   ##---------------- Save step-------------
 # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
-  if(counter %% 5 == 0 | t == length(simulation_duration)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
+  if(counter %% 5 == 0 || t == length(simulation_duration) || t == tail(simulation_duration,1)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
     if(!impervious){
       rasterCompile(ModelFolder, "soil", remove = T, overwrite = F)
     }
@@ -475,11 +498,11 @@ print(paste("The model took: ", paste0(difftime(Sys.time(), start_time))))
   # rasterCompile(ModelFolder, "surface", remove = F)
   # rasterCompile(ModelFolder, "velocity", remove = F)
 
-# Save simulation time as text
-end_time <- Sys.time()
-duration <- difftime(end_time, start_time)
-out_duration <- paste("Simulation took", round(duration[[1]], 2),  units(duration), "to run.")
-writeLines(out_duration, file.path(ModelFolder, "simulation_time.txt"))
+  # Save simulation time as text
+  end_time <- Sys.time()
+  duration <- difftime(end_time, start_time)
+  out_duration <- paste("Simulation took", round(duration[[1]], 2),  units(duration), "to run.")
+  writeLines(out_duration, file.path(ModelFolder, "simulation_time.txt"))
 # print("Got through it!")
 #return(surfaceStorage)
 }
