@@ -268,6 +268,16 @@ dischargeAnalysis <- function(ModelFolder, WatershedElements, discharge = F, sto
 #' gifCreation(ModelFolder, saveGraph = T)
 #' }
 gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharge = F, saveGraph = T, rainfall_only = F){
+  # Find date
+
+  if(is.null(date)){
+    date <- substr(basename(ModelFolder),1,10) # assumes first 10 are numbers
+  }
+
+  if(length(rainfall_method) < 2){
+    inputs <- data.table::fread(file.path(ModelFolder, "input-variables.csv"))
+    rainfall_method <- inputs$rainfall_method
+  }
   # paths to storage layers
   surface_path <- file.path(ModelFolder, "surfaceStorage.tif")
   velocity_path <- file.path(ModelFolder, "velocityStorage.tif")

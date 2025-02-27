@@ -90,7 +90,8 @@ arid_model <- function(ModelFolder,
     return(0)
   }
   print(paste0("Folder path for model: ", file.path(ModelFolder)))
-  inputs <- data.frame(rainfall_method = rainfall_method,
+  inputs <- data.frame(date = date,
+                       rainfall_method = rainfall_method,
                        impervious = impervious,
                        depth_adjusted = depth_adjusted,
                        courant = courant,
