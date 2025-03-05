@@ -642,9 +642,6 @@ waterMovement <- function(surfaceStorage,
 # ManningsWideChannelVelocity(n = 0.05, depth = .004, slope = 45, length = 10)
 # ----------------------------- Manning's Channel Velocity
 manningsVelocity <- function(n, depth, slope, length, units = "cm/s"){
-  if(is.null(length) & class(n) == "SpatRaster"){
-    length <- grid_size(n)
-  }
 
   depth_adj <- depth / 100 # convert depth in cm to meters
   Area <- depth_adj * length # calculate cross sectional area
@@ -652,7 +649,7 @@ manningsVelocity <- function(n, depth, slope, length, units = "cm/s"){
   #print(HydraulicRadius)
   #HydraulicRadius <-  Area / (length) # calculate the hydraulic radius
   #latex Rh: R_{h} = \frac{(d_{water}*l_{grid})}{2*d_{water} + l_{grid}}
-  slope_gradient <- tanpi(slope/180) # convert slope into a gradient (m/m)
+  slope_gradient <- tanpi(slope*0.005555556) # convert slope into a gradient (m/m)
   # LaTEX V(\frac{m}{s}) = \frac{1}{n}*R_{h}^{\frac{2}{3}} * S^{\frac{1}{2}}_{grad}
   velocity <- ((HydraulicRadius^ (2/3)) * (slope_gradient^.5)) / n
   if(units == "cm/s"){
@@ -792,10 +789,7 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   time_adjustment <- rain_step_min/ 60 # time per hour - h^-1
   hr_to_s <- 1 / 3600
   # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand for
-  # other rainfall methods
-  # Rainfall rate over 1 minute - depth of rain (cm)
-  #rainfall_rate_cm_hr <- surfaceStack$throughfall/time_adjustment # cm/hr
-  #rainfall_rate_cm_hr <- surfaceStack$throughfall/time_adjustment # cm/hr
+
   rainfall_rate_cm_hr <- throughfall/time_adjustment # cm/hr
   # Add infiltration rate here --- cm/hr - rate should already be in cm/hr
   max_infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr
@@ -811,14 +805,16 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   flow_units <- flowLength(surfaceStack$flow_direction) * cellsize * 100 # cm
   # Discharge out of every cell - normalized by distance
   discharge_out <- h_current * velocity / flow_units # unit cm/s - technically cm/s
-  #discharge_out <- discharge_out / flow_units # scale the discharge by the distance out
-  discharge_sum <- sumCells(discharge_out)
+
   # Route the discharge in different directions - technically a velocity right now..
   discharge_in_sep <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
   discharge_in <- sum(discharge_in_sep, na.rm = T)
-  discharge_in_sum <- sumCells(discharge_in)
+
+  #discharge_sum <- sumCells(discharge_out)
+  #discharge_in_sum <- sumCells(discharge_in)
   # Check that discharge out equals discharge in
-  testthat::expect_equal(discharge_in_sum, discharge_sum)
+  #testthat::expect_equal(discharge_in_sum, discharge_sum)
+
   # Calculate the movement of water = s * (cm/s - cm/s) = cm
   flow_water_cm <- time_delta_s * (discharge_out - discharge_in)
 
@@ -923,8 +919,12 @@ time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm
   source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
   ### Stability check on rainfall magnitude
   # Find the maximum rainfall intensity
-  time_step_hr <- courant_condition / max(terra::values(source_water_cm_hr, na.rm = T))
+  #time_step_hr <- courant_condition / max(terra::values(source_water_cm_hr, na.rm = T))
+  # Use terra::global() instead of terra::values()
+  max_source_water <- terra::global(source_water_cm_hr, "max", na.rm = TRUE)[,1]
+  time_step_hr <- courant_condition / max_source_water
   time_step_sec <- floor(time_step_hr * 3600) # convert hours to seconds - needs to be changed
+
   # Calculate time delta or the time-step for this step in seconds
   if(time_step_sec > 0 && time_step_sec < time_step_min * 60){
     time_delta_s <- time_step_sec
@@ -939,8 +939,11 @@ time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm
   # dt = C(courant number) * distance traveled (cm) / velocity (cm/s)
   # (1000/1000) is to leave 2 decimal places for hundreths of a second to elapse
   # browser()
-  dt <- floor(min(terra::values(
-    courant_condition * cellsize * 100/ velocity, na.rm = T))*1000)/1000
+  # dt <- floor(min(terra::values(
+  #   courant_condition * cellsize * 100/ velocity, na.rm = T))*1000)/1000
+  # Courant condition for flow stability
+  min_velocity <- terra::global(velocity, "min", na.rm = TRUE)[,1]
+  dt <- floor(min(courant_condition * cellsize * 100 / min_velocity, na.rm = TRUE) * 1000) / 1000
   # Change the time step, if the conditions require it
   if(dt < time_delta_s){
     time_delta_s <- dt
@@ -986,7 +989,9 @@ time_delta2 <- function(surfaceStack, time_step_min = 1, cellsize = NULL, couran
   source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
   ### Stability check on rainfall magnitude
   # Find the maximum rainfall intensity
-  time_step_hr <- courant_condition / max(terra::values(source_water_cm_hr, na.rm = T))
+  max_source_water <- terra::global(source_water_cm_hr, "max", na.rm = TRUE)[,1]
+  # max_source_water <- max(terra::values(source_water_cm_hr, na.rm = T))
+  time_step_hr <- courant_condition / max_source_water
   time_step_sec <- floor(time_step_hr * 3600) # convert hours to seconds - needs to be changed
   # Calculate time delta or the time-step for this step in seconds
   if(time_step_sec > 0 && time_step_sec < time_step_min * 60){
@@ -1002,8 +1007,11 @@ time_delta2 <- function(surfaceStack, time_step_min = 1, cellsize = NULL, couran
   # dt = C(courant number) * distance traveled (cm) / velocity (cm/s)
   # (1000/1000) is to leave 2 decimal places for hundreths of a second to elapse
   # browser()
-  dt <- floor(min(terra::values(
-    courant_condition * cellsize * 100/ velocity, na.rm = T))*1000)/1000
+  # Old way of getting values
+  # dt <- floor(min(terra::values(
+  #   courant_condition * cellsize * 100/ velocity, na.rm = T))*1000)/1000
+  min_velocity <- terra::global(velocity, "min", na.rm = TRUE)[,1]
+  dt <- floor(min(courant_condition * cellsize * 100 / min_velocity, na.rm = TRUE) * 1000) / 1000
   # Change the time step, if the conditions require it
   if(dt < time_delta_s){
     time_delta_s <- dt

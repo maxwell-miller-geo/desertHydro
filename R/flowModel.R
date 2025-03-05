@@ -45,7 +45,6 @@ flowModel <- function(ModelFolder,
                       cellsize = NULL,
                       infiltration_method = "green",
                       ...){
-  gc()
   print(paste("Time step:", time_step))
   print(paste("Simulation length:", simulation_length))
   print(paste("Estimated run time:", round(simulation_length/ time_step * 25/60), " minutes."))
@@ -469,8 +468,6 @@ for(t in simulation_values){
     temporary <- adjustStack + 0 # create temporary Soil Stack
 
     terra::writeRaster(temporary, filename = tempStorage, overwrite = T)
-    rm(temporary)
-    gc()
     #terra::writeRaster(flowStack, file.path(ModelFolder, "AdjustedFlowMaps.tif"), overwrite = T)
   }
  ##------------------------------------##
