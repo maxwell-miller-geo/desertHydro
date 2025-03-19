@@ -134,24 +134,7 @@ flowModel <- function(ModelFolder,
                                      volume_difference_cm = 0, cumulative_infiltrated_water_cm = 0, cumulative_rain_cm = 0,
                                      cumulative_height_out_cm = 0, cumulative_outflow_percent = 0,cumulative_infiltration_percent = 0,
                                      cumulative_surface_percent = 0)
-    # Time_min = end_time,
-    # time_elapsed_s = time_delta_s,
-    # total_rain_cm = total_rain_cm,
-    # total_surface_depth_cm = total_surface_depth_cm,
-    # total_infiltration_cm = total_infiltration_cm,
-    # gauge_height_cm = outflow,
-    # gauge_velocity_cm_s = out_velocity,
-    # gauge_discharge_m3_s = round(outflow/100*cellsize^2/time_delta_s,4),
-    # mean_total_rain_cm = total_rain_cm/activeCells,
-    # total_height_out_cm  = total_height_out_cm,
-    # volume_difference_cm = volume_difference_cm,
-    # cumulative_infiltrated_water_cm = cumulative_infiltrated_water_cm,
-    # cumulative_rain_cm = cumulative_rain_cm,
-    # cumulative_height_out_cm = cumulative_height_out_cm,
-    # cumulative_outflow_percent = cumulative_outflow_percent,
-    # cumulative_infiltration_percent = cumulative_infiltration_percent,
-    # cumulative_surface_percent = cumulative_surface_percent
-    # Create initial rasters for outputs
+
     if(!impervious){
       subsurfacePath <- initializeRaster(SoilStack$mannings_n*0, "soilStorage", ModelFolder, zero = T)
     }

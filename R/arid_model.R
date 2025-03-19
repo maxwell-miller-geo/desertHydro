@@ -231,7 +231,6 @@ arid_model <- function(ModelFolder,
   print("Checking necessary files")
   file_check(c(SoilStack_file, flowStack_file, rain_file, file.path(ModelFolder, "drainCells.csv")))
   print("Beginning Model Run...")
-  gc()
   flowModel(ModelFolder = ModelFolder,
             rain_file = rain_file,
             SoilStack_file = SoilStack_file,
