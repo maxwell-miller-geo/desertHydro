@@ -275,16 +275,22 @@ for(t in simulation_values){
   # Loop over 60 seconds - checking that simulation runs up to 60 seconds
   while(runoff_counter != simulationTimeSecs){
     # # Calculate the time delta
-    # Calculate potential ve!=locity
+    # Calculate potential velocity
     velocity <- manningsVelocity(mannings_n, surfaceWater, slope, length = cellsize, units = "cm/s")
+    # Speed limit on water - Can't go faster than 1000 cm/s or 10 m/s
+    if(terra::global(velocity, "max", na.rm = TRUE)[,1] > 1000){
+      velocity <- terra::ifel(velocity > 1000, 1000, velocity)
+    }
     # Calculate infiltration rate
-    if(infiltration_method == "green" && !impervious){
+    if(grepl("green", infiltration_method) && !impervious){
       # Returns infiltration in cm/hr
       staticStack$infiltration_cmhr <- green_ampt_infil(Ksat_cm_hr = staticStack$Ksat_cm_hr,
                                        theta_s = staticStack$saturation_percent,
                                        theta_i = staticStack$initial_sat_content,
                                        F_0 = infiltrated_water_cm)
 
+    }else if(grepl("flat", infiltration_method) && !impervious){
+      staticStack$infiltration_cmhr <- staticStack$infiltration_cmhr
     }else{
       staticStack$infiltration_cmhr <- staticStack$infiltration_cmhr
     }

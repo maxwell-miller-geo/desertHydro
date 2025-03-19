@@ -156,37 +156,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics,
   saturatedPercentage <- LCC$initial_sat_content
   # Current soil storage
   LCC$currentSoilStorage <- saturatedPercentage * LCC$maxSoilStorageAmount
-
-  #
-  # # Adjust Hydraulic conductivity layers from day - minute, not very DRY
-  # LCC$saturatedHydraulicMatrix <- LCC$saturatedHydraulicMatrix / hour_to_sec
-  # LCC$verticalHydraulicConductivity <- LCC$verticalHydraulicConductivity / hour_to_sec
-  # LCC$hydraulicConductivityRestrictiveLayer <- LCC$hydraulicConductivityRestrictiveLayer / hour_to_sec
-  #
-  # LCC$fieldCapacityAmount <- LCC$soilDepthCM * (LCC$fieldCapacityMoistureContent - LCC$residualMoistureContent)
-  #
-  # # Calculate starting canopy storage amount
-  # LCC$currentCanopyStorage <- 0.0
-  #
-  # LCC$fieldCapacityAmount <- LCC$soilDepthCM * (LCC$fieldCapacityMoistureContent - LCC$residualMoistureContent)
-  #
-  # # Create conductivity at field capacity (Kfc)
-  # # Field Capacity Conductivity = Ksat * exp((-13.0/Sat_mc)*(sat_mc_1 -fieldcapt_amt/soilDepth))
-  # LCC$conductivityAtFieldCapacity <- hydraulicFieldConductivity(
-  #   LCC$saturatedHydraulicMatrix,
-  #   LCC$saturatedMoistureContent,
-  #   LCC$fieldCapacityAmount,
-  #   LCC$soilDepthCM)
-
-  #
-  # # Adjust the filed capacity amount if less than zero
-  # LCC$fieldCapacityAmount[LCC$fieldCapacityAmount < 0] <- 0
-  #
-  # LCC$wiltingPointAmount <- LCC$wiltingPointMoistureContent * LCC$soilDepthCM
-  #
-  # LCC$ET_Reduction <- LCC$fieldCapacityAmount * 0.8 / LCC$soilDepthCM
   }
-
   # Convert Soil table into Stacked raster
   SoilStack <- createSoilRasters(ClassMapFile = ClassificationMap, soilTable = LCC, key = key)
   # Select necesary Soil Stack Layers
