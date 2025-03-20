@@ -22,7 +22,6 @@ flow_window <- function(x){
   return(store)
 }
 
-
 # x <- c(1,2,3,4,5,6,7,8,9)
 # flow_window(x)
 # Direction = vector value, direction scalar
@@ -641,6 +640,7 @@ waterMovement <- function(surfaceStorage,
 # vel <- ManningsWideChannelVelocity(n = 0.06, depth = 100, slope = 30, length = 10)
 # ManningsWideChannelVelocity(n = 0.05, depth = .004, slope = 45, length = 10)
 # ----------------------------- Manning's Channel Velocity
+
 manningsVelocity <- function(n, depth, slope, length, units = "cm/s"){
 
   depth_adj <- depth / 100 # convert depth in cm to meters

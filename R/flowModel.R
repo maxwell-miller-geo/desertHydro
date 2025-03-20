@@ -44,6 +44,7 @@ flowModel <- function(ModelFolder,
                       courant = 0.8,
                       cellsize = NULL,
                       infiltration_method = "green",
+                      surface_method = "nlcd",
                       ...){
   print(paste("Time step:", time_step))
   print(paste("Simulation length:", simulation_length))
@@ -164,7 +165,7 @@ flowModel <- function(ModelFolder,
   # Velocity cell - second to last cell that feeds the outflow cell
   velocity_cell <- drainCells$cell[2]
   # Adjust manning's based on slope - not re-adjusted through time
-  if(FALSE){
+  if(grepl("slope", surface_method)){
     SoilStack$mannings_n <- adjust_mannings(SoilStack$slope)
   }
   # Load in rainfall method first if GOES satellite imagery
@@ -408,7 +409,7 @@ for(t in simulation_values){
       #   mean_surface_depth_cm
 
       cumulative_outflow_percent <- round((cumulative_height_out_cm/cumulative_rain_cm)*100,2)
-      cumulative_infiltration_percent <- round((cumulative_infiltrated_water_cm/cumulative_rain_cm),2)
+      cumulative_infiltration_percent <- round((cumulative_infiltrated_water_cm/cumulative_rain_cm)*100,2)
       cumulative_surface_percent <- round((total_surface_depth_cm/cumulative_rain_cm)*100,2)
 
       volumes <- rbind(volumes,
@@ -477,7 +478,10 @@ print(paste("The model took: ", paste0(difftime(Sys.time(), start_time))))
   model_complete <- "Model Complete"
   utils::write.table(model_complete, file = file.path(ModelFolder, "ModelComplete.txt"))
   #file.remove(tempStorage)
-
+  # Create cumulative percentage graph
+  ggplot2::ggplot(volumes) +
+    ggplot2::geom_line(mapping = ggplot2::aes(x = Time_min, y = cumulative_infiltration_percent)) +
+    ggplot2::geom_line(mapping = ggplot2::aes(x = Time_min, y = cumulative_infiltration_percent))
   # if(!impervious){
   #   rasterCompile(ModelFolder, "soil", remove = T)
   # }

@@ -243,7 +243,8 @@ arid_model <- function(ModelFolder,
             gif = gif,
             restartModel = restartModel,
             courant = courant,
-            infiltration_method = infiltration_method
+            infiltration_method = infiltration_method,
+            surface_method = surface_method
   )
 
   print(paste0("Creating graphics in ", ModelFolder))
