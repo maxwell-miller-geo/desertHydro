@@ -346,7 +346,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
     surface_plot <- animateStack(meltedSurface,
                                  title = "Surface Depth",
                                  units = "Depth (cm)",
-                                caption = paste0(total_rain," inches of rain over ",  round(total_rain_duration, 2)," minutes."))
+                                caption = paste0(round(total_rain,2)," inches of rain over ",  round(total_rain_duration, 2)," minutes."))
     # Display the animation
     #gganimate::animate(surface_plot)
     # store the animated GIF
@@ -364,7 +364,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
       subsurface_plot <- animateStack(meltedMoistureContent,
                                       title = "Moisture Content",
                                       units = "% Full",
-                                      caption = paste0(total_rain," inches of rain over ",
+                                      caption = paste0(round(total_rain,2)," inches of rain over ",
                                                        round(total_rain_duration, 2)," minutes."))
 
       # Display the animation
@@ -471,6 +471,33 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
 
 # Create function that looks at the discharge and rainfall data and determines certain characteristics
 # Assumes column called Total_in
+# load in volume
 
+volume_over_time_plot <- function(ModelFolder, date){
+  if(!file.exists(file.path(ModelFolder, "volumes.csv"))){
+    return("Error: volumes.csv not found in model folder")
+  }
+  volumes <- data.table::fread(file.path(ModelFolder, "volumes.csv"))
+  # Get total rainfall volume - sum of all the cells (depth of cell * cell dimensions)
+  total_rain <- max(volumes[, cumulative_rain_cm]) # cumulative depth cm
 
+  volume_plot <- ggplot2::ggplot(volumes) +
+    ggplot2::geom_line(ggplot2::aes(x = Time_min, y = cumulative_surface_percent, color = "Surface")) +
+    ggplot2::geom_line(ggplot2::aes(x = Time_min, y = cumulative_infiltration_percent, color = "Infiltrated")) +
+    ggplot2::geom_line(ggplot2::aes(x = Time_min, y = cumulative_outflow_percent, color = "Discharge")) +
+    ggplot2::theme_bw() +
+    ggplot2::scale_color_manual(name = "Cumulative Percent (%)",
+                                values = c("Surface" = "blue",
+                                           "Infiltrated" ="green",
+                                           "Discharge" = "purple")) +
+    ggplot2::labs(title = paste("Water Budget:", date),
+                  x = "Time (minutes)", y = "Percentage of Water Volume (%)") +
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+
+  volume_plot
+
+  ggplot2::ggsave(file.path(ModelFolder, paste0("water_budget_",date,".png")), plot = volume_plot,
+                  width = 6, height = 2.5, units = "in")
+  return("Plot Saved")
+}
 

@@ -479,9 +479,6 @@ print(paste("The model took: ", paste0(difftime(Sys.time(), start_time))))
   utils::write.table(model_complete, file = file.path(ModelFolder, "ModelComplete.txt"))
   #file.remove(tempStorage)
   # Create cumulative percentage graph
-  ggplot2::ggplot(volumes) +
-    ggplot2::geom_line(mapping = ggplot2::aes(x = Time_min, y = cumulative_infiltration_percent)) +
-    ggplot2::geom_line(mapping = ggplot2::aes(x = Time_min, y = cumulative_infiltration_percent))
   # if(!impervious){
   #   rasterCompile(ModelFolder, "soil", remove = T)
   # }

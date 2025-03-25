@@ -252,6 +252,8 @@ arid_model <- function(ModelFolder,
   if(store){
     dischargeAnalysis(ModelFolder, WatershedElements, discharge = discharge, store = store, time_step = time_step, simulation_length = simulation_length, date = date)
   }
+  print("Creating Water Budget over simulation")
+  volume_over_time_plot(ModelFolder, date = date)
 
   # Surface GIF
   ##--------------------------------
