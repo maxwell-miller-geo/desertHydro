@@ -156,27 +156,6 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
   xDim <- terra::res(discharge)[1]
   yDim <- terra::res(discharge)[2]
 
-  mapCalculations <- function(flow_direction, flow_d8, discharge, xDim, yDim, flowKey, discharge_out = FALSE, ModelFolder){
-    # Select cells in particular direction
-    cells_to_flow <- terra::ifel(flow_d8 == as.numeric(flow_direction), 1, 0)
-    flow_distance <- 1 # hard coded for calculating discharge directions
-    if(discharge_out){ # when routing flow change the distance for diagonal cells
-      flow_distance <- flowKey[[flow_direction]][[3]]
-    }
-    # Apply the shift to the dimensions of the raster
-    xshift <- flowKey[[flow_direction]][[2]][[1]]*xDim
-    yshift <- flowKey[[flow_direction]][[2]][[2]]*yDim
-    # Stack dem and flow direction map
-    discharge_of_cell <- cells_to_flow*discharge/flow_distance
-    # Shift the raster
-    shiftMap <- terra::shift(discharge_of_cell, dx = xshift, dy = yshift)
-    # Crop the raster
-    dischargeShifted <- terra::crop(shiftMap, cells_to_flow, snap = "near", extend = TRUE)
-
-    names(dischargeShifted) <- flowKey[[flow_direction]][[1]] # direction of flow
-    #terra::writeRaster(dischargeShifted, file.path(ModelFolder, paste0(flowKey[[flow_direction]][[1]],".tif")), overwrite = T)
-    return(dischargeShifted)
-  }
   # if(F){
   #   flowList <- foreach(flow_direction = flow_directions, .packages = c("terra")) %dopar% {
   #     mapCalculations(flow_direction, flow_d8, discharge, xDim, yDim, flowKey, discharge_out)
@@ -187,6 +166,28 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
   flowMaps <- terra::rast(flowList)
   #rm(flow_d8)
   return(flowMaps)
+}
+
+mapCalculations <- function(flow_direction, flow_d8, discharge, xDim, yDim, flowKey, discharge_out = FALSE, ModelFolder){
+  # Select cells in particular direction
+  cells_to_flow <- terra::ifel(flow_d8 == as.numeric(flow_direction), 1, 0)
+  flow_distance <- 1 # hard coded for calculating discharge directions
+  if(discharge_out){ # when routing flow change the distance for diagonal cells
+    flow_distance <- flowKey[[flow_direction]][[3]]
+  }
+  # Apply the shift to the dimensions of the raster
+  xshift <- flowKey[[flow_direction]][[2]][[1]]*xDim
+  yshift <- flowKey[[flow_direction]][[2]][[2]]*yDim
+  # Stack dem and flow direction map
+  discharge_of_cell <- cells_to_flow*discharge/flow_distance
+  # Shift the raster
+  shiftMap <- terra::shift(discharge_of_cell, dx = xshift, dy = yshift)
+  # Crop the raster
+  dischargeShifted <- terra::crop(shiftMap, cells_to_flow, snap = "near", extend = TRUE)
+
+  names(dischargeShifted) <- flowKey[[flow_direction]][[1]] # direction of flow
+  #terra::writeRaster(dischargeShifted, file.path(ModelFolder, paste0(flowKey[[flow_direction]][[1]],".tif")), overwrite = T)
+  return(dischargeShifted)
 }
 ## ---------------------------
 # Create flow maps 2.0
