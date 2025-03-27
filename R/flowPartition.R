@@ -776,6 +776,7 @@ adjust_mannings <- function(slope){
 }
 
 surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s, velocity = NULL, cellsize = NULL, rain_step_min = 1, infiltration = T){
+  terra::terraOptions(datatype="FLT8S")
   # Units should be in the seconds for calculations
   # mannings_n, surfaceWater, slope, throughfall, infiltration_cmhr, flow_direction, currentSoilStorage, maxSoilStorage
   # Cannot be negative depths
@@ -823,45 +824,34 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   if(infiltration){
   # Add up all potential water
   possible_surface_water <- h_current - flow_water_cm + rainfall_water_cm
+  # Potential filling amount
   potential_infiltration_cm <- terra::ifel(max_infiltrated_water_cm < possible_surface_water,
                                    max_infiltrated_water_cm,
                                    possible_surface_water)
-  # all_surface_infiltrated <- terra::ifel(infiltration_overflow >= 0, 1, 0) * possible_surface_water
-  # partial_surface_infiltrated <- terra::ifel(infiltration_overflow < 0, 1, 0) * max_infiltrated_water_cm
-  #potential_infiltration_cm <- all_surface_infiltrated + partial_surface_infiltrated
-  # Check if storage is exceeded
-  #temp_soil_storage <- surfaceStack$currentSoilStorage + potential_infiltration_cm
-  # Check if storage is exceeded
-  temp_soil_storage <- adjustStack$currentSoilStorage + potential_infiltration_cm
-  # Check to see if the water exceed storage
-  storage_difference <- surfaceStack$maxSoilStorageAmount - temp_soil_storage
-  # Calculate the excess water infiltrated - taken care of in routing
-  excess_water <- terra::ifel(storage_difference < 0, abs(storage_difference), 0)
-  # Calculate actual infiltrated water
-  actual_infiltration_cm <- potential_infiltration_cm - excess_water
-  # If the amount of water that could be infiltrated is greater than the soil capacity,
-  # set the soil storage to max capacity
-  # max_storage_cells <- terra::ifel(storage_check <= 0, 1, 0) * surfaceStack$maxSoilStorageAmount
-  # partial_storage_cells <- terra::ifel(storage_check > 0, 1, 0) * potential_storage_cm
-  # soil_storage <- max_storage_cells + partial_storage_cells # adjust the soil - stack
-  # surfaceStack$currentSoilStorage <- soil_storage
-  # actual_infiltration_cm <- soil_storage - current_storage
-  #partial_infiltration <- terra::ifel()
-  # Add infiltrated water to soil? do afterwaterds...
-  #soil_level <- terra::ifel(SoilStack$maxSoilStorageAmount - SoilStack$currentSoilStorage + infiltrated_water_cm < 0,
-                            # SoilStack$maxSoilStorageAmount,
-                            # SoilStack$currentSoilStorage + infiltrated_water_cm)
+
+  soil_capacity <- surfaceStack$maxSoilStorageAmount - adjustStack$currentSoilStorage
+
+  infiltrated_water_cm <- terra::ifel(potential_infiltration_cm > soil_capacity,
+                                   soil_capacity, potential_infiltration_cm)
+
+  # Not needed actually
+  excess_water <- terra::ifel((potential_infiltration_cm - soil_capacity) > 0, potential_infiltration_cm - soil_capacity, 0)
+
+  # Check that water is equal to potential water
+  check_water <- terra::global(excess_water + infiltrated_water_cm - potential_infiltration_cm, "sum", na.rm=T)[,1]
+  testthat::expect_equal(check_water, 0)
+
   }else{
-    #actual_infiltration_cm <- surfaceStack$infiltration_cmhr
-    actual_infiltration_cm <- h_current * 0
+    #infiltrated_water_cm <- surfaceStack$infiltration_cmhr
+    infiltrated_water_cm <- h_current * 0
   }
   # Calculate new height
-  h_0 <- h_current - flow_water_cm + (rainfall_water_cm - actual_infiltration_cm)
+  h_0 <- h_current - flow_water_cm + (rainfall_water_cm - infiltrated_water_cm)
   # If infiltrated water is greater than water present
   h_new <- terra::ifel(h_0 > 0, h_0, 0)
   # Check this makes sense
   # New surface depth
-  return(list(h_new,actual_infiltration_cm,rainfall_water_cm))
+  return(list(h_new,infiltrated_water_cm,rainfall_water_cm))
 }
 
 # return mean distance that flows into a given cell
@@ -942,8 +932,8 @@ time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm
   # dt <- floor(min(terra::values(
   #   courant_condition * cellsize * 100/ velocity, na.rm = T))*1000)/1000
   # Courant condition for flow stability
-  min_velocity <- terra::global(velocity, "min", na.rm = TRUE)[,1]
-  dt <- floor(min(courant_condition * cellsize * 100 / min_velocity, na.rm = TRUE) * 1000) / 1000
+  max_velocity <- terra::global(velocity, "max", na.rm = TRUE)[,1]
+  dt <- floor(min(courant_condition * cellsize * 100 / max_velocity, na.rm = TRUE) * 1000) / 1000
   # Change the time step, if the conditions require it
   if(dt < time_delta_s){
     time_delta_s <- dt

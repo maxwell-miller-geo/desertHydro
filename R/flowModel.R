@@ -199,6 +199,11 @@ flowModel <- function(ModelFolder,
     adjustStack <- c(adjustStack,
                      SoilStack$currentSoilStorage,
                      SoilStack$infiltrated_water_cm)
+
+    # Check to make sure maximum soil storage is not exceeded
+    adjustStack$currentSoilStorage <- terra::ifel((staticStack$maxSoilStorageAmount - adjustStack$currentSoilStorage) > 0,
+                                                  adjustStack$currentSoilStorage,
+                                                  staticStack$maxSoilStorageAmount)
   }else{
     # Impervious conditions
     infiltration_cmhr <- SoilStack$infiltration_cmhr*0
@@ -256,6 +261,7 @@ for(t in simulation_values){
   throughfall <- current_rainfall
   runoff_counter <- 0
   time_remaining <- simulationTimeSecs
+
   # Loop over 60 seconds - checking that simulation runs up to 60 seconds
   while(runoff_counter != simulationTimeSecs){
     # # Calculate the time delta

@@ -127,6 +127,9 @@ monsoon <- function(ModelFolder = NULL,
   }
   if(!is.na(overwrite)){
     model1@overwrite <- overwrite
+    if(model1@overwrite == T){
+      model1@restartModel <- F
+    }
   }
   a <- arid_model(model1@ModelFolder,
                   model1@watershedPath,
