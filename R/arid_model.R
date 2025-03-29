@@ -254,7 +254,10 @@ arid_model <- function(ModelFolder,
   }
   print("Creating Water Budget over simulation")
   volume_over_time_plot(ModelFolder, date = date)
-
+  print("Creating rainfall comparisons")
+  if(rainfall_method == "goes"){
+    rainfall_plot_comparison(ModelFolder, date = date)
+  }
   # Surface GIF
   ##--------------------------------
   # Functions for visualizations
