@@ -1,16 +1,3 @@
-# # Functions to process Rainfall Data
-# # Rainfall can come in 2 non-spatial varieties: constant and time-dependent
-# library(readxl)
-# library(tidyverse)
-# library(purrr)
-# library(lubridate)
-
-## Rainfall Data to bring over
-# Items | Model Folder | Options |
-# Synthetic - Dummy Data present within function
-# Rainfall Data from Gauges
-# Weighted Data from Gauges
-# Spatially Distributed Rainfall
 # Always returns a rainfile path - Expects within the Model Folder
 rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method = "gauges", weighted = T, overwrite = F, shape = "voronoi.shp"){
   # Getting rid of notes
@@ -68,7 +55,10 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
       #temporalFolder <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Temporal_Data)"
       #rainFolder <- file.path(temporalFolder, paste0(date,"-rain"))
       # Get rainfall and discharge if possible.
-      if(T){
+      rain_file <- file.path(ModelFolder, paste0(date,"-goes.tif"))
+      if(file.exists(rain_file)){
+        return(rain_file)
+      }
         # Rainfall filtering
         rainFiltered <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = T)
         #Save rainfall to model folder
@@ -85,9 +75,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
         rain_file <- get_GOES_Rainfall(ModelFolder, date = date, WatershedElements = WatershedElements)
         # rainfall_inches_per_time <- rainfall_stack/6
         # total_rainfall <- sum(rainfall_inches_per_time, na.rm = T)
-      }
       return(rain_file)
-    }
     # Normalize the rainfall data
     if(method == "gauges"){
       # Weight the input rainfall
@@ -135,6 +123,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
     }
     else{
       stop(paste("Could not find rainfall method", method))
+    }
     }
 }
 # Test
@@ -199,16 +188,6 @@ rainfallProcess <- function(rainfall, filepath = T, inches = T){
   # return combined data frame of time with minute intervals and normalized rainfall
   return(cbind.data.frame(time_min, rainfall_rate))
 }
-# Test 2
-# rainfallDayEvent <- rainfallProcess(rain)
-# # Test rainfall process function
-# rainfall_file <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Outputs\1hr_1in_initial\Rainfall.csv)"
-# rainfallProcess(rainfall_file)
-# Example:
-# rainfall_times <- c(0, 1, 2, 3, 5, 10, 40, 60) # rainfall steps in minutes
-# rainfall_percent <- c(0, .01, .03, .05, .1, .25, .5, 1) # percent rainfall over time
-# rainfall_test <- cbind.data.frame(rainfall_times,rainfall_percent)
-# rainfallProcess(rainfall_test, filepath = F)
 
 # Get the total rainfall for a particular day
 rainfallTotal <- function(rainfall, filepath = T, inches = T){
@@ -316,17 +295,6 @@ rainfallTotalRain <- function(rainfall_folder, date, level = "day", total_col = 
   return(outDF)
 }
 
-# Test total rain
-#df <- rainfallTotalRain(WatershedElements)
-# gauges <- c("WATER-1", "WATER-2", "WATER-G")
-# rainfall_file <- r"(C:\Thesis\Arid-Land-Hydrology\Data\Waterhole\Temporal_Data\USGS-GCMRC rain-gauge data WY 2000_2021.xlsx)"
-# unit <- "second"
-# date <- "2002-17-03"
-# rainDF <- rainfallTotalRain(rainfall_file = rainfall_file, gaugeList = gauges, level = unit, write = F)
-# # Gut check on data
-# colMax <- function(data) sapply(data, max, na.rm = TRUE)
-# colMax(rainDF)
-
 # Function select data from a given rainfall date - built from rainTotalRainfall() function - second or minute level
 
 rainfallForEvent <- function(rainDF, eventDate, remove = T){
@@ -417,10 +385,6 @@ checkRainfall <- function(date_list, WatershedElements, day_list){
   #x <- readr::read_csv(file.path(WatershedElements, "rainfall_discharge_dates.csv"))
   return(rainDF)
 }
-# days_of_rain <- checkRainfall(day_list)
-## Test for rainfall for a given day
-# eventDate <- "2012-07-15"
-# rainfallEvent <- rainfallForEvent(rainDF = rainDF, eventDate = eventDate)
 
 # Function that takes rainfall for a particular day and obtains duration and intensity (in/hr)
 rainfallIntensity <- function(rainfallEvent){
@@ -446,35 +410,6 @@ rainSelection <- function(rain_dataset, date, sheets = c("WATER-1", "WATER-2", "
   return(date_matches)
 }
 
-# Test - rainfall selection
-# data_folder <- r"(C:\Thesis\Arid-Land-Hydrology\R\Example\SampleData)" # data folder
-# rain_dataset <- file.path(data_folder, "USGS-GCMRC rain-gauge data WY 2000_2021.xlsx") # xlsx file
-# date <- "2002-06-08" # key date must be in a yy/mm/dddd format
-# q <- rainSelection(rain_dataset, date = date)
-
-
-# Function that takes rainfall for a particular day and obtains duration and intensity (in/hr)
-# rainfallDayDistribution <- function(rainfallEvent, units = "minute", write = T){
-#   # Remove the first entry if it isn't contributing significantly
-#   rainfallEvent <- rainfallEvent[-1,]
-#   # Remove the last entry - often entries at the end of day
-#   #rainfallEvent <- rainfallEvent |> filter(row_number() <= n()-1)
-#
-#   time <- ceiling_date(rainfallEvent[,1], unit = units)
-#   sumRain <- rainfallEvent |>
-#     mutate(Time_date = time) |>
-#     aggregate(Total_in ~ Time_date, FUN = sum) |> # sum rainfall per time (minute)
-#     mutate(Time_sec = Time_date - base::min(Time_date)) |> # scale time to 0
-#     mutate(rain_duration = as.numeric(Time_sec) / 60 + 1) |> # adjust to minutes (add 1 to make start 0)
-#     mutate(across(c("Total_in"), round, 5)) |> # round the total inches to 5 decimals
-#     select(rain_duration, Total_in)
-#   rainDF <- rbind(list(0,0), sumRain)
-#   if(write){
-#     write_csv(rainDF, "Rainfall.csv")
-#   }
-#   return(rainDF)
-# }
-
 # #Test
 # rainDayDF <- rainfallDayDistribution(rainfallEvent = rainfallEvent)
 loadRain <- function(rain_file, rainfall_method = "gauges"){
@@ -491,47 +426,7 @@ loadRain <- function(rain_file, rainfall_method = "gauges"){
   }
   return(list(rain, total_rain_duration))
 }
-# --------------------------------- Rainfall selection
-# Function that checks if rainfall happened on particular dates or before particular dates
-# rainfallCheck <- function(data, search_dates){
-#   # read the rainfall data list
-#   data <- readr::read_csv(data)
-#   search_dates <- data.frame(readr::read_csv(search_dates))
-#   col_names <- c("DischargeDate","Rain","RainBefore")
-#   # Create dataframe to be filled
-#   df <- data.frame(matrix(nrow = nrow(search_dates), ncol = length(col_names)))
-#   colnames(df) <- col_names
-#
-#   for(x in 1:nrow(search_dates)){
-#     date <- search_dates[x,2]
-#     df[x,1] <- as.character(date)
-#     # Assuming the input date is in YYYY/MM/DD
-#     date <- lubridate::parse_date_time(date, "ymd")
-#     #date_after <- date + lubridate::days(1) # day after
-#     date_before <- date + lubridate::days(-1)
-#
-#     # Check search date, before, and after
-#     if(date %in% data$day){
-#       print(paste0("Rain recorded on ", date))
-#       df[x, 2] <- as.character(date)
-#       #rainfall_dates_list <- append(rainfall_dates_list, date)
-#     }
-#     if(date_before %in% data$day){
-#       print(paste0("Rain recorded on ", date_before))
-#       df[x, 3] <- as.character(date_before)
-#       #rainfall_dates_list <- append(rainfall_dates_list, date_before)
-#     }
-#     if(is.null(rainfall_dates_list)){
-#       paste0("No recorded rainfall found on ", date, " or ", date_before)
-#     }
-#   }
-#   return(df)
-# }
-# Test
-# rainfall_dates <- "days-of-disharge.csv" # in root directory
-# rainfall_data <- "rain-data-day.csv"
-# x <- rainfallCheck(rainfall_data, rainfall_dates)
-# readr::write_csv(x, file = "rainfall-check.csv")
+
 # Function that sums the rainfall between to times
 cumulativeRain <- function(rainDF, left, right, spatial = F){
   # Function assumes two column rain data frame: time(minutes) | total rainfall
@@ -820,5 +715,46 @@ download_rain <- function(date, rainfall_method = "goes"){
 }
 # Get all of the rain
 #goes_rain_all <- lapply(goes_dates, download_rain)
+rainfall_plot_comparison <- function(folder,  date = "2022-07-29", method1 = "spatial", method2 = "goes"){
 
+  goes_file <- rainfallCreation(folder, model()@watershedPath, date = date, method = method2, overwrite = F)
+  # Spatially distributed map
+  spatial_file <- rainfallCreation(folder, model()@watershedPath, date = date, method = method1, overwrite = F)
+  # Create two graphs
+  rain_df <- data.table::fread(spatial_file)[,c("time","WATER-1", "WATER-2", "WATER-G")]
+  # Janky way to load in the voronoi shapefile
+  rain_regions <- terra::vect(filePresent("voronoi.shp", model()@watershedPath))
+  gauges <- rain_df[,c("WATER-1", "WATER-2", "WATER-G")]*25.4
+  rain_surface <- do.call(c, apply(gauges, MARGIN = 1, FUN = rasterizeRainfall, rain_regions, terra::rast(goes_file)[[1]]))
+  # Add up all the rain surfaces
+  spatial_rain_total <- sum(rain_surface)
+  units <- "Rain (mm)"
+  caption <- paste0("Rainfall from gauges over ", max(rain_df$time)," minutes.")
 
+  # Create template for goes rain
+  goes_rain_total <- sum(terra::rast(goes_file))/6
+  # Get global minimums
+  # Get global min and max for both rasters
+  # vals <- terra::unique(c(terra::values(spatial_rain_total), terra::values(goes_rain_total)))
+  # vals <- round(sort(terra::unique(vals)))  # sort and remove duplicates
+  # breaks <- c(vals, max(vals) + 1)  # right-inclusive intervals
+  # col_pal <- viridis::viridis(length(vals))  # one color per value
+  png(filename = file.path(folder, paste0("rainfall-comparison-", date, ".png")),
+      width = 5.67, height = 4.5, units = "in", res = 300, family = "serif")
+
+  # Tight layout: shrink top & bottom margins (mar[1]=bottom, mar[3]=top)
+  par(mfrow = c(1, 2), mar = c(2, 3, 2, 2), oma = c(0, 0, 0, 0), family = "serif")
+
+  # Plot 1
+  terra::plot(spatial_rain_total,
+              main = "Gauges Rainfall (mm)",
+              cex = 0.5)
+
+  # Plot 2
+  terra::plot(goes_rain_total,
+              main = "Satellite Rainfall (mm)",
+              cex = 0.9)
+
+  dev.off()
+  return("Finished Creating Plot")
+}
