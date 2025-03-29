@@ -66,7 +66,7 @@ animateStack <- function(meltedDF, title = "", units = "", caption = ""){
               ggplot2::ylab("Latitude") +
               ggplot2::labs(fill = units, caption = caption) +
               ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
-              ggplot2::theme_dark() +
+              ggplot2::theme_light() +
               gganimate::transition_time(Time)
   return(gg)
 }
