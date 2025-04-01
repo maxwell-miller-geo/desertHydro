@@ -175,6 +175,7 @@ arid_model <- function(ModelFolder,
  # browser()
   ## 2b. Weather - Rain data
   # Read in the rainfall data from a saved file, normalize it, and create a
+
   rain_file <- suppressWarnings(rainfallCreation(ModelFolder, WatershedElements,
                                                  date = date, method = rainfall_method,
                                                  overwrite = overwrite))

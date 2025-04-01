@@ -27,6 +27,8 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
       return(rain_file)
     }
   }
+  # Rainfall filtering
+  rainFiltered <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = T)
     # Synthetic rainfall method
     if(method == "synthetic" | is.null(date)){
       print("Using synthetic data")
@@ -47,8 +49,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
       readr::write_csv(rain, rain_file)
       return(rain_file)
     }
-    # Rainfall filtering
-    rainFiltered <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = T)
+
     #test <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = F)
     # GOES Rainfall
     if(method == "goes"){
@@ -76,6 +77,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
         # rainfall_inches_per_time <- rainfall_stack/6
         # total_rainfall <- sum(rainfall_inches_per_time, na.rm = T)
       return(rain_file)
+      }
     # Normalize the rainfall data
     if(method == "gauges"){
       # Weight the input rainfall
@@ -123,7 +125,6 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
     }
     else{
       stop(paste("Could not find rainfall method", method))
-    }
     }
 }
 # Test
