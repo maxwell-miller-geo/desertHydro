@@ -1,6 +1,6 @@
 # AWS CLI interface with GOES Series
 
-get_GOES_Rainfall <- function(ModelFolder, date = "2021-07-22", region = "us-east-1",
+ get_GOES_Rainfall <- function(ModelFolder, date = "2021-07-22", region = "us-east-1",
                               WatershedElements = model()@watershedPath, remove = T, all = F, hours_adj = 1){
   # Calculate the day of the year
   date <- as.Date(date)
@@ -71,11 +71,12 @@ get_GOES_Rainfall <- function(ModelFolder, date = "2021-07-22", region = "us-eas
   ordered_rain_paths <- lapply(days, FUN = retrieve_and_order_GOES, days, hour_start, hour_end, bucket, pattern, region, year, ModelFolder)
   # Remove NA's if present
   ordered_files <- unlist(ordered_rain_paths)
+  # browser()
   stack <- create_GOES_raster(ordered_files)
   # Load in boundary
   model_dem <- terra::rast(file.path(WatershedElements, "model_dem.tif")) # Bad practice - should at least be Model Folder
   # Crop and resize
-  resize_rain <- resizeImagery(stack, model_dem, model_dem)
+  resize_rain <- resizeImagery(imagery = stack, outline = model_dem, targetRaster = model_dem)
   # Convert mm/h into in/hr
   # rain_in <- resize_rain/25.4
   # Convert object from nc to spatial format of model

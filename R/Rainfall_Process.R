@@ -73,7 +73,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
         discharge <- dischargeCreate(date, ModelFolder, WatershedElements, rain_file = rain_file, discharge = T)
         # Determine start and end times
         #a <- get_start_end_time(discharge)
-        rain_file <- get_GOES_Rainfall(ModelFolder, date = date, WatershedElements = WatershedElements)
+        rain_file <- get_GOES_Rainfall(ModelFolder, date = date, WatershedElements = WatershedElements, remove = T)
         # rainfall_inches_per_time <- rainfall_stack/6
         # total_rainfall <- sum(rainfall_inches_per_time, na.rm = T)
       return(rain_file)
@@ -733,18 +733,18 @@ rainfall_plot_comparison <- function(folder,  date = "2022-07-29", method1 = "sp
   caption <- paste0("Rainfall from gauges over ", max(rain_df$time)," minutes.")
 
   # Create template for goes rain
-  goes_rain_total <- sum(terra::rast(goes_file))/6
+  goes_rain_total <- sum(terra::rast(goes_file)/6)
   # Get global minimums
   # Get global min and max for both rasters
   # vals <- terra::unique(c(terra::values(spatial_rain_total), terra::values(goes_rain_total)))
   # vals <- round(sort(terra::unique(vals)))  # sort and remove duplicates
   # breaks <- c(vals, max(vals) + 1)  # right-inclusive intervals
   # col_pal <- viridis::viridis(length(vals))  # one color per value
-  png(filename = file.path(folder, paste0("rainfall-comparison-", date, ".png")),
+  grDevices::png(filename = file.path(folder, paste0("rainfall-comparison-", date, ".png")),
       width = 5.67, height = 4.5, units = "in", res = 300, family = "serif")
 
   # Tight layout: shrink top & bottom margins (mar[1]=bottom, mar[3]=top)
-  par(mfrow = c(1, 2), mar = c(2, 3, 2, 2), oma = c(0, 0, 0, 0), family = "serif")
+  graphics::par(mfrow = c(1, 2), mar = c(2, 3, 2, 2), oma = c(0, 0, 0, 0), family = "serif")
 
   # Plot 1
   terra::plot(spatial_rain_total,
