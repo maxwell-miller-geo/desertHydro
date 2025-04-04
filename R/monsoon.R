@@ -80,6 +80,7 @@ monsoon <- function(ModelFolder = NULL,
                     courant = 0.8,
                     time = NaN,
                     overwrite = NA,
+                    velocity_method = "darcys",
                     ...){
 
   if(is.null(ModelFolder)){
@@ -131,6 +132,7 @@ monsoon <- function(ModelFolder = NULL,
       model1@restartModel <- F
     }
   }
+
   a <- arid_model(model1@ModelFolder,
                   model1@watershedPath,
                   date = model1@date,
@@ -154,7 +156,8 @@ monsoon <- function(ModelFolder = NULL,
                   initial_soil_conditions = initial_soil_conditions,
                   rain_adj = rain_adj,
                   surface_adj = surface_adj,
-                  infiltration_adj = infiltration_adj
+                  infiltration_adj = infiltration_adj,
+                  velocity_method = velocity_method
                   )
 
   if(model1@gif){

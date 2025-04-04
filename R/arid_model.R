@@ -75,6 +75,7 @@ arid_model <- function(ModelFolder,
                        rain_adj = 1,
                        surface_adj = 1,
                        infiltration_adj = 1,
+                       velocity_method = "darcys",
                        ...){
 
   if(!file.exists(ModelFolder)){ # Create Model folder, if it doesn't exist
@@ -245,7 +246,8 @@ arid_model <- function(ModelFolder,
             restartModel = restartModel,
             courant = courant,
             infiltration_method = infiltration_method,
-            surface_method = surface_method
+            surface_method = surface_method,
+            velocity_method = velocity_method
   )
 
   print(paste0("Creating graphics in ", ModelFolder))

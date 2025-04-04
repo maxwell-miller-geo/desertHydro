@@ -59,7 +59,7 @@ watershedElementsCreate <- function(ModelFolder,
   if(!file.exists(slope) | overwrite){
     # Expects one of the outputs from previous function to produce "cropped_dem.tif"
     #cropped_dem <- file.path(WatershedElements, "cropped_dem.tif")
-    slope_temp <- terra::terrain(terra::rast(model_dem), v = "slope", neighbors = 8, unit = "degrees")
+    slope_temp <- terra::terrain(terra::rast(model_dem), v = "slope", neighbors = 8, unit = "radians")
     slope_total <- slope_edge(model_dem, slope_temp, cellsize = cellsize)
     names(slope_total) <- "slope"
     # NOTE - slope does compute for boundary cells - see slope_edge()

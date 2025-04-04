@@ -421,43 +421,48 @@ get_crs <- function(raster_path){
 }
 
 # Estimate slope based on elevation and pre-existing slope map
-slope_edge <- function(dem, slope, cellsize, cpp = F){
+slope_edge <- function(dem, slope, cellsize, cpp = T){
   if(is.character(dem)){
     dem <- terra::rast(dem)
   }
   if(cpp){
-    gradient_edge <- terra::focalCpp(dem, fun = gradientCpp, fillvalue = NaN)
+    gradient_edge <- terra::focalCpp(dem, w = c(3,3), fun = gradientCpp, fillvalue = NA)
   }else{
     gradient_edge <- terra::focal(dem, fun = gradient, fillvalue = NA)
   }
 
-  slope_edges <- atan(gradient_edge/cellsize) * 180/pi
+  slope_edges <- gradient_edge / cellsize
   slope_total <- terra::merge(slope, slope_edges, first = T)
   return(slope_total)
 }
 
 # function to calculate the unitless gradient from minimum direction
 gradient <- function(x){
-  if(is.na(x[5])){
+  # Center cell
+  center <- x[5]
+  if(is.na(center)){
     return(NA)
   }
   # passes 9 numbers from top left to bottom right
-  minimum <- min(x, na.rm = T)
-  if(minimum == x[5]){ # find middle number in center
-    minimum <- max(x, na.rm = T)
-    dh <- minimum - x[5]
+  minimum_elevation <- min(x, na.rm = T)
+
+  if(minimum_elevation == center){ # find middle number in center
+    minimum_elevation <- max(x, na.rm = T)
+    dh <- minimum_elevation - center
   }else{
-    dh <- x[5] - minimum
+    dh <- center - minimum_elevation
   }
-  if(is.infinite(dh) | is.na(dh)){
-    return(NA)
-  }
-  if(length(which(x %in% minimum)) > 1){
-    # sample on direction for slope if two minimums found
-    index <- sample(minimum, 1)
-  }else{
-    index <- which(x %in% minimum)
-  }
+  # if(is.infinite(dh) | is.na(dh)){
+  #   return(NA)
+  # }
+  index <- which(x %in% minimum_elevation)[[1]]
+  # if(length(which(x %in% minimum)) > 1){
+  #   # sample on direction for slope if two minimums found
+  #   index <- sample(minimum, 1)
+  # }else{
+  #   index <- which(x %in% minimum)
+  # }
+
   if(index %% 2 == 0){
     gradient <- dh / 1
   }else{
@@ -466,73 +471,119 @@ gradient <- function(x){
   return(gradient)
 }
 
-Rcpp::cppFunction('NumericVector gradientCpp(NumericVector x, NumericMatrix ni) {
-  // Check if the 5th element is NA (Index 4 in 0-based index)
-  if (R_IsNA(x[4])) {
-    return NumericVector::get_na();  // Return NA if x[5] (x[4] in 0-indexed) is NA
-  }
+Rcpp::cppFunction('
+  NumericVector gradientCpp(NumericVector x, size_t ni, size_t nw) {
+    NumericVector grad(ni); // one gradient per center cell
 
-  // Get the minimum value of the vector, ignoring NAs
-  double minimum = *std::min_element(x.begin(), x.end(), [](double a, double b) {
-    return !R_IsNA(a) && (R_IsNA(b) || a < b);
-  });
+    for (size_t i = 0; i < ni; i++) {
+      size_t start = i * nw;
+      double center = x[start + 4]; // center of 3x3 window
 
-  // Check if the minimum is the 5th element (index 4 in 0-based indexing)
-  double dh;
-  if (minimum == x[4]) {
-    // If the minimum is at position 5, use the maximum value
-    minimum = *std::max_element(x.begin(), x.end(), [](double a, double b) {
-      return !R_IsNA(a) && (R_IsNA(b) || a < b);
-    });
-    dh = minimum - x[4];
-  } else {
-    dh = x[4] - minimum;
-  }
+      if (NumericVector::is_na(center)) {
+        grad[i] = NA_REAL;
+        continue;
+      }
 
-  // Return NA if dh is infinite or NA
-  if (R_finite(dh) == 0) {
-    return NumericVector::get_na();
-  }
+      // Find minimum value
+      double minVal = R_PosInf;
+      for (size_t j = 0; j < nw; j++) {
+        double val = x[start + j];
+        if (!NumericVector::is_na(val) && val < minVal) {
+          minVal = val;
+        }
+      }
 
-  // Find indices where the minimum occurs
-  IntegerVector indices;
-  for (int i = 0; i < x.size(); ++i) {
-    if (x[i] == minimum) {
-      indices.push_back(i);
+      // Compute dh
+      double dh;
+      if (minVal == center) {
+        // Switch to max if center is min
+        double maxVal = R_NegInf;
+        for (size_t j = 0; j < nw; j++) {
+          double val = x[start + j];
+          if (!NumericVector::is_na(val) && val > maxVal) {
+            maxVal = val;
+          }
+        }
+        dh = maxVal - center;
+      } else {
+        dh = center - minVal;
+      }
+
+      // Get index of first occurrence of minVal
+      int index = 0;
+      for (size_t j = 0; j < nw; j++) {
+        if (x[start + j] == minVal) {
+          index = j;
+          break;
+        }
+      }
+
+      // Compute gradient
+      grad[i] = (index % 2 == 0) ? (dh / sqrt(2.0)) : (dh / 1.0);
     }
+
+    return grad;
   }
+')
 
-  // Check if we have valid indices
-  if (indices.size() == 0) {
-    return NumericVector::get_na();  // Return NA if no minimum found
-  }
 
-  // Randomly sample one index from the minimum values if there are multiple minimums
-  int index = indices[R::runif(0, indices.size())];
+# Rcpp::cppFunction('
+#   NumericVector gradientCpp(NumericVector x, size_t ni, size_t nw) {
+#     Rcout << "The is NA: " << NumericVector::is_na(x[4]) << std::endl;
+#     if (NumericVector::is_na(x[4])) return NA_REAL;  // center of 3x3 window
+#
+#     double center = x[4];
+#     double minVal = R_PosInf;
+#     int minIndex = -1;
+#     int countMin = 0;
+#     Rcout << "The NumericVector is: " << x << std::endl;
+#     Rcout << "The size_t is ni: " << ni << std::endl;
+#     Rcout << "The size_t nw is: " << nw << std::endl;
+#
+#     // Find minimum value in the window
+#     for (int i = 0; i < nw; i++) {
+#       if (!NumericVector::is_na(x[i]) && x[i] < minVal) {
+#         minVal = x[i];
+#         minIndex = i;
+#         countMin = 1;
+#       } else if (!NumericVector::is_na(x[i]) && x[i] == minVal) {
+#         countMin++;
+#       }
+#     }
+#
+#     double dh;
+#     if (minVal == center) {
+#       // Center is minimum — switch to max
+#       double maxVal = R_NegInf;
+#       for (int i = 0; i < nw; i++) {
+#         if (!NumericVector::is_na(x[i]) && x[i] > maxVal) {
+#           maxVal = x[i];
+#           minIndex = i;
+#         }
+#       }
+#       dh = maxVal - center;
+#     } else {
+#       dh = center - minVal;
+#     }
+#
+#     if (!R_finite(dh) || NumericVector::is_na(dh)) return NA_REAL;
+#
+#     // Deterministic min selection (first match)
+#     if (countMin > 1 && minVal != center) {
+#       for (int i = 0; i < nw; i++) {
+#         if (x[i] == minVal) {
+#           minIndex = i;
+#           break;
+#         }
+#       }
+#     }
+#
+#     // Distance: diagonal = sqrt(2), edge = 1
+#     double dist = (minIndex % 2 == 0) ? sqrt(2.0) : 1.0;
+#     return dh / dist;
+#   }
+# ')
 
-  // You can also manipulate the neighborhood information `ni` here if needed
-  // For example, lets assume we calculate the average of the neighborhood
-                  double ni_avg = 0;
-                  for (int i = 0; i < ni.nrow(); ++i) {
-                    for (int j = 0; j < ni.ncol(); ++j) {
-                      ni_avg += ni(i, j);
-                    }
-                  }
-                  ni_avg /= (ni.nrow() * ni.ncol());  // Average of the neighborhood values
-
-                  // Calculate the gradient based on the index and neighborhood data
-                  NumericVector result(2); // 2D spatial vector (x, y)
-
-                  if (index % 2 == 0) {
-                    result[0] = dh / 1;   // X direction
-                    result[1] = ni_avg;   // Y direction (using neighborhood average for the Y direction)
-                  } else {
-                    result[0] = dh / sqrt(2);   // X direction
-                    result[1] = dh / sqrt(2);   // Y direction
-                  }
-
-                  return result;
-                  }')
 # Sum the values of all of the cells within a raster layer
 sumCells <- function(raster){
   return(terra::global(raster, "sum", na.rm = TRUE)$sum)

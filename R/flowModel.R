@@ -45,6 +45,7 @@ flowModel <- function(ModelFolder,
                       cellsize = NULL,
                       infiltration_method = "green",
                       surface_method = "nlcd",
+                      velocity_method = "darcys",
                       ...){
   print(paste("Time step:", time_step))
   print(paste("Simulation length:", simulation_length))
@@ -266,7 +267,11 @@ for(t in simulation_values){
   while(runoff_counter != simulationTimeSecs){
     # # Calculate the time delta
     # Calculate potential velocity
-    velocity <- manningsVelocity(mannings_n, surfaceWater, slope, length = cellsize, units = "cm/s")
+    if(velocity_method == "mannings"){
+      velocity <- manningsVelocity(mannings_n, surfaceWater, slope, length = cellsize, units = "cm/s")
+    }else if(velocity_method == "darcys"){
+      velocity <- darcysVelocity(mannings_n, surfaceWater, slope)
+    }
     # Speed limit on water - Can't go faster than 1000 cm/s or 10 m/s
     if(terra::global(velocity, "max", na.rm = TRUE)[,1] > 1000){
       velocity <- terra::ifel(velocity > 1000, 1000, velocity)
@@ -317,13 +322,14 @@ for(t in simulation_values){
                                  cellsize = cellsize,
                                  rain_step_min = 1,
                                  infiltration = !impervious)
+
     # Save new depth to surface water
     #surfaceStack$surfaceWater <- SoilStack$surfaceWater <- depth_list[[1]]
     surfaceWater <- depth_list[[1]]
     # Adjust the slope for next time-step
     #new_dem <- surfaceStack$surfaceWater/100 + surfaceStack$model_dem # assumes meters
     new_dem <- surfaceWater/100 + staticStack$model_dem # assumes meters
-    slope_temp <- terra::terrain(new_dem, v = "slope", neighbors = 8, unit = "degrees")
+    slope_temp <- terra::terrain(new_dem, v = "slope", neighbors = 8, unit = "radians")
     new_slope <- terra::merge(slope_temp, model_slope) # opened earlier
     #new_slope <- slope_edge(new_dem, slope_temp, cellsize = cellsize)
     names(new_slope) <- "slope"

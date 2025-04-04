@@ -162,10 +162,12 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
   #   }
   # }
   flowList <- lapply(flow_directions, FUN = mapCalculations, flow_d8, discharge, xDim, yDim, flowKey, discharge_out, ModelFolder)
+
   #flowList <- lapp(discharge, FUN = mapCalculations, flow_d8, flow_direction, xDim, yDim, flowKey, discharge_out)
   flowMaps <- terra::rast(flowList)
+  flowMap <- sum(flowMaps, na.rm = T)
   #rm(flow_d8)
-  return(flowMaps)
+  return(flowMap)
 }
 
 mapCalculations <- function(flow_direction, flow_d8, discharge, xDim, yDim, flowKey, discharge_out = FALSE, ModelFolder){
@@ -189,6 +191,42 @@ mapCalculations <- function(flow_direction, flow_d8, discharge, xDim, yDim, flow
   #terra::writeRaster(dischargeShifted, file.path(ModelFolder, paste0(flowKey[[flow_direction]][[1]],".tif")), overwrite = T)
   return(dischargeShifted)
 }
+# Flow contributions
+# Rcpp::cppFunction('
+# List computeFlowContributions(NumericMatrix discharge, NumericMatrix flow_d8,
+#                               NumericVector flow_vals,
+#                               NumericVector x_shifts,
+#                               NumericVector y_shifts,
+#                               NumericVector flow_lengths) {
+#
+#   int nrows = discharge.nrow();
+#   int ncols = discharge.ncol();
+#   int nflows = flow_vals.size();
+#
+#   List output(nflows);
+#
+#   for (int d = 0; d < nflows; ++d) {
+#     NumericMatrix out(nrows, ncols);
+#     double code = flow_vals[d];
+#     double distance = flow_lengths[d];
+#
+#     for (int i = 0; i < nrows; ++i) {
+#       for (int j = 0; j < ncols; ++j) {
+#         if (flow_d8(i, j) == code) {
+#           out(i, j) = discharge(i, j) / distance;
+#         } else {
+#           out(i, j) = NA_REAL;
+#         }
+#       }
+#     }
+#
+#     output[d] = out;
+#   }
+#
+#   return output;
+# }
+# ')
+
 ## ---------------------------
 # Create flow maps 2.0
 createFlowMaps <- function(dem, dem_flow){
@@ -650,13 +688,25 @@ manningsVelocity <- function(n, depth, slope, length, units = "cm/s"){
   #print(HydraulicRadius)
   #HydraulicRadius <-  Area / (length) # calculate the hydraulic radius
   #latex Rh: R_{h} = \frac{(d_{water}*l_{grid})}{2*d_{water} + l_{grid}}
-  slope_gradient <- tanpi(slope*0.005555556) # convert slope into a gradient (m/m)
+  #slope_gradient <- tanpi(slope*0.005555556) # convert slope into a gradient (m/m)
+  slope_gradient <- slope
   # LaTEX V(\frac{m}{s}) = \frac{1}{n}*R_{h}^{\frac{2}{3}} * S^{\frac{1}{2}}_{grad}
   velocity <- ((HydraulicRadius^ (2/3)) * (slope_gradient^.5)) / n
   if(units == "cm/s"){
     velocity <- velocity * 100 # m/s to cm/s
   }
   return(velocity)
+}
+
+darcysVelocity <- function(n, height_cm, slope, gravity = 980){
+  friction_factor <- manning_to_darcy_cm(n, height_cm)
+  velocity_cm_s <- sqrt(8*gravity*height_cm*slope/friction_factor)
+  return(velocity_cm_s)
+}
+
+darcys_alpha <- function(n, height_cm, slope, gravity = 980){
+  ff <- manning_to_darcy_cm(n, height_cm)
+  return(ff)
 }
 # Test
 # plot(manningsVelocity(SoilStack$mannings_n, .0254, SoilStack$slope, length = 10))
@@ -772,21 +822,31 @@ manningsVelocity <- function(n, depth, slope, length, units = "cm/s"){
 adjust_mannings <- function(slope){
   # (Hessel et al., 2003) Adjust Manning's velocity based upon empirical relationship
   # n = 0.0559 + 0.0022S where S is % slope
-  n <- 0.0559 + 0.0022 * tanpi(slope/180) * 100 # convert slope to gradient %
+  n <- 0.0559 + 0.0022 * slope * 100 # convert slope to gradient %
   return(n)
 }
 
-surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s, velocity = NULL, cellsize = NULL, rain_step_min = 1, infiltration = T){
+surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s, velocity = NULL, cellsize = NULL, rain_step_min = 1, infiltration = T, velocity_method = "darcy"){
   terra::terraOptions(datatype="FLT8S")
   # Units should be in the seconds for calculations
   # mannings_n, surfaceWater, slope, throughfall, infiltration_cmhr, flow_direction, currentSoilStorage, maxSoilStorage
   # Cannot be negative depths
   if(is.null(velocity)){
-    velocity <- manningsVelocity(adjustStack$mannings_n, adjustStack$surfaceWater, adjustStack$slope, length = NULL)
+    if(velocity_method == "darcy"){
+      velocity <- darcysVelocity(n = adjustStack$mannings_n,
+                                 height_cm = adjustStack$surfaceWater,
+                                 slope = adjustStack$slope)
+    }else{
+      velocity <- manningsVelocity(adjustStack$mannings_n,
+                                   adjustStack$surfaceWater,
+                                   adjustStack$slope,
+                                   length = NULL)
+    }
   }
   if(is.null(cellsize)){
     cellsize <- grid_size(velocity)
   }
+
   # Check the source term
   time_adjustment <- rain_step_min/ 60 # time per hour - h^-1
   hr_to_s <- 1 / 3600
@@ -807,10 +867,9 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   flow_units <- flowLength(surfaceStack$flow_direction) * cellsize * 100 # cm
   # Discharge out of every cell - normalized by distance
   discharge_out <- h_current * velocity / flow_units # unit cm/s - technically cm/s
-
   # Route the discharge in different directions - technically a velocity right now..
-  discharge_in_sep <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
-  discharge_in <- sum(discharge_in_sep, na.rm = T)
+  discharge_in <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
+  #discharge_in <- sum(discharge_in_sep, na.rm = T)
 
   #discharge_sum <- sumCells(discharge_out)
   #discharge_in_sum <- sumCells(discharge_in)
@@ -948,156 +1007,156 @@ time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm
   }
   return(time_delta_s)
 }
-time_delta2 <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T, impervious = F){
-  # Layers needed
-  #mannings_n,surfaceWater,slope, throughfall, (infiltration_cm_hr)
-  if(is.null(cellsize)){
-    cellsize <- grid_size(surfaceStack)
-  }
-  # Velocity calculation
-  velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater,
-                               surfaceStack$slope, length = cellsize, units = "cm/s")
-  # Bring in the trouble areas - should be brought in first
-  # if(trouble){
-  #   trouble_cells <- terra::rast(file.path(ModelFolder, "trouble-cells.tif"))
-  #   adjustment <- terra::ifel(trouble_cells > 40, trouble_cells, 1)
-  #   adjusted_cells <- trouble_cells * stream_extracted
-  # }
-  # Check the source term
-  min_to_hour <- 60
-  time_adjustment <- time_step_min/ min_to_hour # time per hour - h^-1
-  # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand for
-  # other rainfall methods
-  rainfall_rate_cm_hr <- surfaceStack$throughfall/time_adjustment
-  # Add infiltration rate here ---
-  if(!impervious){
-    infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr # to be adjusted - part of surface stack
-  }else{
-    infiltration_rate_cm_hr <- 0
-  }
-
-  # Calculate source water term
-  source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
-  ### Stability check on rainfall magnitude
-  # Find the maximum rainfall intensity
-  max_source_water <- terra::global(source_water_cm_hr, "max", na.rm = TRUE)[,1]
-  # max_source_water <- max(terra::values(source_water_cm_hr, na.rm = T))
-  time_step_hr <- courant_condition / max_source_water
-  time_step_sec <- floor(time_step_hr * 3600) # convert hours to seconds - needs to be changed
-  # Calculate time delta or the time-step for this step in seconds
-  if(time_step_sec > 0 && time_step_sec < time_step_min * 60){
-    time_delta_s <- time_step_sec
-  }else{
-    time_delta_s <- time_step_min * 60
-  }
-  # Time delta rounded
-  time_delta_s <- round(time_delta_s, 2) # round down to nearest second
-
-  ## Courant stability of flow
-  # velocity * time / distance < 1 or
-  # dt = C(courant number) * distance traveled (cm) / velocity (cm/s)
-  # (1000/1000) is to leave 2 decimal places for hundreths of a second to elapse
-  # browser()
-  # Old way of getting values
-  # dt <- floor(min(terra::values(
-  #   courant_condition * cellsize * 100/ velocity, na.rm = T))*1000)/1000
-  min_velocity <- terra::global(velocity, "min", na.rm = TRUE)[,1]
-  dt <- floor(min(courant_condition * cellsize * 100 / min_velocity, na.rm = TRUE) * 1000) / 1000
-  # Change the time step, if the conditions require it
-  if(dt < time_delta_s){
-    time_delta_s <- dt
-  }
-  # Round down for seconds
-  if(time_delta_s > 1){
-    time_delta_s <- floor(time_delta_s)
-  }
-  if(vel){
-    return(list(time_delta_s, velocity))
-  }
-  return(time_delta_s)
-}
+# time_delta2 <- function(surfaceStack, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T, impervious = F){
+#   # Layers needed
+#   #mannings_n,surfaceWater,slope, throughfall, (infiltration_cm_hr)
+#   if(is.null(cellsize)){
+#     cellsize <- grid_size(surfaceStack)
+#   }
+#   # Velocity calculation
+#   velocity <- manningsVelocity(surfaceStack$mannings_n, surfaceStack$surfaceWater,
+#                                surfaceStack$slope, length = cellsize, units = "cm/s")
+#   # Bring in the trouble areas - should be brought in first
+#   # if(trouble){
+#   #   trouble_cells <- terra::rast(file.path(ModelFolder, "trouble-cells.tif"))
+#   #   adjustment <- terra::ifel(trouble_cells > 40, trouble_cells, 1)
+#   #   adjusted_cells <- trouble_cells * stream_extracted
+#   # }
+#   # Check the source term
+#   min_to_hour <- 60
+#   time_adjustment <- time_step_min/ min_to_hour # time per hour - h^-1
+#   # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand for
+#   # other rainfall methods
+#   rainfall_rate_cm_hr <- surfaceStack$throughfall/time_adjustment
+#   # Add infiltration rate here ---
+#   if(!impervious){
+#     infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr # to be adjusted - part of surface stack
+#   }else{
+#     infiltration_rate_cm_hr <- 0
+#   }
+#
+#   # Calculate source water term
+#   source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
+#   ### Stability check on rainfall magnitude
+#   # Find the maximum rainfall intensity
+#   max_source_water <- terra::global(source_water_cm_hr, "max", na.rm = TRUE)[,1]
+#   # max_source_water <- max(terra::values(source_water_cm_hr, na.rm = T))
+#   time_step_hr <- courant_condition / max_source_water
+#   time_step_sec <- floor(time_step_hr * 3600) # convert hours to seconds - needs to be changed
+#   # Calculate time delta or the time-step for this step in seconds
+#   if(time_step_sec > 0 && time_step_sec < time_step_min * 60){
+#     time_delta_s <- time_step_sec
+#   }else{
+#     time_delta_s <- time_step_min * 60
+#   }
+#   # Time delta rounded
+#   time_delta_s <- round(time_delta_s, 2) # round down to nearest second
+#
+#   ## Courant stability of flow
+#   # velocity * time / distance < 1 or
+#   # dt = C(courant number) * distance traveled (cm) / velocity (cm/s)
+#   # (1000/1000) is to leave 2 decimal places for hundreths of a second to elapse
+#   # browser()
+#   # Old way of getting values
+#   # dt <- floor(min(terra::values(
+#   #   courant_condition * cellsize * 100/ velocity, na.rm = T))*1000)/1000
+#   min_velocity <- terra::global(velocity, "min", na.rm = TRUE)[,1]
+#   dt <- floor(min(courant_condition * cellsize * 100 / min_velocity, na.rm = TRUE) * 1000) / 1000
+#   # Change the time step, if the conditions require it
+#   if(dt < time_delta_s){
+#     time_delta_s <- dt
+#   }
+#   # Round down for seconds
+#   if(time_delta_s > 1){
+#     time_delta_s <- floor(time_delta_s)
+#   }
+#   if(vel){
+#     return(list(time_delta_s, velocity))
+#   }
+#   return(time_delta_s)
+# }
 # Flow routing that has a semi fixed spacing and save rate
-routeWater2 <- function(ModelFolder, SoilStack, flowDirectionMap, time_step = 5, length = 10, timeVelocity = list(0,0), drainCells = NA, ...){
-
-  if(is.character(flowDirectionMap)){
-    flowDirectionMap <- terra::rast(flowDirectionMap)
-  }
-  #
-  # Initial variables
-  maxTravel <- length # 5-10 m per time step
-  n <- SoilStack$mannings_n
-  surface <- SoilStack$surfaceWater # cm of current surface depth
-  throughfall <- SoilStack$throughfall
-  rainfallRate <- throughfall/time_step # rainfall rate per second
-  rainSurface <- surface + throughfall # cm
-
-  #print(n)
-  slope <- SoilStack$slope
-  dem <- SoilStack$model_dem # m
- # Manning's n adjustment - dynamically adjust manning's n, if the depth is very low
-
-  # Initial velocity
-  #velocityInitial <- manningsVelocity(n, surface, slope, length = length)
-  initialDepth <- terra::subst((surface + rainfallRate*time_step*0.5), NA, 0)
-  velocityIntermediate <- manningsVelocity(n, initialDepth, slope, length = length)
-  #velocityAverage <- (velocityInitial + velocityFinal) * .5
-  velocityStorage <- velocityIntermediate
-  #print(paste("velocity out", velocityIntermediate))
-  # Time step check - returns max distance traveled and adjusted depth
-  distanceDepth <- distanceCheck(ModelFolder, velocityIntermediate, rainSurface, time_step,
-                                 flowDirectionMap, dem, n, timeVelocity = timeVelocity,
-                                 drainCells = drainCells, check = T)
-  #print(distanceDepth)
-  # Calculate which cells are to fast
-  #fastCells <- distanceDepth[[2]] - maxTravel
-  #terra::writeRaster(fastCells, file.path(ModelFolder, paste0("fastest-",round(distanceDepth[[1]],2),".tif")), overwrite = T)
-  #print(distanceDepth)
-  timeAdjustment <- ceiling(distanceDepth[[1]])
-  #print(distanceDepth[[1]])
-  timeAdjustment <- ifelse(timeAdjustment == 0, 1, timeAdjustment)
-  #print(distanceDepth[[1]])
-  time_step <- time_step / timeAdjustment
-  rain_adjust <- throughfall / timeAdjustment
-
-  #distanceDepth[[2]] <- surface + rain_adjust
-  volumeStorage <- c()
-  dischargeStorage <- c()
-  #print(timeAdjustment)
-  for(x in 1:timeAdjustment){
-    if(timeAdjustment == 1){
-      volumeStorage <- c(volumeStorage, distanceDepth[[3]])
-      dischargeStorage <- c(dischargeStorage, distanceDepth[[4]])
-      break
-    }
-    if(x ==1){
-      velocityAfterRain <- manningsVelocity(n,surface + rain_adjust,slope,length = length)
-      terra::add(velocityStorage) <- velocityAfterRain # add velocity
-      distanceDepth <- distanceCheck(ModelFolder, velocityAfterRain, surface + rain_adjust, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity, drainCells = drainCells, check = T)
-      volumeStorage <- c(volumeStorage, distanceDepth[[3]])
-      dischargeStorage <- c(dischargeStorage, distanceDepth[[4]])
-    }
-    newSurface <- distanceDepth[[2]] + rain_adjust
-    velocityAfterRain <- manningsVelocity(n, newSurface,slope,length = length)
-    terra::add(velocityStorage) <- velocityAfterRain # add velocity
-    distanceDepth <- distanceCheck(ModelFolder, velocityAfterRain, newSurface, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity, drainCells = drainCells, check = T)
-    volumeStorage <- c(volumeStorage, distanceDepth[[3]])
-    dischargeStorage <- c(dischargeStorage, distanceDepth[[4]])
-    #print(distanceDepth[[2]])
-  }
-
-  if(!(terra::nlyr(velocityStorage) == 1)){
-    velocityAverage <- terra::mean(velocityStorage, na.rm = T)
-  }else{
-    velocityAverage <- velocityStorage
-  }
-  slopeNew <- slopeCalculate(dem + distanceDepth[[2]])
-  slopeNew <- terra::ifel(slopeNew < 0.01, 0.01, slopeNew)
-  flowNew <- flowMap(dem + distanceDepth[[2]])
-  # surface depth cm, average velocity per time step, new slope, new flow direction map,volume, discharge
-  return(list(distanceDepth[[2]], velocityAverage, slopeNew, flowNew, volumeStorage, dischargeStorage))
-          # 1                       2               3         4       5                 6
-
-}
+# routeWater2 <- function(ModelFolder, SoilStack, flowDirectionMap, time_step = 5, length = 10, timeVelocity = list(0,0), drainCells = NA, ...){
+#
+#   if(is.character(flowDirectionMap)){
+#     flowDirectionMap <- terra::rast(flowDirectionMap)
+#   }
+#   #
+#   # Initial variables
+#   maxTravel <- length # 5-10 m per time step
+#   n <- SoilStack$mannings_n
+#   surface <- SoilStack$surfaceWater # cm of current surface depth
+#   throughfall <- SoilStack$throughfall
+#   rainfallRate <- throughfall/time_step # rainfall rate per second
+#   rainSurface <- surface + throughfall # cm
+#
+#   #print(n)
+#   slope <- SoilStack$slope
+#   dem <- SoilStack$model_dem # m
+#  # Manning's n adjustment - dynamically adjust manning's n, if the depth is very low
+#
+#   # Initial velocity
+#   #velocityInitial <- manningsVelocity(n, surface, slope, length = length)
+#   initialDepth <- terra::subst((surface + rainfallRate*time_step*0.5), NA, 0)
+#   velocityIntermediate <- manningsVelocity(n, initialDepth, slope, length = length)
+#   #velocityAverage <- (velocityInitial + velocityFinal) * .5
+#   velocityStorage <- velocityIntermediate
+#   #print(paste("velocity out", velocityIntermediate))
+#   # Time step check - returns max distance traveled and adjusted depth
+#   distanceDepth <- distanceCheck(ModelFolder, velocityIntermediate, rainSurface, time_step,
+#                                  flowDirectionMap, dem, n, timeVelocity = timeVelocity,
+#                                  drainCells = drainCells, check = T)
+#   #print(distanceDepth)
+#   # Calculate which cells are to fast
+#   #fastCells <- distanceDepth[[2]] - maxTravel
+#   #terra::writeRaster(fastCells, file.path(ModelFolder, paste0("fastest-",round(distanceDepth[[1]],2),".tif")), overwrite = T)
+#   #print(distanceDepth)
+#   timeAdjustment <- ceiling(distanceDepth[[1]])
+#   #print(distanceDepth[[1]])
+#   timeAdjustment <- ifelse(timeAdjustment == 0, 1, timeAdjustment)
+#   #print(distanceDepth[[1]])
+#   time_step <- time_step / timeAdjustment
+#   rain_adjust <- throughfall / timeAdjustment
+#
+#   #distanceDepth[[2]] <- surface + rain_adjust
+#   volumeStorage <- c()
+#   dischargeStorage <- c()
+#   #print(timeAdjustment)
+#   for(x in 1:timeAdjustment){
+#     if(timeAdjustment == 1){
+#       volumeStorage <- c(volumeStorage, distanceDepth[[3]])
+#       dischargeStorage <- c(dischargeStorage, distanceDepth[[4]])
+#       break
+#     }
+#     if(x ==1){
+#       velocityAfterRain <- manningsVelocity(n,surface + rain_adjust,slope,length = length)
+#       terra::add(velocityStorage) <- velocityAfterRain # add velocity
+#       distanceDepth <- distanceCheck(ModelFolder, velocityAfterRain, surface + rain_adjust, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity, drainCells = drainCells, check = T)
+#       volumeStorage <- c(volumeStorage, distanceDepth[[3]])
+#       dischargeStorage <- c(dischargeStorage, distanceDepth[[4]])
+#     }
+#     newSurface <- distanceDepth[[2]] + rain_adjust
+#     velocityAfterRain <- manningsVelocity(n, newSurface,slope,length = length)
+#     terra::add(velocityStorage) <- velocityAfterRain # add velocity
+#     distanceDepth <- distanceCheck(ModelFolder, velocityAfterRain, newSurface, time_step, flowDirectionMap, dem, n, timeVelocity = timeVelocity, drainCells = drainCells, check = T)
+#     volumeStorage <- c(volumeStorage, distanceDepth[[3]])
+#     dischargeStorage <- c(dischargeStorage, distanceDepth[[4]])
+#     #print(distanceDepth[[2]])
+#   }
+#
+#   if(!(terra::nlyr(velocityStorage) == 1)){
+#     velocityAverage <- terra::mean(velocityStorage, na.rm = T)
+#   }else{
+#     velocityAverage <- velocityStorage
+#   }
+#   slopeNew <- slopeCalculate(dem + distanceDepth[[2]])
+#   slopeNew <- terra::ifel(slopeNew < 0.01, 0.01, slopeNew)
+#   flowNew <- flowMap(dem + distanceDepth[[2]])
+#   # surface depth cm, average velocity per time step, new slope, new flow direction map,volume, discharge
+#   return(list(distanceDepth[[2]], velocityAverage, slopeNew, flowNew, volumeStorage, dischargeStorage))
+#           # 1                       2               3         4       5                 6
+#
+# }
 depthChange <- function(velocity, depth, time_step, flowDirectionMap, length = 10, drainCells = NA, check = F, ...){
   depth_m <- depth / 100
   #distance <- velocity * time_step
@@ -1384,4 +1443,27 @@ grid_size <- function(raster, unit = "m"){
   # assuming square shape
   length <- sqrt(mean)
   return(length)
+}
+# mannings n to darcy friction factor
+manning_to_darcy_cm <- function(n, h_cm, g = 980) {
+  # Inputs:
+  # n     : Manning’s roughness coefficient
+  # h_cm  : Flow depth in centimeters
+  # g     : Acceleration due to gravity in cm/s² (default 980)
+
+  # if (any(h_cm <= 0)) stop("Flow depth h must be greater than 0 cm.")
+  # if (any(n <= 0)) stop("Manning's n must be greater than 0.")
+  #\( f = \frac{8gn^2}{h^{1/3}} \)
+  # 1.\ \ v = \frac{1}{n} R^{2/3} S^{1/2} \quad\text{(Manning’s equation)}\\
+  # 2.\ \ v = \sqrt{ \frac{8gRS}{f} } \quad\text{(Darcy–Weisbach equation)}\\
+  # 3.\ \ \frac{1}{n} R^{2/3} S^{1/2} = \sqrt{ \frac{8gRS}{f} }\\
+  # 4.\ \ \left( \frac{1}{n} R^{2/3} S^{1/2} \right)^2 = \frac{8gRS}{f}\\
+  # 5.\ \ \frac{1}{n^2} R^{4/3} S = \frac{8gRS}{f}\\
+  # 6.\ \ \frac{1}{n^2} R^{4/3} = \frac{8gR}{f} \quad\text{(cancel } S \text{)}\\
+  # 7.\ \ \frac{1}{n^2} R^{1/3} = \frac{8g}{f} \quad\text{(divide by } R \text{)}\\
+  # 8.\ \ f = \frac{8gn^2}{R^{1/3}}\\
+  # 9.\ \ \text{If } R \approx h \text{ (for overland flow):} \quad f = \frac{8gn^2}{h^{1/3}}
+  # Compute Darcy–Weisbach friction factor
+  f <- (8 * g * n^2) / (h_cm^(1/3))
+  return(f)
 }
