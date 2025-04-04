@@ -310,7 +310,7 @@ plot_rainfall_discharge <- function(rain_discharge_DF, date, store = T, outpath 
   discharge_plot <- ggplot2::ggplot(rain_discharge_DF) +
     ggplot2::geom_line(mapping = ggplot2::aes(x = Time_minute, y = discharge))  +
     #labs(title = paste("Discharge at Waterholes Watershed, AZ:", date), x = "", y = bquote("Measured Discharge" (ft^3/s))) +
-    ggplot2::labs(title = paste("Discharge at Waterholes Watershed, AZ:", date), x = "", y = paste0("Measured Discharge ft\u00b3/s)")) +
+    ggplot2::labs(title = paste("Discharge at Waterholes Watershed, AZ:", date), x = "", y = paste0("Measured Discharge (ft\u00b3/s)")) +
     ggplot2::theme_bw() +
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 

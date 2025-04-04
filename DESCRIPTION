@@ -29,6 +29,7 @@ Imports:
     future.apply,
     gganimate,
     ggplot2,
+    gifski,
     gridExtra,
     hms,
     lubridate,
@@ -45,7 +46,6 @@ Imports:
     whitebox,
     zoo
 Suggests: 
-    gifski,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
