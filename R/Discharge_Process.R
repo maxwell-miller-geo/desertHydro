@@ -282,6 +282,8 @@ plot_rainfall_discharge <- function(rain_discharge_DF, date, store = T, outpath 
   # Widen the data of rainfall with the melt, which will take the gauge columns and
   # Create categories under the "Gauge" column and keep the values in a new column called
   # "Rain_depths" and preserve the "Time_minute" column
+  data.table::setDT(rain_discharge_DF)
+
   # Find gauges with "Water"
   gauges <- grep(gauge_prefix, colnames(rain_discharge_DF), ignore.case = T, value = T)
   meltedDF <- data.table::melt(data.table::as.data.table(rain_discharge_DF),
@@ -314,12 +316,19 @@ plot_rainfall_discharge <- function(rain_discharge_DF, date, store = T, outpath 
 
     # Combine the two graphs
     combined_plot <- gridExtra::grid.arrange(discharge_plot, rain_plot)
+
+    # Create additional combined plot with discharge
+
     # store the graph for the date
     if(store){
       outputPlot <- paste0("discharge_rain_", date ,".png")
       ggplot2::ggsave(file.path(outpath, outputPlot), plot = combined_plot, width = 6)
     }
 }
+
+
+
+
 #
 # # Test function
 # # rain_discharge <- "rain-discharge.csv"
@@ -674,4 +683,46 @@ plot_corre <- function(df, col1 = "rainfall_vol", col2 = "discharge_duration", f
     ggplot2::annotate("text", x = xlimit, y = ylimit, label = paste("Correlation coefficient:",rsquared))
   #p + ggplot2::geom_smooth(method = "lm", se = F)
   return(p)
+}
+
+plot_rainfall_line_dual_axis <- function(combined_dt, primary_col = "discharge", secondary_col = "Cumulative_rainfall", date = "", store = TRUE, outpath = "") {
+
+  # Ensure data.table format
+  data.table::setDT(combined_dt)
+  # Total rainfall column
+  total_column <- grep("Total", names(combined_dt), value = T)
+  # Cumulative sum column
+  combined_dt[, paste0("Cumulative_rainfall") := cumsum(.SD[[1]]), .SDcols = total_column]
+  # Scale factor to align axes
+  max_primary <- max(combined_dt[[primary_col]], na.rm = TRUE)
+  max_secondary <- max(combined_dt[[secondary_col]], na.rm = TRUE)
+  scale_factor <- if (max_secondary == 0) 1 else max_primary / max_secondary * 0.5
+
+  # Plot
+  joint_plot <- ggplot2::ggplot(combined_dt, ggplot2::aes(x = time)) +
+    ggplot2::geom_line(ggplot2::aes(y = get(primary_col)), color = "blue", size = .65) +
+    ggplot2::geom_line(ggplot2::aes(y = get(secondary_col) * scale_factor), color = "red", size = .75, linetype = "dashed") +
+    ggplot2::scale_y_continuous(
+      name = paste("Measured Discharge (ft\u00b3/s)"),
+      sec.axis = ggplot2::sec_axis(~ . / scale_factor, name = paste("Cumulative Rainfall (in)"))
+    ) +
+    ggplot2::labs(
+      title = paste("Rainfall vs. Discharge:", date),
+      x = "Time (minutes)"
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(hjust = 0.5),
+      axis.title.y.left = ggplot2::element_text(color = "blue"),
+      axis.text.y.left = ggplot2::element_text(color = "blue"),
+      axis.title.y.right = ggplot2::element_text(color = "red"),
+      axis.text.y.right = ggplot2::element_text(color = "red")
+    )
+
+  if (store) {
+    file_name <- paste0("rainfall_line_dual_axis_", date, ".png")
+    ggplot2::ggsave(file.path(outpath, file_name), plot = joint_plot, width = 8, height = 5)
+  }
+
+  return(joint_plot)
 }

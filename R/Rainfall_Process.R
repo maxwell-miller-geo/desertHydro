@@ -447,7 +447,7 @@ cumulativeRain <- function(rainDF, left, right, spatial = F){
 }
 
 # Test - no test currently
-#voronoi
+# voronoi
 # Function uses Watershed voronoi shapefile, recorded rainfall amounts - outputs rasterized rainfall
 rasterizeRainfall <- function(rainAtGauges, voronoi_shape, rainfallRaster){
     # Order must be the same: WATERHOLES-1, WATERHOLES-2, WATERHOLES-G

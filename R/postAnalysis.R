@@ -549,4 +549,12 @@ create_single_graphic <- function(ModelFolder, date = NULL){
   # Save final GIF
   image_write(final_gif, file.path(ModelFolder,paste0(date,"combined_gifs.gif")))
 }
+# Create graphic that displays discharge and rainfall on same graph
+rainfall_discharge_plot <- function(ModelFolder, rainfall_method = "spatial"){
+  # Get the rainfall data used
+
+}
+
+
+
 
