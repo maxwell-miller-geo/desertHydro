@@ -1,37 +1,4 @@
-# Model Main
-# The script takes in the necessary input parameters and performs flow routing
-# The script writes the outputs of the script to the model folder
-# Necessary Libraries
-# libs <- c(
-#   "tidyverse", "tidyterra", "tidyverse", "dplyr", "readxl", "whitebox", "terra", "data.table")
-#
-# # Check if packages are install or not
-# installed_libraries <- libs %in% rownames(installed.packages())
-#
-# if(any(installed_libraries == F)){
-#   install.packages(libs[!installed_libraries])
-# }
-# invisible(lapply(
-#   libs, library, character.only = T
-# ))
-
-# Custom Functions necessary
-#source("setup_LandCover.R") # Land Cover script
-# # If flow direction has already been calculated, then it can be loaded in there.
-# source("setup_FlowPartition.R")
-# # Weather functions
-# source("Rainfall_Process.R")
-# # Model functions
-# source("Main_Script_Functions.R")
-# # Digital Elevation Functions
-# source("demProcessing.R")
-# # Utility functions
-# source("utils.R")
-
-##  Model Script
-#LandCoverCharacteristics <- storage_amount(LandCoverCharacteristics) # adjusts the storage amount must reassign values for table
-
-
+# Flow Model script
 flowModel <- function(ModelFolder,
                       rain_file,
                       time_step = 1,
@@ -50,7 +17,8 @@ flowModel <- function(ModelFolder,
                       ...){
   print(paste("Time step:", time_step))
   print(paste("Simulation length:", simulation_length))
-  print(paste("Estimated run time:", round(simulation_length/ time_step * 25/60), " minutes."))
+  print(paste("Estimated run time:", round(simulation_length*2.5), " minutes."))
+  print(paste("Using velocity method:", velocity_method))
   # Set up parallel backend
   # num_cores <- parallel::detectCores() - 1  # Use one less core to avoid overloading the system
   # cl <- parallel::makeCluster(num_cores)
@@ -212,7 +180,7 @@ flowModel <- function(ModelFolder,
     staticStack <- c(staticStack, infiltration_cmhr)
     currentSoilStorage <- infiltration_cmhr # assign soils storage to 0
     names(currentSoilStorage) <- "currentSoilStorage"
-    adjustStack <- c(adjustStack, currentSoilStorage)
+    adjustStack <- c(adjustStack, currentSoilStorage, SoilStack$infiltrated_water_cm)
   }
 
   # Individual layers that will be adjusted
@@ -221,7 +189,6 @@ flowModel <- function(ModelFolder,
   mannings_n <- adjustStack$mannings_n
   currentSoilStorage <- adjustStack$currentSoilStorage
   infiltrated_water_cm <- adjustStack$infiltrated_water_cm
-
   # Write the Surface Stack
   terra::writeRaster(adjustStack+0, tempStorage, overwrite = T)
   #browser()
@@ -274,9 +241,12 @@ for(t in simulation_values){
       velocity <- darcysVelocity(mannings_n, surfaceWater, slope)
     }
     # Speed limit on water - Can't go faster than 1000 cm/s or 10 m/s
-    if(terra::global(velocity, "max", na.rm = TRUE)[,1] > 1000){
-      velocity <- terra::ifel(velocity > 1000, 1000, velocity)
+    if(velocity_method == "mannings"){
+      if(terra::global(velocity, "max", na.rm = TRUE)[,1] > 1000){
+        velocity <- terra::ifel(velocity > 1000, 1000, velocity)
+      }
     }
+
     # Calculate infiltration rate
     if(grepl("green", infiltration_method) && !impervious){
       # Returns infiltration in cm/hr
@@ -296,16 +266,17 @@ for(t in simulation_values){
                          throughfall = throughfall,
                          infiltration_rate_cm_hr = staticStack$infiltration_cmhr,
                          cellsize = cellsize, time_step_min = 1,
-                         courant_condition = courant, vel = T,
+                         courant_condition = courant, vel = F,
                          impervious = impervious)
 
-    time_delta_s <- limits[[1]]
+    time_delta_s <- limits
+
     if(time_delta_s < 0){
       stop("Error: Negative time step occured, please check input variables")
     }
      #print(paste("Time calculate:", time_delta_s))
     # Calculate the velocity over the timestep
-    velocity <- limits[[2]]
+    # velocity <- limits[[2]]
     #print(paste("Time remaining:", time_remaining))
     time_remaining <- time_remaining - time_delta_s
     #print(paste("Time remaining:", time_remaining))
@@ -382,8 +353,13 @@ for(t in simulation_values){
       surfaceWater[outflow_cell] <- 0
 
       # Adjust layers for next time through
-      rm(adjustStack)
-      adjustStack <- c(surfaceWater, currentSoilStorage, slope, mannings_n, infiltrated_water_cm)
+      adjustStack[[1]] <- surfaceWater
+      adjustStack[[2]] <- slope
+      adjustStack[[3]] <- mannings_n
+      adjustStack[[4]] <- currentSoilStorage
+      adjustStack[[5]] <- infiltrated_water_cm
+      # rm(adjustStack)
+      # adjustStack <- c(surfaceWater, currentSoilStorage, slope, mannings_n, infiltrated_water_cm)
 
       # Velocity of outflow -feeder cell
       out_velocity <- velocity[velocity_cell][[1]]
@@ -453,8 +429,6 @@ for(t in simulation_values){
      if(abs(runoff_counter-simulationTimeSecs) < 0.1){
        runoff_counter <- simulationTimeSecs
      }
-     # Adjust the raster depth for the outflow cell and save it
-     #print(paste("Runoff Counter:", runoff_counter))
     }
 
   ##---------------- Save step-------------
@@ -469,46 +443,24 @@ for(t in simulation_values){
     # Adjust time storage file
     simulationDF$simtime <- end_time
     data.table::fwrite(simulationDF, simulationProgress) # write current simulation time
-    #data.table::fwrite(data.table::data.table(tempvelocityFile), file = file.path(ModelFolder, "max_velocity_cm_s_per_time.csv"))
     data.table::fwrite(model_checks, file = file.path(ModelFolder, "model-checks.csv"))
     data.table::fwrite(volumes, file = file.path(ModelFolder, "volumes.csv"))
     # Save a temporary version of the soil stack
     temporary <- adjustStack + 0 # create temporary Soil Stack
-
     terra::writeRaster(temporary, filename = tempStorage, overwrite = T)
-    #terra::writeRaster(flowStack, file.path(ModelFolder, "AdjustedFlowMaps.tif"), overwrite = T)
   }
  ##------------------------------------##
   ### give a name to the current storage based upon iteration
   counter <- counter + 1 # End of loop
 }
-
-print(paste("The model took: ", paste0(difftime(Sys.time(), start_time))))
-
-# close(progressBar)
-
-  # Saved rasters
-  # terra::writeRaster(surfaceStorage, filename = file.path(ModelFolder, "Surface_Storage.tif"), overwrite = T)
-  # terra::writeRaster(subsurfaceStorage, filename = file.path(ModelFolder, "Soil_Moisture_percent.tif"), overwrite = T)
-  # terra::writeRaster(velocityStorage, filename = file.path(ModelFolder, "Velocities.tif"), overwrite = T)
-  # Additional save data
-
+  print(paste("The model took: ", paste0(difftime(Sys.time(), start_time))))
   model_complete <- "Model Complete"
   utils::write.table(model_complete, file = file.path(ModelFolder, "ModelComplete.txt"))
-  #file.remove(tempStorage)
-  # Create cumulative percentage graph
-  # if(!impervious){
-  #   rasterCompile(ModelFolder, "soil", remove = T)
-  # }
-  # rasterCompile(ModelFolder, "surface", remove = F)
-  # rasterCompile(ModelFolder, "velocity", remove = F)
 
   # Save simulation time as text
   end_time <- Sys.time()
   duration <- difftime(end_time, start_time)
   out_duration <- paste("Simulation took", round(duration[[1]], 2),  units(duration), "to run.")
   writeLines(out_duration, file.path(ModelFolder, "simulation_time.txt"))
-# print("Got through it!")
-#return(surfaceStorage)
 }
 

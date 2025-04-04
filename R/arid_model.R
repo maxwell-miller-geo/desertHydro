@@ -100,7 +100,8 @@ arid_model <- function(ModelFolder,
                        infiltration_method = infiltration_method,
                        rain_adj = rain_adj,
                        surface_adj = surface_adj,
-                       infiltration_adj = infiltration_adj)
+                       infiltration_adj = infiltration_adj,
+                       velocity_method = velocity_method)
 
   utils::write.csv(inputs, file.path(ModelFolder, "input-variables.csv"))
   # Preprocess - Create watershed

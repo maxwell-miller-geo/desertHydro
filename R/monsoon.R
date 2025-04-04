@@ -132,6 +132,7 @@ monsoon <- function(ModelFolder = NULL,
       model1@restartModel <- F
     }
   }
+  model1@gif <- T
 
   a <- arid_model(model1@ModelFolder,
                   model1@watershedPath,

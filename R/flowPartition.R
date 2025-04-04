@@ -869,12 +869,6 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   discharge_out <- h_current * velocity / flow_units # unit cm/s - technically cm/s
   # Route the discharge in different directions - technically a velocity right now..
   discharge_in <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
-  #discharge_in <- sum(discharge_in_sep, na.rm = T)
-
-  #discharge_sum <- sumCells(discharge_out)
-  #discharge_in_sum <- sumCells(discharge_in)
-  # Check that discharge out equals discharge in
-  #testthat::expect_equal(discharge_in_sum, discharge_sum)
 
   # Calculate the movement of water = s * (cm/s - cm/s) = cm
   flow_water_cm <- time_delta_s * (discharge_out - discharge_in)
@@ -895,11 +889,11 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
                                    soil_capacity, potential_infiltration_cm)
 
   # Not needed actually
-  excess_water <- terra::ifel((potential_infiltration_cm - soil_capacity) > 0, potential_infiltration_cm - soil_capacity, 0)
+  # excess_water <- terra::ifel((potential_infiltration_cm - soil_capacity) > 0, potential_infiltration_cm - soil_capacity, 0)
 
   # Check that water is equal to potential water
-  check_water <- terra::global(excess_water + infiltrated_water_cm - potential_infiltration_cm, "sum", na.rm=T)[,1]
-  testthat::expect_equal(check_water, 0)
+  # check_water <- terra::global(excess_water + infiltrated_water_cm - potential_infiltration_cm, "sum", na.rm=T)[,1]
+  # testthat::expect_equal(check_water, 0)
 
   }else{
     #infiltrated_water_cm <- surfaceStack$infiltration_cmhr
@@ -1001,9 +995,6 @@ time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm
   # Round down for seconds
   if(time_delta_s > 1){
     time_delta_s <- floor(time_delta_s)
-  }
-  if(vel){
-    return(list(time_delta_s, velocity))
   }
   return(time_delta_s)
 }
