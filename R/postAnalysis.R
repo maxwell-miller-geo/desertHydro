@@ -271,7 +271,9 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
   # Find date
 
   if(is.null(date)){
-    date <- substr(basename(ModelFolder),1,10) # assumes first 10 are numbers
+    inputs <- data.table::fread(file.path(ModelFolder, "input-variables.csv"))
+    date <- inputs$date
+    #date <- substr(basename(ModelFolder),1,10) # assumes first 10 are numbers
   }
 
   if(length(rainfall_method) < 2){
@@ -317,7 +319,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
   # Determine points taken by raster stack
   xvalues <- as.vector(stats::na.omit(as.numeric(names(surfaceStorage))))
   # Determine how rainfall is read in
-  if(discharge & rainfall_method != "goes"){ # gathers total rain and rain duration values
+  if(discharge && rainfall_method != "goes" && !is.null(date)){ # gathers total rain and rain duration values
     print("Retrieving rainfall data from simulation: rain_discharge")
     rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
     rainFiltered <- readr::read_csv(rainFiltered_file, show_col_types = F)

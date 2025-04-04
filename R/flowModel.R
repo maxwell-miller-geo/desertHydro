@@ -46,6 +46,7 @@ flowModel <- function(ModelFolder,
                       infiltration_method = "green",
                       surface_method = "nlcd",
                       velocity_method = "darcys",
+                      adjust_slope = T,
                       ...){
   print(paste("Time step:", time_step))
   print(paste("Simulation length:", simulation_length))
@@ -328,13 +329,18 @@ for(t in simulation_values){
     surfaceWater <- depth_list[[1]]
     # Adjust the slope for next time-step
     #new_dem <- surfaceStack$surfaceWater/100 + surfaceStack$model_dem # assumes meters
-    new_dem <- surfaceWater/100 + staticStack$model_dem # assumes meters
-    slope_temp <- terra::terrain(new_dem, v = "slope", neighbors = 8, unit = "radians")
-    new_slope <- terra::merge(slope_temp, model_slope) # opened earlier
-    #new_slope <- slope_edge(new_dem, slope_temp, cellsize = cellsize)
-    names(new_slope) <- "slope"
-    #surfaceStack$slope <- SoilStack$slope <- new_slope
-    slope <- new_slope
+    # Adjust elevation model every so often? or never?
+    if(adjust_slope){
+      new_dem <- surfaceWater/100 + staticStack$model_dem # assumes meters
+      slope_temp <- terra::terrain(new_dem, v = "slope", neighbors = 8, unit = "radians")
+      new_slope <- terra::merge(slope_temp, model_slope) # opened earlier
+      #new_slope <- slope_edge(new_dem, slope_temp, cellsize = cellsize)
+      names(new_slope) <- "slope"
+      slope <- new_slope
+    }else{
+      slope <- slope
+    }
+
     # Return infiltration depth
     infiltration_depth_cm <- depth_list[[2]]
     rain_depth_cm <- depth_list[[3]]
@@ -453,7 +459,7 @@ for(t in simulation_values){
 
   ##---------------- Save step-------------
 # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
-  if(counter %% 5 == 0 || t == length(simulation_duration) || t == tail(simulation_duration,1)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
+  if(counter %% 25 == 0 || t == length(simulation_duration) || t == tail(simulation_duration,1)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
     if(!impervious){
       rasterCompile(ModelFolder, "soil", remove = T, overwrite = F)
     }
