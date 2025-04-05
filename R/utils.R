@@ -421,7 +421,7 @@ get_crs <- function(raster_path){
 }
 
 # Estimate slope based on elevation and pre-existing slope map
-slope_edge <- function(dem, slope, cellsize, cpp = T){
+slope_edge <- function(dem, slope, cellsize, cpp = F){
   if(is.character(dem)){
     dem <- terra::rast(dem)
   }
