@@ -33,7 +33,6 @@ Imports:
     gridExtra,
     hms,
     lubridate,
-    magick,
     methods,
     purrr,
     Rcpp,
