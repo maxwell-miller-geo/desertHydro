@@ -275,7 +275,9 @@ arid_model <- function(ModelFolder,
   if(gif){
     print("Creating gifs")
     gifCreation(ModelFolder, rainfall_method = rainfall_method, discharge = discharge, date = date)
-    create_single_graphic(ModelFolder, date = date)
+    if(F){
+      create_single_graphic(ModelFolder, date = date)
+    }
   }
 
 

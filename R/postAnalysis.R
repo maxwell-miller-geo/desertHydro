@@ -504,7 +504,7 @@ volume_over_time_plot <- function(ModelFolder, date){
 }
 
 create_single_graphic <- function(ModelFolder, date = NULL){
-  require(magick)
+  #require(magick)
 
   if(is.null(date)){
     date <- substr(basename(ModelFolder),1,10) # assumes first 10 are numbers
