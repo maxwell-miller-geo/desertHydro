@@ -118,7 +118,10 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
       readr::write_csv(spatial_rain, rain_spatial_file)
       # Copy voronoi shapefile over
       copy_shape <- file.path(WatershedElements, shape)
-      terra::writeVector(terra::vect(copy_shape), file.path(ModelFolder, "voronoi.shp"), overwrite = T)
+      # Copy file and convert into the right projection
+      voronoi_shape <- terra::vect(copy_shape)
+      voronoi_reproj <- terra::project(voronoi_shape, get_crs(file.path(ModelFolder, "model_dem.tif")))
+      terra::writeVector(voronoi_reproj, file.path(ModelFolder, "voronoi.shp"), overwrite = T)
       #file.copy(, ModelFolder)
       print("Spatial Rainfall created...")
       return(rain_spatial_file)
@@ -153,7 +156,6 @@ rainfallAccum <- function(rain, beginning_time, end_time, rainfall_method = "gau
       if(layerSelection == 0){
         layerSelection == 1
       }
-      print(layerSelection)
       mm_to_in <- 1/25.4
       timeElapsed <- end_time - beginning_time
       rainfall_for_timestep <- goes[[layerSelection]] / (10/timeElapsed) * mm_to_in # rain fallen in inches

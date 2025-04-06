@@ -135,6 +135,7 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
   # registerDoParallel(cl)
   if(!is.null(dem_path) & is.null(flow_d8)){
     crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_path), describe = T)[[3]])
+    #crs_dem <- get_crs(dem_path)
     flow <- file.path(tempdir(), "d8flow.tif")
     whitebox::wbt_d8_pointer(dem_path, flow, esri_pntr = TRUE)
     crsAssign(flow, crs_dem)
@@ -173,10 +174,8 @@ flowMap1D <- function(discharge, flow_d8 = NULL, dem_path = NULL, discharge_out 
 mapCalculations <- function(flow_direction, flow_d8, discharge, xDim, yDim, flowKey, discharge_out = FALSE, ModelFolder){
   # Select cells in particular direction
   cells_to_flow <- terra::ifel(flow_d8 == as.numeric(flow_direction), 1, 0)
-  flow_distance <- 1 # hard coded for calculating discharge directions
-  if(discharge_out){ # when routing flow change the distance for diagonal cells
-    flow_distance <- flowKey[[flow_direction]][[3]]
-  }
+  flow_distance <- 1 # hard coded for calculating discharge directions - 1 cell
+
   # Apply the shift to the dimensions of the raster
   xshift <- flowKey[[flow_direction]][[2]][[1]]*xDim
   yshift <- flowKey[[flow_direction]][[2]][[2]]*yDim
@@ -267,11 +266,22 @@ createFlowMaps <- function(dem, dem_flow){
   flowMaps <- flow
   return(flowMaps)
 }
+
 ## Determine flow lengths of space increments based on flow direction map
-flowLength <- function(d8_flow){
+flowLength <- function(d8_flow, model_dem, filepath = ""){
   if(is.character(d8_flow)){
     d8_flow <- terra::rast(d8_flow)
   }
+  if(is.character(model_dem)){
+    model_dem <- terra::rast(model_dem)
+  }
+  # Get grid size of model_dem
+  cell_dimensions <- grid_size(model_dem) # in meters
+  # Use the slope to help determine the offset?
+  minimum_elevation <- terra::focal(model_dem, w=3, fun = min_value)
+
+  # Change in elevation
+  vertical_distance <- model_dem - minimum_elevation
   # Based on flow direction of terra terrain and esri pointer
   flow_reclass <- c(0, 1,
                     1, 1,
@@ -282,11 +292,54 @@ flowLength <- function(d8_flow){
                     32, sqrt(2),
                     64, 1,
                     128, sqrt(2))
+  # Create matrix for classification
+  flow_matrix <- matrix(flow_reclass, ncol = 2, byrow = TRUE)
+  # Normalize horizontal distance
+  horizontal_distance <- terra::classify(d8_flow, rcl = flow_matrix) * cell_dimensions
+  flow_distance_vector <- round(sqrt(vertical_distance^2 + horizontal_distance^2),2)
+  names(flow_distance_vector) <- "flow_length"
+  # Write raster
+  print("Saving flow_lengths")
+  terra::writeRaster(flow_distance_vector, filename = file.path(filepath, "flow_length.tif"), overwrite =T)
+  return(flow_distance_vector)
+  # Hidden plot figure
+  # dh_focal <- terra::focal(dh, w = 3, fun = max, na.policy = "omit", fillvalue = NA)
+  # breaks <- c(0, 0.01, 0.5, 1, 2, 5, 10, 20, 50, round(terra::minmax(dh)[[2]]))
+  # plot(dh_focal,
+  #      main = "Maximum Elevation Change",
+  #      col = hcl.colors(100, "Viridis"),      # cleaner, modern palette
+  #      breaks = breaks,
+  #      legend = TRUE,
+  #      plg = list(title = "Difference (m)", cex = 0.72, x = "topright"),   # label for the legend
+  #      mar = c(2, 1, 3, 1),                   # adjust margins to fit title/legend
+  #      cex.main = 1,                        # slightly smaller title
+  #      cex.axis = 0.7,                        # cleaner axis text
+  #      cex.lab = 0.5                          # axis labels (if any)
+  # )
 
-  flow_matrix <- matrix(flow_reclass, ncol = 2, byrow = T)
-
-  flow_units <- terra::classify(d8_flow, rcl = flow_matrix)
-  return(flow_units)
+  # plot(dh_focal,
+  #      main = "Maximum Elevation Change",
+  #      col = hcl.colors(100, "Viridis"),
+  #      breaks = breaks,
+  #      legend = TRUE,
+  #      plg = list(
+  #        title = "Difference (m)",
+  #        cex = 0.75,
+  #        x = "topright"  # Position
+  #      ),
+  #      mar = c(4, 4, 5, 6),
+  #      cex.main = 1.1,
+  #      cex.axis = 0.7
+  # )
+}
+min_value <- function(x){
+  center <- x[5]
+  if(is.na(center)){
+    return(NA)
+  }
+  # passes 9 numbers from top left to bottom right
+  minimum_elevation <- min(x, na.rm = T)
+  return(minimum_elevation)
 }
 ## Flow Partitioning function- Percent flow
 # outputFlow <- function(values, dir){
@@ -840,7 +893,7 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
       velocity <- manningsVelocity(adjustStack$mannings_n,
                                    adjustStack$surfaceWater,
                                    adjustStack$slope,
-                                   length = NULL)
+                                   length = grid_size(adjustStack$surfaceWater))
     }
   }
   if(is.null(cellsize)){
@@ -850,8 +903,7 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   # Check the source term
   time_adjustment <- rain_step_min/ 60 # time per hour - h^-1
   hr_to_s <- 1 / 3600
-  # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand for
-
+  # Ensure throughfall is in cm over 1 minute - needs to be checked beforehand
   rainfall_rate_cm_hr <- throughfall/time_adjustment # cm/hr
   # Add infiltration rate here --- cm/hr - rate should already be in cm/hr
   max_infiltration_rate_cm_hr <- surfaceStack$infiltration_cmhr
@@ -861,10 +913,11 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   max_infiltrated_water_cm <-  max_infiltration_rate_cm_hr * hr_to_s * time_delta_s
   # Amount of rainfall for given time-step
   rainfall_water_cm <- rainfall_rate_cm_hr * hr_to_s * time_delta_s
-
+  # Current surface height
   h_current <- adjustStack$surfaceWater
   # Calculate flow lengths - m * 100 = cm
-  flow_units <- flowLength(surfaceStack$flow_direction) * cellsize * 100 # cm
+  #flow_units <- flowLength(surfaceStack$flow_direction) * cellsize * 100 # cm
+  flow_units <- surfaceStack$flow_direction * 100 # * 100cm
   # Discharge out of every cell - normalized by distance
   discharge_out <- h_current * velocity / flow_units # unit cm/s - technically cm/s
   # Route the discharge in different directions - technically a velocity right now..
@@ -879,18 +932,17 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   # Add up all potential water
   possible_surface_water <- h_current - flow_water_cm + rainfall_water_cm
   # Potential filling amount
-  potential_infiltration_cm <- terra::ifel(max_infiltrated_water_cm < possible_surface_water,
-                                   max_infiltrated_water_cm,
-                                   possible_surface_water)
-
+  # potential_infiltration_cm <- terra::ifel(max_infiltrated_water_cm < possible_surface_water,
+  #                                  max_infiltrated_water_cm,
+  #                                  possible_surface_water)
+  potential_infiltration_cm <- min(max_infiltrated_water_cm, possible_surface_water)
   soil_capacity <- surfaceStack$maxSoilStorageAmount - adjustStack$currentSoilStorage
 
-  infiltrated_water_cm <- terra::ifel(potential_infiltration_cm > soil_capacity,
-                                   soil_capacity, potential_infiltration_cm)
-
-  # Not needed actually
+  # infiltrated_water_cm <- terra::ifel(potential_infiltration_cm > soil_capacity,
+  #                                  soil_capacity, potential_infiltration_cm)
+  infiltrated_water_cm <- min(potential_infiltration_cm, soil_capacity)
   # excess_water <- terra::ifel((potential_infiltration_cm - soil_capacity) > 0, potential_infiltration_cm - soil_capacity, 0)
-
+  infiltrated_water_cm <- min(infiltrated_water_cm, rainfall_water_cm)
   # Check that water is equal to potential water
   # check_water <- terra::global(excess_water + infiltrated_water_cm - potential_infiltration_cm, "sum", na.rm=T)[,1]
   # testthat::expect_equal(check_water, 0)
@@ -905,7 +957,7 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   h_new <- terra::ifel(h_0 > 0, h_0, 0)
   # Check this makes sense
   # New surface depth
-  return(list(h_new,infiltrated_water_cm,rainfall_water_cm))
+  return(list(h_new, infiltrated_water_cm, rainfall_water_cm))
 }
 
 # return mean distance that flows into a given cell
@@ -938,7 +990,7 @@ deltaX <- function(discharge_in_sep){
 # }
 ## ---------------------------- Flow Routing fixed
 # Check the limiting conditions of flow
-time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm_hr, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T, impervious = F){
+time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm_hr, flow_length, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T, impervious = F){
   # Layers needed
   #mannings_n,surfaceWater,slope, throughfall, (infiltration_cm_hr)
   if(is.null(cellsize)){
@@ -966,11 +1018,12 @@ time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm
   #time_step_hr <- courant_condition / max(terra::values(source_water_cm_hr, na.rm = T))
   # Use terra::global() instead of terra::values()
   max_source_water <- terra::global(source_water_cm_hr, "max", na.rm = TRUE)[,1]
+
   time_step_hr <- courant_condition / max_source_water
   time_step_sec <- floor(time_step_hr * 3600) # convert hours to seconds - needs to be changed
 
   # Calculate time delta or the time-step for this step in seconds
-  if(time_step_sec > 0 && time_step_sec < time_step_min * 60){
+  if(!is.na(time_step_sec) && time_step_sec > 0 && time_step_sec < time_step_min * 60){
     time_delta_s <- time_step_sec
   }else{
     time_delta_s <- time_step_min * 60
@@ -986,8 +1039,11 @@ time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm
   # dt <- floor(min(terra::values(
   #   courant_condition * cellsize * 100/ velocity, na.rm = T))*1000)/1000
   # Courant condition for flow stability
-  max_velocity <- terra::global(velocity, "max", na.rm = TRUE)[,1]
-  dt <- floor(min(courant_condition * cellsize * 100 / max_velocity, na.rm = TRUE) * 1000) / 1000
+  #max_velocity <- terra::global(velocity, "max", na.rm = TRUE)[,1]
+  velocity <- terra::ifel(velocity == 0, 1, velocity)
+  time_values <- courant_condition * flow_length * 100 / velocity
+  dt <- floor(terra::global(time_values, fun = "min", na.rm=T)[,1] * 1000) / 1000
+  #dt <- floor(min(courant_condition * flow_length * 100 / max_velocity, na.rm = TRUE) * 1000) / 1000
   # Change the time step, if the conditions require it
   if(dt < time_delta_s){
     time_delta_s <- dt

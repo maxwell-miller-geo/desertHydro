@@ -159,14 +159,15 @@ initial_soil_conditions <- function(LandCoverCharacteristics,
   }
   # Convert Soil table into Stacked raster
   SoilStack <- createSoilRasters(ClassMapFile = ClassificationMap, soilTable = LCC, key = key)
-  # Select necesary Soil Stack Layers
+  # Select necessary Soil Stack Layers
   # Don't combine flow stacks
   SoilStack <- c(SoilStack, WatershedStack) # combine watershed and flow stacks
 
+  # Should be written previously
   # Adjust slope based on elevation differences
-  SoilStack$slope <- terra::ifel(SoilStack$slope < 0.01, 0.01, SoilStack$slope)
-  slopeName <- file.path(ModelFolder, "model_slope.tif")
-  terra::writeRaster(SoilStack$slope, slopeName, overwrite = T)
+  #SoilStack$slope <- terra::ifel(SoilStack$slope < 0.01, 0.01, SoilStack$slope)
+  # slopeName <- file.path(ModelFolder, "model_slope.tif")
+  # terra::writeRaster(SoilStack$slope, slopeName, overwrite = T)
 
   # Create surface water layer
   SoilStack$surfaceWater <- SoilStack$slope * 0
@@ -184,14 +185,14 @@ initial_soil_conditions <- function(LandCoverCharacteristics,
   # Adjust certain characteristics base upon slope
   if(grepl("slope", depth_adjusted) && key != "ID"){
     # From - to classification of soil depth from slope
-    reclassTable <- c(0, 10, 1,
-                      10, 20, .98,
-                      20, 30, .95,
-                      30, 40, .80,
-                      40, 45, .50,
-                      45, 90, .01)
-
-    reclassMatrix <- matrix(reclassTable, ncol = 3, byrow = T)
+    reclassMatrix <- matrix(c(0, 10, 1,
+                             10, 20, 0.98,
+                             20, 30, 0.95,
+                             30, 40, 0.80,
+                             40, 45, 0.50,
+                             45, 90, 0.01),
+                           ncol = 3, byrow = TRUE)
+    reclassMatrix[, 1:2] <- reclassMatrix[, 1:2] * pi / 180
     depthModifier <- terra::classify(SoilStack$slope, reclassMatrix, include.lowest = T)
     SoilStack$soil_depth_cm <- SoilStack$soil_depth_cm * depthModifier
   }

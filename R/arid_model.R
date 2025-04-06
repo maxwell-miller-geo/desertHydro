@@ -211,7 +211,6 @@ arid_model <- function(ModelFolder,
   ## ------------------------------------
   ## 3. Checks
   # Necessary elements for the model
-  flowStack_file <- file.path(ModelFolder, "stack_flow.tif")
   SoilStack_file <- file.path(ModelFolder, "model_soil_stack.tif")
   rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
 
@@ -232,7 +231,7 @@ arid_model <- function(ModelFolder,
   ## Flow Model
   # Check files
   print("Checking necessary files")
-  file_check(c(SoilStack_file, flowStack_file, rain_file, file.path(ModelFolder, "drainCells.csv")))
+  file_check(c(SoilStack_file, rain_file, file.path(ModelFolder, "drainCells.csv")))
   print("Beginning Model Run...")
   flowModel(ModelFolder = ModelFolder,
             rain_file = rain_file,

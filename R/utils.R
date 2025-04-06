@@ -416,8 +416,14 @@ fill_edge <- function(raster, cellsToFill, dontFillCells, fill_amount = .0001){
 }
 
 # Determine the coordinate system of a tif file
-get_crs <- function(raster_path){
-  return(paste0("epsg:",terra::crs(terra::rast(raster_path), describe = T)[[3]]))
+get_crs <- function(raster_path, raster = T){
+  if(raster & is.character(raster_path)){
+      return(paste0("epsg:",terra::crs(terra::rast(raster_path), describe = T)[[3]]))
+  }else if(!raster & is.character(raster_path)){
+    return(paste0("epsg:",terra::crs(terra::vect(raster_path), describe = T)[[3]]))
+  }else{
+    return(paste0("epsg:",terra::crs(raster_path, describe = T)[[3]]))
+  }
 }
 
 # Estimate slope based on elevation and pre-existing slope map
@@ -428,48 +434,73 @@ slope_edge <- function(dem, slope, cellsize, cpp = F){
   if(cpp){
     gradient_edge <- terra::focalCpp(dem, w = c(3,3), fun = gradientCpp, fillvalue = NA)
   }else{
-    gradient_edge <- terra::focal(dem, fun = gradient, fillvalue = NA)
+    #gradient_edge <- terra::focal(dem, fun = gradient, fillvalue = NA)
+    gradient_edge <- terra::focal(dem, fun = function(x) gradient(x, cellsize), fillvalue = NA)
+
   }
 
   slope_edges <- gradient_edge / cellsize
   slope_total <- terra::merge(slope, slope_edges, first = T)
   return(slope_total)
 }
-
-# function to calculate the unitless gradient from minimum direction
-gradient <- function(x){
-  # Center cell
+gradient <- function(x, cellsize){
   center <- x[5]
-  if(is.na(center)){
-    return(NA)
-  }
-  # passes 9 numbers from top left to bottom right
-  minimum_elevation <- min(x, na.rm = T)
+  if(is.na(center)) return(NA)
 
-  if(minimum_elevation == center){ # find middle number in center
-    minimum_elevation <- max(x, na.rm = T)
-    dh <- minimum_elevation - center
-  }else{
-    dh <- center - minimum_elevation
-  }
-  # if(is.infinite(dh) | is.na(dh)){
-  #   return(NA)
-  # }
-  index <- which(x %in% minimum_elevation)[[1]]
-  # if(length(which(x %in% minimum)) > 1){
-  #   # sample on direction for slope if two minimums found
-  #   index <- sample(minimum, 1)
-  # }else{
-  #   index <- which(x %in% minimum)
-  # }
+  min_val <- min(x, na.rm = TRUE)
 
+  if(min_val == center){
+    min_val <- max(x, na.rm = TRUE)
+    dh <- min_val - center
+  } else {
+    dh <- center - min_val
+  }
+
+  index <- which(x %in% min_val)[1]
+
+  # Correct: use real-world dx based on direction
   if(index %% 2 == 0){
-    gradient <- dh / 1
-  }else{
-    gradient <- dh / sqrt(2)
+    dx <- cellsize            # direct neighbors
+  } else {
+    dx <- sqrt(2) * cellsize  # diagonal neighbors
   }
-  return(gradient)
+
+  return(dh / dx)
 }
+# function to calculate the unitless gradient from minimum direction
+# gradient <- function(x){
+#   # Center cell
+#   center <- x[5]
+#   if(is.na(center)){
+#     return(NA)
+#   }
+#   # passes 9 numbers from top left to bottom right
+#   minimum_elevation <- min(x, na.rm = T)
+#
+#   if(minimum_elevation == center){ # find middle number in center
+#     minimum_elevation <- max(x, na.rm = T)
+#     dh <- minimum_elevation - center
+#   }else{
+#     dh <- center - minimum_elevation
+#   }
+#   # if(is.infinite(dh) | is.na(dh)){
+#   #   return(NA)
+#   # }
+#   index <- which(x %in% minimum_elevation)[[1]]
+#   # if(length(which(x %in% minimum)) > 1){
+#   #   # sample on direction for slope if two minimums found
+#   #   index <- sample(minimum, 1)
+#   # }else{
+#   #   index <- which(x %in% minimum)
+#   # }
+#
+#   if(index %% 2 == 0){
+#     gradient <- dh / 1
+#   }else{
+#     gradient <- dh / sqrt(2)
+#   }
+#   return(gradient)
+# }
 
 Rcpp::cppFunction('
   NumericVector gradientCpp(NumericVector x, size_t ni, size_t nw) {
@@ -782,4 +813,54 @@ find_completed_models <- function(parent_folder, file = "ModelComplete.txt"){
   folders <- list.dirs(parent_folder)
   boolean <- sapply(folders, function(x) file.exists(file.path(x, file)))
   return(folders[boolean])
+}
+
+# Check the dem projection
+get_utm_epsg <- function(raster, datum = "NAD83") {
+  if (is.character(raster)) {
+    raster <- terra::rast(raster)
+  }
+
+  # Get the current CRS of the raster
+  current_crs <- terra::crs(raster, proj=T)[1]
+  #current_crs <- terra::crs(raster, describe = T)[[3]]
+  # Check if it is projected in a dirty way
+  check_projected <- substr(current_crs,7,9)
+  # Check if the CRS is already projected
+  if (check_projected == "utm") {
+    message("The raster is already in a projected coordinate system.")
+    # Optionally, return the current EPSG code if available
+    epsg_code <- terra::crs(raster, describe = T)[[3]]
+    return(paste0("EPSG:", epsg_code))
+  }
+
+  # If the raster is not projected, proceed to determine the appropriate UTM zone
+  ext <- terra::ext(raster)
+  lon_center <- mean(c(ext$xmin, ext$xmax))
+  lat_center <- mean(c(ext$ymin, ext$ymax))
+
+  # Determine UTM zone
+  zone <- floor((lon_center + 180) / 6) + 1
+
+  # Determine hemisphere
+  hemisphere <- if (lat_center >= 0) "north" else "south"
+
+  # Determine EPSG code based on datum and hemisphere
+  if (datum == "NAD83") {
+    if (hemisphere == "north") {
+      epsg <- 26900 + zone  # NAD83 UTM North zones: EPSG 26901–26960
+    } else {
+      stop("NAD83 is not defined for southern hemisphere UTM zones.")
+    }
+  } else if (datum == "WGS84") {
+    if (hemisphere == "north") {
+      epsg <- 32600 + zone  # WGS84 UTM North
+    } else {
+      epsg <- 32700 + zone  # WGS84 UTM South
+    }
+  } else {
+    stop("Unsupported datum. Use 'NAD83' or 'WGS84'.")
+  }
+
+  return(paste0("EPSG:", epsg))
 }

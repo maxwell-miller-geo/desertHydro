@@ -74,7 +74,7 @@
   # browser()
   stack <- create_GOES_raster(ordered_files)
   # Load in boundary
-  model_dem <- terra::rast(file.path(WatershedElements, "model_dem.tif")) # Bad practice - should at least be Model Folder
+  model_dem <- terra::rast(file.path(ModelFolder, "model_dem.tif")) # Bad practice - should at least be Model Folder
   # Crop and resize
   resize_rain <- resizeImagery(imagery = stack, outline = model_dem, targetRaster = model_dem)
   # Convert mm/h into in/hr

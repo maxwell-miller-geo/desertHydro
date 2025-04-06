@@ -28,10 +28,10 @@ flowModel <- function(ModelFolder,
   # Load soil stack
   SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
   model_slope <- terra::rast(file.path(ModelFolder, "model_slope.tif"))
-  flowStackMethod <- file.path(ModelFolder, "stack_flow.tif")
-  if(file.exists(flowStackMethod)){
-    flowStack <- terra::rast(flowStackMethod)
-  }
+  # flowStackMethod <- file.path(ModelFolder, "stack_flow.tif")
+  # if(file.exists(flowStackMethod)){
+  #   flowStack <- terra::rast(flowStackMethod)
+  # }
 
   activeCells <- cellsWithValues(SoilStack$model_dem)
   if(is.null(cellsize)){
@@ -151,7 +151,8 @@ flowModel <- function(ModelFolder,
 # Initialize  size of things beforehand
 # Things to initialize
   staticStack <- c(SoilStack$model_dem,
-                    SoilStack$flow_direction)
+                    SoilStack$flow_direction,
+                   SoilStack$flow_length)
 
   adjustStack <- c(SoilStack$surfaceWater,
                    SoilStack$slope,
@@ -209,7 +210,18 @@ for(t in simulation_values){
   ## [1] Rainfall
   ## - Calculates the amount of rainfall in a given time step
   if(simulation_duration[t] < total_rain_duration){ # could cut off rainfall if not careful
-    rainfall_for_timestep <- rainfallAccum(rain, beginning_time, end_time, rainfall_method = rainfall_method, ModelFolder = ModelFolder, goes = goes)
+    rainfall_for_timestep <- rainfallAccum(rain,
+                                           beginning_time,
+                                           end_time,
+                                           rainfall_method = rainfall_method,
+                                           ModelFolder = ModelFolder,
+                                           goes = goes)
+    if(class(rainfall_for_timestep) == "SpatRaster"){
+      if(terra::global(rainfall_for_timestep, "notNA", na.rm = FALSE)[,1] == 0){
+         rainfall_for_timestep <- surfaceWater*0
+       }
+    }
+
    if(rainfall_method == "goes" && inherits(rainfall_for_timestep, "SpatRaster")){
      if (!(terra::ext(rainfall_for_timestep) == terra::ext(adjustStack))){
        # Potentially scale up - later on - should be rainfall over a minute
@@ -265,6 +277,7 @@ for(t in simulation_values){
                          velocity = velocity,
                          throughfall = throughfall,
                          infiltration_rate_cm_hr = staticStack$infiltration_cmhr,
+                         flow_length = staticStack$flow_length,
                          cellsize = cellsize, time_step_min = 1,
                          courant_condition = courant, vel = F,
                          impervious = impervious)
@@ -307,7 +320,7 @@ for(t in simulation_values){
       new_slope <- terra::merge(slope_temp, model_slope) # opened earlier
       #new_slope <- slope_edge(new_dem, slope_temp, cellsize = cellsize)
       names(new_slope) <- "slope"
-      slope <- new_slope
+      slope <- terra::ifel(new_slope < 0.01, 0.01, new_slope)
     }else{
       slope <- slope
     }

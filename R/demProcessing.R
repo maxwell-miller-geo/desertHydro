@@ -64,13 +64,23 @@ crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
 # dem_path <- system.file("extdata", "dem.tif", package = "desertHydro") # pass dem as file path
 # hydro_workflow <- flow_accumlation_wb(dem_path, ModelFolder, )
 
-flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA_character_, smooth = T, max_dist = 5, stream_threshold = NULL, carve = 0, overwrite = T){
+flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path = NA_character_, smooth = T, max_dist = 11, stream_threshold = NULL, carve = 0, overwrite = T){
   # Need this level of precision when filling - to work with whitebox tools
   terra::terraOptions(datatype="FLT8S")
   # List of created rasters
-  crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
+  crs_dem <- get_utm_epsg(dem_file_path)
+  crs_dem_og <- paste0("EPSG:",terra::crs(terra::rast(dem_file_path), describe=T)[[3]])
+  if(crs_dem != crs_dem_og){
+    dem_proj <- terra::project(terra::rast(dem_file_path), crs_dem)
+    dem_file_path <- file.path(ModelFolder, "dem.tif")
+    terra::writeRaster(dem_proj, filename = dem_file_path, overwrite = T)
+    #units <- terra::res(dem_proj)[1] # units of dem
+  }
+
+  get_crs(dem_file_path)
+  #crs_dem <- paste0("epsg:",terra::crs(terra::rast(dem_file_path), describe = T)[[3]])
   print(paste0("DEM Projection: ", crs_dem))
-  units <- terra::res(terra::rast(dem_file_path))[1] # units of dem
+  #units <- terra::res(terra::rast(dem_file_path))[1] # units of dem
   # crs_dem <- paste0("epsg:",terra::crs(terra::rast(file.path(WatershedElements, "dem.tif")), describe = T)[[3]])
   model_dem <- file.path(ModelFolder, "model_dem.tif")
   flow_accum <- file.path(ModelFolder, "flow_accumulation.tif")
@@ -157,8 +167,18 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
   if(!is.na(watershed_shape_path)){
     # Clip the dem, if a shapefile is present
     # Projection Check
-    dem_code <- terra::crs(terra::rast(model_dem), describe = T)[[3]] # crs of dem
-    shape_crs_code <-  terra::crs(terra::vect(watershed_shape_path), describe = T)[[3]] # crs of shapefile
+    #dem_code <- terra::crs(terra::rast(model_dem), describe = T)[[3]] # crs of dem
+    dem_code <- get_crs(model_dem)
+    #shape_crs_code <-  terra::crs(terra::vect(watershed_shape_path), describe = T)[[3]] # crs of shapefile
+    shape_crs_code <- get_crs(watershed_shape_path, raster = F)
+    # Adjust coordinates
+    if(dem_code != shape_crs_code){
+      # Project the shapefile containing the watershed boundary
+      watershed_proj <- terra::project(terra::vect(watershed_shape_path), dem_code)
+      #watershed_shape_path <- file.path(ModelFolder, "watershed.shp")
+      terra::writeVector(watershed_proj, filename = watershed_shape_path, overwrite = T)
+      shape_crs_code <- get_crs(watershed_shape_path, raster = F)
+    }
     if(dem_code == shape_crs_code){
       # if coordinate systems match
       temp_dem <- terra::rast(model_dem) + 0 # load in dem

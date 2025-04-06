@@ -49,6 +49,7 @@ watershedElementsCreate <- function(ModelFolder,
     #print("Copying digital elevation model over to model folder.")
     #file.copy(model_dem, ModelFolder, recursive= T)
   }
+
   # Slope creation
   slope <- file.path(ModelFolder, "model_slope.tif") # default name of slope file
   print('Locating slope file')
@@ -60,10 +61,12 @@ watershedElementsCreate <- function(ModelFolder,
     # Expects one of the outputs from previous function to produce "cropped_dem.tif"
     #cropped_dem <- file.path(WatershedElements, "cropped_dem.tif")
     slope_temp <- terra::terrain(terra::rast(model_dem), v = "slope", neighbors = 8, unit = "radians")
-    slope_total <- slope_edge(model_dem, slope_temp, cellsize = cellsize)
+    slope_total <- slope_edge(dem = model_dem, slope = slope_temp, cellsize = cellsize)
     names(slope_total) <- "slope"
+    slope_out <- terra::ifel(slope_total < .01, 0.01, slope_total)
+    # Adjust the slope to 0.02
     # NOTE - slope does compute for boundary cells - see slope_edge()
-    terra::writeRaster(slope_total, filename = slope, overwrite = T)
+    terra::writeRaster(slope_out, filename = slope, overwrite = T)
   }
   # Determine potential troublesome cells # assumes path written in
   trouble <- terra::rast(file.path(ModelFolder, "stream_extracted.tif")) * terra::rast(slope)
@@ -95,43 +98,52 @@ watershedElementsCreate <- function(ModelFolder,
     land_cover_raster <- terra::rast(model_landcover)
   }
   # Flow Calculations
-  flow_filename <- "stack_flow.tif" # must be created with names of layers
-  flow_file <- file.path(ModelFolder, flow_filename)
-
-  print('Locating flow partition map.')
-  if(!file.exists(flow_file) | overwrite){ # Can take a few minutes if not already created
-    print("No flow partition map found.")
-    print("Creating flow partition map.")
-    method <- "flowMap1D"
-    if(method == "flowMap1D"){
-      discharge <- terra::rast(model_dem)/ terra::rast(model_dem)
-      flowStack <- flowMap1D(discharge, dem_path = model_dem)
-      terra::writeRaster(flowStack, flow_file, overwrite = T)
-    }else{
-      flowStack <- flowMap(dem = model_dem, outFolder = ModelFolder)
-    }
-    print("Flow partition map created.")
-  }else{
-    print('Found flow partition map.')
-    flowStack <- terra::rast(flow_file) + 0
-  }
-  print("Checking created flow calculations extent.")
-  # Crop the flow calculations raster to the extent of the land cover. If needed, overwrite previous data
-  if(!(dim(flowStack)[1] == dim(land_cover_raster)[1] & dim(flowStack)[2] == dim(land_cover_raster)[2])){
-    copyflowStack <- terra::crop(flowStack, land_cover_raster, snap = "near")
-    terra::writeRaster(copyflowStack, flow_file, overwrite = T)
-  }
+  # flow_filename <- "stack_flow.tif" # must be created with names of layers
+  # flow_file <- file.path(ModelFolder, flow_filename)
+  #
+  # print('Locating flow partition map.')
+  # if(!file.exists(flow_file) | overwrite){ # Can take a few minutes if not already created
+  #   print("No flow partition map found.")
+  #   print("Creating flow partition map.")
+  #   method <- "flowMap1D"
+  #   if(method == "flowMap1D"){
+  #     discharge <- terra::rast(model_dem)/ terra::rast(model_dem)
+  #     flowStack <- flowMap1D(discharge, dem_path = model_dem)
+  #     terra::writeRaster(flowStack, flow_file, overwrite = T)
+  #   }else{
+  #     flowStack <- flowMap(dem = model_dem, outFolder = ModelFolder)
+  #   }
+  #   print("Flow partition map created.")
+  # }else{
+  #   print('Found flow partition map.')
+  #   flowStack <- terra::rast(flow_file) + 0
+  # }
+  # print("Checking created flow calculations extent.")
+  # # Crop the flow calculations raster to the extent of the land cover. If needed, overwrite previous data
+  # if(!(dim(flowStack)[1] == dim(land_cover_raster)[1] & dim(flowStack)[2] == dim(land_cover_raster)[2])){
+  #   copyflowStack <- terra::crop(flowStack, land_cover_raster, snap = "near")
+  #   terra::writeRaster(copyflowStack, flow_file, overwrite = T)
+  # }
 
   # Create flow direction map to add to watershed stack
   flow_direction <- file.path(ModelFolder, "flow_direction.tif")
   whitebox::wbt_d8_pointer(model_dem, flow_direction, esri_pntr = T)
   crsAssign(flow_direction, get_crs(model_dem))
+
+  # Flow Length vectors
+  # Flow lengths for 1D models based on the flow direction and elevations
+  flow_length <- file.path(ModelFolder, "flow_length.tif")
+  if(file.exists(flow_length) && !overwrite){
+    flow_length <- terra::rast(flow_length)
+  }else{
+    flow_length <- flowLength(flow_direction, model_dem, filepath = ModelFolder)
+  }
   # Stack them all up
   WatershedStack <- c(terra::rast(model_dem),
                       terra::rast(slope),
-                      terra::rast(flow_file),
                       terra::rast(model_landcover),
-                      terra::rast(flow_direction))
+                      terra::rast(flow_direction),
+                      flow_length)
 
   terra::writeRaster(WatershedStack, file.path(ModelFolder, "watershed_stack.tif"), overwrite = T)
   print(paste0("Finished creating/checking files. Watershed elements files located in: ", ModelFolder))

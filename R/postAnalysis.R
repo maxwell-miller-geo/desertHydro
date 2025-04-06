@@ -292,7 +292,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
       surfaceStorage <- rasterCompile(ModelFolder, "surface", remove = T)
     }
   }else{
-    cat(surface_path, "does not exist \n")
+    print(paste(surface_path, "does not exist \n"))
   }
   # Velocity
   if(file.exists(velocity_path)){
@@ -301,7 +301,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
       velocityStorage <- rasterCompile(ModelFolder, "velocity", remove = T)
     }
   }else{
-    cat(velocity_path, "does not exist \n")
+    print(paste(velocity_path, "does not exist \n"))
   }
   # Soil
   if(file.exists(file.path(ModelFolder, "soilStorage.tif"))){
@@ -310,7 +310,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
       surfaceStorage <- rasterCompile(ModelFolder, "soil", remove = T)
     }
   }else{
-    cat(surface_path, "does not exist \n")
+    print(paste(surface_path, "does not exist \n"))
   }
 
   if(!rainfall_only){
@@ -374,7 +374,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
       # store the animated GIF
       gganimate::anim_save(filename = paste0(date, "-moisture-content.gif"), path = ModelFolder, animation = subsurface_plot, fps = 10, renderer = gganimate::gifski_renderer())
     }else{
-      cat("Could not find not find soil raster.")
+      print("Could not find not find soil raster.")
     }
 
 
@@ -510,10 +510,10 @@ create_single_graphic <- function(ModelFolder, date = NULL){
     date <- substr(basename(ModelFolder),1,10) # assumes first 10 are numbers
   }
   # Read the GIFs
-  gif1 <- image_read(file.path(ModelFolder, paste0(date,"-moisture-content.gif")))
-  gif2 <- image_read(file.path(ModelFolder, paste0(date,"-rain-Depth.gif")))
-  gif3 <- image_read(file.path(ModelFolder, paste0(date,"-surface-Depth.gif")))
-  gif4 <- image_read(file.path(ModelFolder, paste0(date,"-velocity.gif")))
+  gif1 <- magick::image_read(file.path(ModelFolder, paste0(date,"-moisture-content.gif")))
+  gif2 <- magick::image_read(file.path(ModelFolder, paste0(date,"-rain-Depth.gif")))
+  gif3 <- magick::image_read(file.path(ModelFolder, paste0(date,"-surface-Depth.gif")))
+  gif4 <- magick::image_read(file.path(ModelFolder, paste0(date,"-velocity.gif")))
 
   # Number of frames (assuming all have equal length)
   n_frames <- length(gif1)
@@ -550,11 +550,6 @@ create_single_graphic <- function(ModelFolder, date = NULL){
 
   # Save final GIF
   image_write(final_gif, file.path(ModelFolder,paste0(date,"combined_gifs.gif")))
-}
-# Create graphic that displays discharge and rainfall on same graph
-rainfall_discharge_plot <- function(ModelFolder, rainfall_method = "spatial"){
-  # Get the rainfall data used
-
 }
 
 
