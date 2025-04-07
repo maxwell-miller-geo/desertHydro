@@ -130,10 +130,8 @@ flowModel <- function(ModelFolder,
   start <- Sys.time()
 
   simulation_values <- 1:(length(simulation_duration)-1)
-  # Determine the outflow cell
-  outflow_cell <- drainCells$cell[1]
-  # Velocity cell - second to last cell that feeds the outflow cell
-  velocity_cell <- drainCells$cell[2]
+
+  #print(drainCells)
   # Adjust manning's based on slope - not re-adjusted through time
   if(grepl("slope", surface_method)){
     SoilStack$mannings_n <- adjust_mannings(SoilStack$slope)
@@ -190,6 +188,17 @@ flowModel <- function(ModelFolder,
   mannings_n <- adjustStack$mannings_n
   currentSoilStorage <- adjustStack$currentSoilStorage
   infiltrated_water_cm <- adjustStack$infiltrated_water_cm
+
+  drain <- terra::vect(file.path(ModelFolder, "drainPoints.shp"))
+  # Determine the outflow cell
+  outflow_cell <- drainCells$cell[1]
+  outflow_cell <- getCellCoords(drain, surfaceWater)[1]
+  #print(outflow_cell)
+  # Velocity cell - second to last cell that feeds the outflow cell
+  velocity_cell <- drainCells$cell[2]
+  velocity_cell <- getCellCoords(drain, surfaceWater)[2]
+  # Create maximum velocity
+  max_velocity <- adjustStack$infiltrated_water_cm * 0 + 1000 # 10 m/s
   # Write the Surface Stack
   terra::writeRaster(adjustStack+0, tempStorage, overwrite = T)
   #browser()
@@ -249,16 +258,15 @@ for(t in simulation_values){
     # Calculate potential velocity
     if(velocity_method == "mannings"){
       velocity <- manningsVelocity(mannings_n, surfaceWater, slope, length = cellsize, units = "cm/s")
-    }else if(velocity_method == "darcys"){
-      velocity <- darcysVelocity(mannings_n, surfaceWater, slope)
-    }
-    # Speed limit on water - Can't go faster than 1000 cm/s or 10 m/s
-    if(velocity_method == "mannings"){
       if(terra::global(velocity, "max", na.rm = TRUE)[,1] > 1000){
         velocity <- terra::ifel(velocity > 1000, 1000, velocity)
       }
+    }else if(velocity_method == "darcys"){
+      velocity <- darcysVelocity(mannings_n, surfaceWater, slope)
+      if(T){
+        velocity <- min(velocity, max_velocity)
+      }
     }
-
     # Calculate infiltration rate
     if(grepl("green", infiltration_method) && !impervious){
       # Returns infiltration in cm/hr
@@ -272,7 +280,6 @@ for(t in simulation_values){
     }else{
       staticStack$infiltration_cmhr <- staticStack$infiltration_cmhr
     }
-
     limits <- time_delta(surfaceWater = surfaceWater,
                          velocity = velocity,
                          throughfall = throughfall,
@@ -314,7 +321,7 @@ for(t in simulation_values){
     # Adjust the slope for next time-step
     #new_dem <- surfaceStack$surfaceWater/100 + surfaceStack$model_dem # assumes meters
     # Adjust elevation model every so often? or never?
-    if(adjust_slope){
+    if(F){
       new_dem <- surfaceWater/100 + staticStack$model_dem # assumes meters
       slope_temp <- terra::terrain(new_dem, v = "slope", neighbors = 8, unit = "radians")
       new_slope <- terra::merge(slope_temp, model_slope) # opened earlier
@@ -352,6 +359,7 @@ for(t in simulation_values){
       # Save the outflow cell
       # Adjust the outflow height -- here in cm
       #outflow <- surfaceStack$surfaceWater[outflow_cell][[1]]
+      #outflow_cell <- getCellCoords(shape, surfaceWater)[1]
       outflow <- surfaceWater[outflow_cell][[1]]
       # Add outflow discharge here
       # Height/100 * cellsize^2 / time elapsed = Q (m3/s)

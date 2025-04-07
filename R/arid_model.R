@@ -272,7 +272,7 @@ arid_model <- function(ModelFolder,
 
   print("Retrieving rainfall data for simulation")
   rain_file <- rainfallMethodCheck(ModelFolder, rainfall_method)
-  if(gif){
+  if(F){
     print("Creating gifs")
     gifCreation(ModelFolder, rainfall_method = rainfall_method, discharge = discharge, date = date)
     if(F){

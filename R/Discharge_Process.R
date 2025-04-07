@@ -156,7 +156,7 @@ discharge_present <- function(data_folder, date, ModelFolder = NULL, discharge_n
 
   # Use the discharge - total function to reorganize the stream gauges by day
   # then compare if input date - before or after exists
-  print(stream_data)
+  #print(stream_data)
   dischargeDF <- suppressWarnings(dischargeTotal(stream_data, write = write, WatershedElements = data_folder)) # dataframe with recorded discharge values (>0)
 
   # use the dischargeResample function to obtain the highest discharge for a each day

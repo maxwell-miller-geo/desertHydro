@@ -13,7 +13,7 @@ full_workflow_wb <- function(dem_file_path, outputLocation, out_dem = "./adjuste
 
 ## Test for full workflow
 # full_workflow_wb(dem_file_path = dem, outputLocation = DataStorage, out_dem = "./adjusted_dem.tif", out_pntr = "./flow_direction.tif", out_accum = "./flow_accum.tif")
-crsAssign <- function(raster_path, coordinateSystem = "epsg:4269"){
+crsAssign <- function(raster_path, coordinateSystem = "epsg:26912"){
   #library(terra)
   if(grepl(".shp", raster_path)){
     temp_vect <- terra::vect(raster_path)
@@ -158,6 +158,8 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
   # }
   #carve_dem <- terra::rast(model_dem) + 0
   # Determine outflow points of model to prevent back filling
+
+  print("Finding outflow cell")
   drain <- outFlowCells(model_dem, flow_accum, Outfolder = ModelFolder, name = "drainCells")
   xy <- data.frame(x = drain$x, y = drain$y)
   v <- terra::vect(xy, geom = c("x","y"), crs = crs_dem)

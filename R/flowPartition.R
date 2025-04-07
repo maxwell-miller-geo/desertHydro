@@ -919,13 +919,15 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   #flow_units <- flowLength(surfaceStack$flow_direction) * cellsize * 100 # cm
   flow_units <- surfaceStack$flow_direction * 100 # * 100cm
   # Discharge out of every cell - normalized by distance
-  discharge_out <- h_current * velocity / flow_units # unit cm/s - technically cm/s
+  #discharge_out <- h_current * velocity / flow_units
+  discharge_out <- terra::ifel(flow_units != 0,
+                               h_current * velocity / flow_units, # unit cm/s - technically cm/s
+                               0)
   # Route the discharge in different directions - technically a velocity right now..
   discharge_in <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
 
   # Calculate the movement of water = s * (cm/s - cm/s) = cm
   flow_water_cm <- time_delta_s * (discharge_out - discharge_in)
-
   # New height cannot be negative!! Negative depths are bad
   # Determine the infiltrated water per cell
   if(infiltration){
@@ -1051,6 +1053,9 @@ time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm
   # Round down for seconds
   if(time_delta_s > 1){
     time_delta_s <- floor(time_delta_s)
+  }
+  if(time_delta_s < 0.25){
+    time_delta_s <- 0.25
   }
   return(time_delta_s)
 }

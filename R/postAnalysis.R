@@ -441,7 +441,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
       # select only two columns
       rain_df <- rain_per_time[, c("normalized_time", "WATER-1", "WATER-2", "WATER-G")]
       # Janky way to load in the voronoi shapefile
-      rain_regions <- terra::vect(filePresent("voronoi.shp", model()@watershedPath))
+      rain_regions <- terra::vect(filePresent("voronoi.shp", ModelFolder))
       gauges <- rain_df[,c("WATER-1", "WATER-2", "WATER-G")]*25.4
       rain_surface <- do.call(c, apply(gauges, MARGIN = 1, FUN = rasterizeRainfall, rain_regions, surfaceStorage[[1]]))
       xvalues <- rain_df$normalized_time
@@ -552,6 +552,6 @@ create_single_graphic <- function(ModelFolder, date = NULL){
   # image_write(final_gif, file.path(ModelFolder,paste0(date,"combined_gifs.gif")))
 }
 
-
+# Create backup extraction for discharge
 
 
