@@ -809,7 +809,10 @@ copy_if_exists <- function(source_file, destination_folder) {
 }
 
 # Folder path
-find_completed_models <- function(parent_folder, file = "ModelComplete.txt"){
+find_completed_models <- function(parent_folder = NULL, file = "ModelComplete.txt"){
+  if(is.null(parent_folder)){
+    parent_folder <- getwd()
+  }
   folders <- list.dirs(parent_folder)
   boolean <- sapply(folders, function(x) file.exists(file.path(x, file)))
   return(folders[boolean])
