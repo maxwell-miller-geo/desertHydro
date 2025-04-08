@@ -304,7 +304,9 @@ for(t in simulation_values){
     if(runoff_counter + time_delta_s > simulationTimeSecs){
       time_delta_s <- simulationTimeSecs - runoff_counter
     }
-
+    # if(end_time == 8){
+    #   browser
+    # }
     # Calculate new surface (cm)
     # mannings_n, surfaceWater, slope, throughfall, infiltration_cmhr, flow_direction, currentSoilStorage, maxSoilStorage
     depth_list <- surfaceRouting(surfaceStack = staticStack,
