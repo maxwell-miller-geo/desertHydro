@@ -178,8 +178,8 @@ initial_soil_conditions <- function(LandCoverCharacteristics,
   # Create throughfall layer
   SoilStack$throughfall <- SoilStack$slope * 0
   names(SoilStack$throughfall) <- "throughfall"
-  # Create total infiltration layer
-  SoilStack$infiltrated_water_cm <- SoilStack$slope * 0
+  # Create total infiltration layer - start at really small number to avoid division errors
+  SoilStack$infiltrated_water_cm <- SoilStack$slope * 0 + 1e-6
   names(SoilStack$infiltrated_water_cm) <- "infiltrated_water_cm"
 
   # Adjust certain characteristics base upon slope

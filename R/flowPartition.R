@@ -879,7 +879,7 @@ adjust_mannings <- function(slope){
   return(n)
 }
 
-surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s, velocity = NULL, cellsize = NULL, rain_step_min = 1, infiltration = T, velocity_method = "darcy"){
+surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s, velocity = NULL, cellsize = NULL, rain_step_min = 1, infiltration = T, velocity_method = "darcy", debug = F){
   terra::terraOptions(datatype="FLT8S")
   # Units should be in the seconds for calculations
   # mannings_n, surfaceWater, slope, throughfall, infiltration_cmhr, flow_direction, currentSoilStorage, maxSoilStorage
@@ -917,7 +917,7 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   h_current <- adjustStack$surfaceWater
   # Calculate flow lengths - m * 100 = cm
   #flow_units <- flowLength(surfaceStack$flow_direction) * cellsize * 100 # cm
-  flow_units <- surfaceStack$flow_direction * 100 # * 100cm
+  flow_units <- surfaceStack$flow_length * 100 # * 100cm
   # Discharge out of every cell - normalized by distance
   #discharge_out <- h_current * velocity / flow_units
   discharge_out <- terra::ifel(flow_units != 0,
@@ -927,13 +927,18 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   discharge_in <- flowMap1D(discharge_out, surfaceStack$flow_direction, discharge_out = F)
 
   # Calculate the movement of water = s * (cm/s - cm/s) = cm
+  # flow can be potentially negative - if discharge in is greater than out.
+  # Exchange of water between
   flow_water_cm <- time_delta_s * (discharge_out - discharge_in)
   # New height cannot be negative!! Negative depths are bad
   # Determine the infiltrated water per cell
   if(infiltration){
   # Add up all potential water
+
   possible_surface_water <- h_current - flow_water_cm + rainfall_water_cm
-  possible_surface_water <- terra::ifel(possible_surface_water < 0, 0, possible_surface_water)
+  if(debug){
+    debuggy(possible_surface_water, time_delta_s, "", "possible_surface_water")
+  }
   # Potential filling amount
   # potential_infiltration_cm <- terra::ifel(max_infiltrated_water_cm < possible_surface_water,
   #                                  max_infiltrated_water_cm,
@@ -945,7 +950,7 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   #                                  soil_capacity, potential_infiltration_cm)
   infiltrated_water_cm <- min(potential_infiltration_cm, soil_capacity)
   # excess_water <- terra::ifel((potential_infiltration_cm - soil_capacity) > 0, potential_infiltration_cm - soil_capacity, 0)
-  infiltrated_water_cm <- min(infiltrated_water_cm, rainfall_water_cm)
+  #infiltrated_water_cm <- min(infiltrated_water_cm, rainfall_water_cm)
   # Check that water is equal to potential water
   # check_water <- terra::global(excess_water + infiltrated_water_cm - potential_infiltration_cm, "sum", na.rm=T)[,1]
   # testthat::expect_equal(check_water, 0)
@@ -956,6 +961,9 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   }
   # Calculate new height
   h_0 <- h_current - flow_water_cm + (rainfall_water_cm - infiltrated_water_cm)
+  if(debug){
+    debuggy(h_0, time_delta_s, "", "h_0 - New surface height")
+  }
   # If infiltrated water is greater than water present
   h_new <- terra::ifel(h_0 > 0, h_0, 0)
   # Check this makes sense
@@ -993,11 +1001,11 @@ deltaX <- function(discharge_in_sep){
 # }
 ## ---------------------------- Flow Routing fixed
 # Check the limiting conditions of flow
-time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm_hr, flow_length, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T, impervious = F){
+time_delta <- function(velocity, throughfall, infiltration_rate_cm_hr, flow_length, time_step_min = 1, cellsize = NULL, courant_condition = 0.9, vel = F, trouble = T, impervious = F){
   # Layers needed
   #mannings_n,surfaceWater,slope, throughfall, (infiltration_cm_hr)
   if(is.null(cellsize)){
-    cellsize <- grid_size(surfaceWater)
+    cellsize <- grid_size(velocity)
   }
   # Velocity calculation
 
@@ -1043,7 +1051,7 @@ time_delta <- function(surfaceWater, velocity, throughfall, infiltration_rate_cm
   #   courant_condition * cellsize * 100/ velocity, na.rm = T))*1000)/1000
   # Courant condition for flow stability
   #max_velocity <- terra::global(velocity, "max", na.rm = TRUE)[,1]
-  velocity <- terra::ifel(velocity == 0, 1, velocity)
+  velocity <- terra::ifel(velocity == 0, 1, velocity) # minimum velocity of 1cm/s
   time_values <- courant_condition * flow_length * 100 / velocity
   dt <- floor(terra::global(time_values, fun = "min", na.rm=T)[,1] * 1000) / 1000
   #dt <- floor(min(courant_condition * flow_length * 100 / max_velocity, na.rm = TRUE) * 1000) / 1000

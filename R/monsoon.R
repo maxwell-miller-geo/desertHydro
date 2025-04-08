@@ -81,6 +81,7 @@ monsoon <- function(ModelFolder = NULL,
                     time = NaN,
                     overwrite = NA,
                     velocity_method = "darcys",
+                    debug = F,
                     ...){
 
   if(is.null(ModelFolder)){
@@ -158,7 +159,8 @@ monsoon <- function(ModelFolder = NULL,
                   rain_adj = rain_adj,
                   surface_adj = surface_adj,
                   infiltration_adj = infiltration_adj,
-                  velocity_method = velocity_method
+                  velocity_method = velocity_method,
+                  debug = debug
                   )
 
   if(model1@gif){

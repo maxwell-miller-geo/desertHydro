@@ -867,3 +867,14 @@ get_utm_epsg <- function(raster, datum = "NAD83") {
 
   return(paste0("EPSG:", epsg))
 }
+
+debuggy <- function(var, start_time, end_time, note = ""){
+  if(is.numeric(var) || is.character(var)){
+    return(print(paste(note,":", var)))
+  }else if(inherits(var, "SpatRaster") || inherits(var, "SpatVector")) {
+    #terra::plot(var, main = paste(note, ": Time", start_time, "-", end_time))
+    mm <- terra::minmax(var)
+    message(paste0(note, ": Time ", start_time, " to ", end_time,
+                   " | Min: ", mm[1], " | Max: ", mm[2]))
+  }
+}

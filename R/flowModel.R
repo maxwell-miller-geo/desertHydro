@@ -14,17 +14,22 @@ flowModel <- function(ModelFolder,
                       surface_method = "nlcd",
                       velocity_method = "darcys",
                       adjust_slope = T,
+                      debug = F,
                       ...){
   print(paste("Time step:", time_step))
   print(paste("Simulation length:", simulation_length))
   print(paste("Estimated run time:", round(simulation_length*2.5), " minutes."))
   print(paste("Using velocity method:", velocity_method))
+
   # Set up parallel backend
   # num_cores <- parallel::detectCores() - 1  # Use one less core to avoid overloading the system
   # cl <- parallel::makeCluster(num_cores)
   # doParallel::registerDoParallel(cl)
   volumeIn_m3 <- volumeOut_m3 <- NULL
   start_time <- Sys.time()
+  if(debug){
+    print("Debugger Activated!")
+  }
   # Load soil stack
   SoilStack <- terra::rast(file.path(ModelFolder, "model_soil_stack.tif"))
   model_slope <- terra::rast(file.path(ModelFolder, "model_slope.tif"))
@@ -204,6 +209,7 @@ flowModel <- function(ModelFolder,
   #browser()
   rm(SoilStack)
 for(t in simulation_values){
+
   # Values to be read in
   #surfaceWater, mannings_n, infiltration_rate_cm_hr, slope, model_dem
   # Modified layers
@@ -215,7 +221,7 @@ for(t in simulation_values){
   end_time <- simulation_duration[t+1]
   timeElapsed <- end_time - beginning_time # time elapsed in minutes
   simulationTimeSecs <- timeElapsed * 60 # time elapse in minutes * seconds
-
+  print(paste("End time:", end_time ))
   ## [1] Rainfall
   ## - Calculates the amount of rainfall in a given time step
   if(simulation_duration[t] < total_rain_duration){ # could cut off rainfall if not careful
@@ -249,6 +255,8 @@ for(t in simulation_values){
   # Rain volume calculations
   # Calculate throughfall
   throughfall <- current_rainfall
+  if(debug){terra::plot(debuggy(throughfall, beginning_time, timeElapsed, "Rainfall"))}
+  print(paste("Rainfall,"))
   runoff_counter <- 0
   time_remaining <- simulationTimeSecs
 
@@ -281,17 +289,21 @@ for(t in simulation_values){
     }else{
       staticStack$infiltration_cmhr <- staticStack$infiltration_cmhr
     }
-    limits <- time_delta(surfaceWater = surfaceWater,
-                         velocity = velocity,
+    if(debug){
+      debuggy(staticStack$infiltration_cmhr, beginning_time, time_remaining, "Infiltration")
+    }
+
+    limits <- time_delta(velocity = velocity,
                          throughfall = throughfall,
                          infiltration_rate_cm_hr = staticStack$infiltration_cmhr,
                          flow_length = staticStack$flow_length,
                          cellsize = cellsize, time_step_min = 1,
                          courant_condition = courant, vel = F,
                          impervious = impervious)
-
+    if(debug){
+      print(paste("Time step: ",limits))
+    }
     time_delta_s <- limits
-
     if(time_delta_s < 0){
       stop("Error: Negative time step occured, please check input variables")
     }
@@ -300,12 +312,15 @@ for(t in simulation_values){
     # velocity <- limits[[2]]
     #print(paste("Time remaining:", time_remaining))
     time_remaining <- time_remaining - time_delta_s
-    #print(paste("Time remaining:", time_remaining))
+    if(debug){
+      print(paste("Time remaining:", time_remaining))
+    }
+
     if(runoff_counter + time_delta_s > simulationTimeSecs){
       time_delta_s <- simulationTimeSecs - runoff_counter
     }
-    # if(end_time == 8){
-    #   browser
+    # if(end_time == 10){
+    #   browser()
     # }
     # Calculate new surface (cm)
     # mannings_n, surfaceWater, slope, throughfall, infiltration_cmhr, flow_direction, currentSoilStorage, maxSoilStorage
@@ -316,11 +331,14 @@ for(t in simulation_values){
                                  velocity = velocity,
                                  cellsize = cellsize,
                                  rain_step_min = 1,
-                                 infiltration = !impervious)
+                                 infiltration = !impervious,
+                                 debug = debug)
 
     # Save new depth to surface water
     #surfaceStack$surfaceWater <- SoilStack$surfaceWater <- depth_list[[1]]
     surfaceWater <- depth_list[[1]]
+    if(debug){debuggy(surfaceWater, beginning_time, time_remaining, "Surface depth")}
+
     # Adjust the slope for next time-step
     #new_dem <- surfaceStack$surfaceWater/100 + surfaceStack$model_dem # assumes meters
     # Adjust elevation model every so often? or never?
@@ -337,7 +355,12 @@ for(t in simulation_values){
 
     # Return infiltration depth
     infiltration_depth_cm <- depth_list[[2]]
+
+    if(debug){debuggy(infiltration_depth_cm, beginning_time, time_delta_s, "infiltration_depth_cm")}
+
     rain_depth_cm <- depth_list[[3]]
+
+    if(debug){debuggy(rain_depth_cm, beginning_time, time_delta_s, "Rain")}
 
     # Add infiltration to subsurface
     #surfaceStack$currentSoilStorage <- surfaceStack$currentSoilStorage + infiltration_depth_cm
@@ -350,7 +373,8 @@ for(t in simulation_values){
     # Write raster to file at every minute
     if(end_time %% 1 == 0){
       if(!impervious){
-        rasterWrite(round(currentSoilStorage,3), ModelFolder, end_time, layername = "soil")
+        percent_saturated <- round(currentSoilStorage / staticStack$maxSoilStorageAmount, 3) * 100
+        rasterWrite(percent_saturated, ModelFolder, end_time, layername = "soil")
         }
       # Write surface depth for time-step
       rasterWrite(round(surfaceWater,3), ModelFolder, end_time, layername = "surface")
@@ -382,6 +406,13 @@ for(t in simulation_values){
       adjustStack[[3]] <- mannings_n
       adjustStack[[4]] <- currentSoilStorage
       adjustStack[[5]] <- infiltrated_water_cm
+
+      if(debug){
+        debuggy(mannings_n, beginning_time, time_remaining, "mannings_n")
+        debuggy(currentSoilStorage, beginning_time, time_remaining, "currentSoilStorage")
+        debuggy(infiltrated_water_cm, beginning_time, time_remaining, "infiltrated_water_cm")
+        debuggy(surfaceWater, beginning_time, time_remaining, "surfaceWater")
+      }
       # rm(adjustStack)
       # adjustStack <- c(surfaceWater, currentSoilStorage, slope, mannings_n, infiltrated_water_cm)
 
@@ -457,7 +488,7 @@ for(t in simulation_values){
 
   ##---------------- Save step-------------
 # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
-  if(counter %% 25 == 0 || t == length(simulation_duration) || t == tail(simulation_duration,1)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
+  if(counter %% 10 == 0 || t == length(simulation_duration) || t == tail(simulation_duration,1)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
     if(!impervious){
       rasterCompile(ModelFolder, "soil", remove = T, overwrite = F)
     }
