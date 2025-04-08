@@ -393,8 +393,8 @@ green_ampt_infil <- function(Ksat_cm_hr, theta_s, theta_i, F_0, psi_cm = 11.01) 
   delta_theta <- theta_s - theta_i
 
   # Avoid divide-by-zero or negative values
-  delta_theta <- pmax(delta_theta, 1e-6)
-  F_0 <- pmax(F_0, 1e-6)
+  #delta_theta <- pmax(delta_theta, 1e-6)
+  #F_0 <- pmax(F_0, 1e-6)
 
   # Green-Ampt infiltration rate equation
   I_t <- Ksat_cm_hr * (1 + (psi_cm * delta_theta / F_0))  # cm/hr
