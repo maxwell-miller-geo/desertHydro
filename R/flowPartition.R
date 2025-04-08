@@ -933,6 +933,7 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   if(infiltration){
   # Add up all potential water
   possible_surface_water <- h_current - flow_water_cm + rainfall_water_cm
+  possible_surface_water <- terra::ifel(possible_surface_water < 0, 0, possible_surface_water)
   # Potential filling amount
   # potential_infiltration_cm <- terra::ifel(max_infiltrated_water_cm < possible_surface_water,
   #                                  max_infiltrated_water_cm,
@@ -948,7 +949,7 @@ surfaceRouting <- function(surfaceStack, adjustStack, throughfall, time_delta_s,
   # Check that water is equal to potential water
   # check_water <- terra::global(excess_water + infiltrated_water_cm - potential_infiltration_cm, "sum", na.rm=T)[,1]
   # testthat::expect_equal(check_water, 0)
-
+  infiltrated_water_cm <- terra::ifel(infiltrated_water_cm < 0, 0, infiltrated_water_cm)
   }else{
     #infiltrated_water_cm <- surfaceStack$infiltration_cmhr
     infiltrated_water_cm <- h_current * 0

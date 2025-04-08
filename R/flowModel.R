@@ -273,7 +273,8 @@ for(t in simulation_values){
       staticStack$infiltration_cmhr <- green_ampt_infil(Ksat_cm_hr = staticStack$Ksat_cm_hr,
                                        theta_s = staticStack$saturation_percent,
                                        theta_i = staticStack$initial_sat_content,
-                                       F_0 = infiltrated_water_cm)
+                                       F_0 = adjustStack$infiltrated_water_cm,
+                                       psi_cm = 11.01)
 
     }else if(grepl("flat", infiltration_method) && !impervious){
       staticStack$infiltration_cmhr <- staticStack$infiltration_cmhr

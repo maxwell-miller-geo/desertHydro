@@ -362,22 +362,42 @@ get_soil_hydraulic_properties <- function(soil_texture) {
   return(result)
 }
 # Function to calculate the infiltration rate I(t) based on the Green and Ampt model
-green_ampt_infil <- function(Ksat_cm_hr, theta_s, theta_i, F_0) {
-  # Calculate the change in volumetric water content (Delta theta)
-  # theta_s = saturated water content %
-  # theta_i = initial saturated water content, either wilting point or field capacity
+# green_ampt_infil <- function(Ksat_cm_hr, theta_s, theta_i, F_0) {
+#   # Calculate the change in volumetric water content (Delta theta)
+#   # theta_s = saturated water content %
+#   # theta_i = initial saturated water content, either wilting point or field capacity
+#   delta_theta <- theta_s - theta_i
+#
+#   wetting_front_suction <- data.frame(
+#     soil_texture = c("Sand", "Loamy Sand", "Sandy Loam", "Loam", "Silt Loam",
+#                      "Sandy Clay Loam", "Clay Loam", "Silty Clay Loam", "Sandy Clay",
+#                      "Silty Clay", "Clay"),
+#     psi_cm = c(4.95, 6.13, 11.01, 8.89, 16.68, 21.85, 20.88, 27.3, 23.9, 29.22, 31.63)
+#   )
+#
+#   # Calculate the infiltration rate I(t)
+#   I_t <- Ksat_cm_hr / delta_theta * (1 + F_0 / delta_theta)^(-1) # cm/hr
+#
+#   return(I_t)
+# }
+
+green_ampt_infil <- function(Ksat_cm_hr, theta_s, theta_i, F_0, psi_cm = 11.01) {
+  # Example dataframe for wetting front suction head values (psi) in cm
+  # wetting_front_suction <- data.frame(
+  #   soil_texture = c("Sand", "Loamy Sand", "Sandy Loam", "Loam", "Silt Loam",
+  #                    "Sandy Clay Loam", "Clay Loam", "Silty Clay Loam", "Sandy Clay",
+  #                    "Silty Clay", "Clay"),
+  #   psi_cm = c(4.95, 6.13, 11.01, 8.89, 16.68, 21.85, 20.88, 27.3, 23.9, 29.22, 31.63)
+  # )
+  # delta_theta: difference between saturated and initial water content
   delta_theta <- theta_s - theta_i
 
-  # Example dataframe for wetting front suction head values (psi) in cm
-  wetting_front_suction <- data.frame(
-    soil_texture = c("Sand", "Loamy Sand", "Sandy Loam", "Loam", "Silt Loam",
-                     "Sandy Clay Loam", "Clay Loam", "Silty Clay Loam", "Sandy Clay",
-                     "Silty Clay", "Clay"),
-    psi_cm = c(4.95, 6.13, 11.01, 8.89, 16.68, 21.85, 20.88, 27.3, 23.9, 29.22, 31.63)
-  )
+  # Avoid divide-by-zero or negative values
+  delta_theta <- pmax(delta_theta, 1e-6)
+  F_0 <- pmax(F_0, 1e-6)
 
-  # Calculate the infiltration rate I(t)
-  I_t <- Ksat_cm_hr / delta_theta * (1 + F_0 / delta_theta)^(-1) # cm/hr
+  # Green-Ampt infiltration rate equation
+  I_t <- Ksat_cm_hr * (1 + (psi_cm * delta_theta / F_0))  # cm/hr
 
   return(I_t)
 }
