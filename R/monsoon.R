@@ -102,6 +102,7 @@ monsoon <- function(ModelFolder = NULL,
   if(model_type == "s-runoff"){
     model1 <- small_impervious(ModelFolder)
     model1@impervious <- T
+    model1@key <- "MUSYM"
   }
   if(model_type == "s-infil"){
     model1 <- small_infiltration(ModelFolder)

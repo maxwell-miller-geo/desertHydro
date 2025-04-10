@@ -615,6 +615,9 @@ compare_rainfall <- function(gauge, goes, gauge_coords){
 
   # Extract values in GOES Rainfall Estimate
   goes_time_values <- names(goes)
+  if(get_crs(goes) != "epsg:4269"){
+    goes <- terra::project(goes, "epsg:4269")
+  }
   goes_values <- terra::extract(goes, gauge_coords, ID = F, raw = F)
   goes_mm <- as.data.frame(t(goes_values))*(10/60) # mm/hr *1hr/60mins * 10 mins = mm
   goes_mm$Time <- as.POSIXct(goes_time_values, tz = "UTC")

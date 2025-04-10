@@ -198,6 +198,8 @@ arid_model <- function(ModelFolder,
   # Calculate the total rainfall
   total_rain <- sum(rain_discharge$Total_in)
 
+  # Reproject the rain gauges
+
   # store plots
   if(store & discharge){
     # Compare goes rainfall to gauge rainfall

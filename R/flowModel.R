@@ -256,7 +256,7 @@ for(t in simulation_values){
   # Calculate throughfall
   throughfall <- current_rainfall
   if(debug){terra::plot(debuggy(throughfall, beginning_time, timeElapsed, "Rainfall"))}
-  print(paste("Rainfall,"))
+  # print(paste("Rainfall,"))
   runoff_counter <- 0
   time_remaining <- simulationTimeSecs
 

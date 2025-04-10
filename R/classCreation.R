@@ -99,14 +99,13 @@ infil_model <- function(ModelFolder){
 small_impervious <- function(ModelFolder){
   object <- model()
   object@ModelFolder <- ModelFolder
-  object@LandCoverCharacteristics <- "nlcd_characteristics.xlsx"
-  object@key <- "ID"
+  object@LandCoverCharacteristics <- "LandCoverCharacteristics_Soils.xlsx"
+  object@key <- "MUSYM"
   object@impervious <- T
   object@demFile <- "dem-test.tif"
   object@overwrite <- F
   object@restartModel <- F
   object@boundary <- desertHydro::polygonize(object@demFile, object@watershedPath)
-  object@landCoverFile <- "waterholes_LC.tif"
   return(object)
 }
 

@@ -63,7 +63,7 @@ watershedElementsCreate <- function(ModelFolder,
     slope_temp <- terra::terrain(terra::rast(model_dem), v = "slope", neighbors = 8, unit = "radians")
     slope_total <- slope_edge(dem = model_dem, slope = slope_temp, cellsize = cellsize)
     names(slope_total) <- "slope"
-    slope_out <- terra::ifel(slope_total < .01, 0.01, slope_total)
+    slope_out <- terra::ifel(slope_total < .02, 0.02, slope_total)
     # Adjust the slope to 0.02
     # NOTE - slope does compute for boundary cells - see slope_edge()
     terra::writeRaster(slope_out, filename = slope, overwrite = T)

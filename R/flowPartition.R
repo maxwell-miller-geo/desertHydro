@@ -1023,7 +1023,7 @@ time_delta <- function(velocity, throughfall, infiltration_rate_cm_hr, flow_leng
   rainfall_rate_cm_hr <- throughfall/time_adjustment
 
   # Calculate source water term
-  source_water_cm_hr <- rainfall_rate_cm_hr - infiltration_rate_cm_hr
+  source_water_cm_hr <- rainfall_rate_cm_hr
   ### Stability check on rainfall magnitude
   # Find the maximum rainfall intensity
   #time_step_hr <- courant_condition / max(terra::values(source_water_cm_hr, na.rm = T))
