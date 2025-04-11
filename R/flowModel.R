@@ -342,13 +342,18 @@ for(t in simulation_values){
     # Adjust the slope for next time-step
     #new_dem <- surfaceStack$surfaceWater/100 + surfaceStack$model_dem # assumes meters
     # Adjust elevation model every so often? or never?
-    if(F){
+    if(grepl("slope", surface_method) || T){
+      # Slope adjustments
+      # new_elevation <- model_dem + .1
+      # shifted_elevation <- shifted_dem
+      # slope_v2 <- (new_elevation - shifted_elevation) / flow_units
+      # slope_temp <- terra::terrain(new_elevation, v = "slope", neighbors = 8, unit = "radians")
       new_dem <- surfaceWater/100 + staticStack$model_dem # assumes meters
       slope_temp <- terra::terrain(new_dem, v = "slope", neighbors = 8, unit = "radians")
       new_slope <- terra::merge(slope_temp, model_slope) # opened earlier
       #new_slope <- slope_edge(new_dem, slope_temp, cellsize = cellsize)
       names(new_slope) <- "slope"
-      slope <- terra::ifel(new_slope < 0.01, 0.01, new_slope)
+      slope <- terra::ifel(new_slope < 0.02, 0.02, new_slope)
     }else{
       slope <- slope
     }

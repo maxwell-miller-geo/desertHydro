@@ -182,6 +182,20 @@ initial_soil_conditions <- function(LandCoverCharacteristics,
   SoilStack$infiltrated_water_cm <- SoilStack$slope * 0 + 1e-6
   names(SoilStack$infiltrated_water_cm) <- "infiltrated_water_cm"
 
+  # Stream extraction - adjust Manning's n in stream channel by 0.01
+  streamPath <- file.path(ModelFolder, "stream_extracted.tif")
+  # Increase the speed of water within stream network
+  if(file.exists(streamPath) && grepl("stream", surface_method)){
+    print("Stream adjustments")
+    stream_extracted <- terra::rast(streamPath)
+    if(terra::ext(stream_extracted) != terra::ext(SoilStack$slope)){
+      stream_extracted <- terra::crop(stream_extracted, SoilStack$slope)
+    }
+    extracted <- terra::ifel(is.nan(stream_extracted), 0, stream_extracted)
+    maxSoilStorageAmount <- terra::ifel((extracted*SoilStack$maxSoilStorageAmount != 0), 10, SoilStack$maxSoilStorageAmount)
+    new_stream <- abs(SoilStack$mannings_n - .0025*extracted)
+    SoilStack$mannings_n <- new_stream
+  }
   # Adjust certain characteristics base upon slope
   if(grepl("slope", depth_adjusted) && key != "ID"){
     # From - to classification of soil depth from slope
@@ -192,11 +206,19 @@ initial_soil_conditions <- function(LandCoverCharacteristics,
                              40, 45, 0.50,
                              45, 90, 0.01),
                            ncol = 3, byrow = TRUE)
+
     reclassMatrix[, 1:2] <- reclassMatrix[, 1:2] * pi / 180
     depthModifier <- terra::classify(SoilStack$slope, reclassMatrix, include.lowest = T)
     SoilStack$soil_depth_cm <- SoilStack$soil_depth_cm * depthModifier
   }
 
+  # Adjust inflow based on multiple
+  if(grepl("inflow", surface_method)){
+    # Determine the manning's adjustment factor
+    print("Adjusting roughness of higher inflow cells")
+    inflow <- abs(count_inflow(SoilStack$flow_direction) -2)
+    SoilStack$mannings_n <- SoilStack$mannings_n - inflow * 0.003
+  }
   # Geo map adjustment
   geologic_map <- file.path(WatershedElements, "geo_soils.shp")
   # Adjust soil characteristics based upon geology
@@ -240,19 +262,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics,
 
   SoilStack$ET_Reduction <- SoilStack$fieldCapacityAmount * 0.8 / SoilStack$soil_depth_cm
 
-  # Stream extraction - adjust Manning's n in stream channel by 0.01
-  streamPath <- file.path(ModelFolder, "stream_extracted.tif")
-  # Increase the speed of water within stream network
-  if(file.exists(streamPath) && grepl("stream", surface_method)){
-    print("Stream adjustments")
-    stream_extracted <- terra::rast(streamPath)
-    if(terra::ext(stream_extracted) != terra::ext(SoilStack$slope)){
-      stream_extracted <- terra::crop(stream_extracted, SoilStack$slope)
-    }
-    extracted <- terra::ifel(is.nan(stream_extracted), 0, stream_extracted)
-    new_stream <- abs(SoilStack$mannings_n - .0025*extracted)
-    SoilStack$mannings_n <- new_stream
-  }
+
 
   # Final adjustments based upon surface and infiltration
   # Adjust surface roughness

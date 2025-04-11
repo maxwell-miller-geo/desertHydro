@@ -120,6 +120,7 @@ flow_accumlation_wb <- function(dem_file_path, ModelFolder, watershed_shape_path
   d8_pntr <- file.path(ModelFolder, "fd8_pntr.tif")
   file_removal(d8_pntr, overwrite)
   whitebox::wbt_d8_pointer(model_dem, d8_pntr, esri_pntr = TRUE)
+  crsAssign(extracted_streams, coordinateSystem = crs_dem)
 
   # RasterStreams to Vector
   file_removal(vect_stream, overwrite)

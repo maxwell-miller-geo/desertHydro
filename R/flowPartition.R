@@ -1528,3 +1528,34 @@ manning_to_darcy_cm <- function(n, h_cm, g = 980) {
   f <- (8 * g * n^2) / (h_cm^(1/3))
   return(f)
 }
+
+count_inflow <- function(flow_dir){
+
+  # Lists
+  reverse_d8 <- c(
+    2, 4, 8,
+    1, -1, 16,
+    128, 64, 32
+  )
+  direction_vectors <- list(
+    c(1,-1), c(0,-1), c(-1,-1),
+    c(1,0), c(0,0), c(-1, 0),
+    c(1,1), c(0,1), c(-1,1)
+  )
+  # Focal function to count inflowing neighbors
+  count_inflows <- function(x) {
+    sum(x == reverse_d8, na.rm = TRUE)
+  }
+
+  vector_sum_inflows <- function(x) {
+    vectors <- direction_vectors[(x == reverse_d8)]
+    x_vect <- sum(sapply(vectors, function(x) x[1]))
+    y_vect <- sum(sapply(vectors, function(x) x[2]))
+    sum(x == reverse_d8, na.rm = TRUE)
+  }
+  # Apply focal filter
+  inflow_count <- terra::focal(flow_dir, w = 3, fun = count_inflows, fillvalue = NA)
+  names(inflow_count) <- "inflow"
+  terra::writeRaster(inflow_count, file.path(ModelFolder, "inflow_cells.tif"), overwrite = T)
+  return(inflow_count)
+}
