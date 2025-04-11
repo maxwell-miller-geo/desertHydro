@@ -132,9 +132,9 @@ watershedElementsCreate <- function(ModelFolder,
   crsAssign(flow_direction, get_crs(model_dem))
 
   # Create shifted elevation map
-  shifted_dem <- terra::focal(terra::rast(model_dem), w = 3, fun = "min", na.rm = T)
-  names(shifted_dem) <- "shifted_dem"
-  terra::writeRaster(shifted_dem, file.path(ModelFolder, "shifted_dem.tif", overwrite = T))
+  # shifted_dem <- terra::focal(terra::rast(model_dem), w = 3, fun = "min", na.rm = T)
+  # names(shifted_dem) <- "shifted_dem"
+  # terra::writeRaster(shifted_dem, file.path(ModelFolder, "shifted_dem.tif", overwrite = T))
 
   # Flow Length vectors
   # Flow lengths for 1D models based on the flow direction and elevations
