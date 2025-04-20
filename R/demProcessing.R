@@ -293,7 +293,7 @@ holes_check <- function(dem, temp_no_flow = file.path(tempdir(), "temp-file.tif"
   # Find No Flow Cells
   whitebox::wbt_find_no_flow_cells(dem = dem, output = temp_no_flow)
   crsAssign(temp_no_flow, crs_dem)
-  terra::plot(terra::rast(temp_no_flow))
+  #terra::plot(terra::rast(temp_no_flow))
   holes <- terra::cells(terra::rast(temp_no_flow))
   # Remove temp file
   rm(temp_no_flow)

@@ -1,5 +1,5 @@
 # Always returns a rainfile path - Expects within the Model Folder
-rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method = "gauges", weighted = T, overwrite = F, shape = "voronoi.shp"){
+rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method = "gauges", weighted = T, overwrite = F, shape = "voronoi.shp", gauges = c("WATER-1", "WATER-2", "WATER-G")){
   # Getting rid of notes
   time <- Total_in <- Time_minute <- NULL
   print("Rainfall...")
@@ -27,6 +27,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
       return(rain_file)
     }
   }
+  # browser()
   # Rainfall filtering
   rainFiltered <- rainfallFilter(date, ModelFolder, WatershedElements, overwrite = T)
     # Synthetic rainfall method
@@ -103,7 +104,7 @@ rainfallCreation <- function(ModelFolder, WatershedElements, date = NULL, method
     }
     # Spatial distributed rainfall - a little janky just returns rainfall- not rain-discharge
     if(method == "spatial"){ # create table with time | Water-1 | Water-2 | Water-G
-      cols <- c("WATER-1", "WATER-2", "WATER-G")
+      cols <- gauges
       spatial_rain <- rainFiltered |>
         dplyr::select(Time_minute, time, dplyr::all_of(cols)) |> # Select relevant columns
         dplyr::add_row(Time_minute = c(rainFiltered[1,1] - lubridate::minutes(1)),
@@ -763,4 +764,16 @@ rainfall_plot_comparison <- function(folder,  date = "2022-07-29", method1 = "sp
 
   dev.off()
   return("Finished Creating Plot")
+}
+
+get_total_rainfall_goes <- function(goes_file){
+  goes <- terra::rast(goes_file)
+  cell_size <- terra::cellSize(goes, unit = "m") #m^2
+  # Sum all the rainfall
+  mm_to_m <- 1/100
+  goes_sum <- sum(goes, na.rm = T) * mm_to_m /6 * cell_size
+  m3_ft3 <- 35.315
+  rain_fall <- sumCells(goes_sum) *m3_ft3 # ft3
+  # Extract rainfall at rain gauge points
+  return(rain_fall)
 }

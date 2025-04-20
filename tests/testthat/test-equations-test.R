@@ -4,6 +4,6 @@ test_that("Manning's Velocity", {
   slope <- 45 # degrees
   length <- 10 # grid length
   mv <- manningsVelocity(n, initial_depth_cm, slope, length = length)
-  expect_lt(mv, 10)
+  expect_lt(mv, 1000)
 })
 

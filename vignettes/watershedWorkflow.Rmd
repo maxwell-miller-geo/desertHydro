@@ -39,7 +39,7 @@ library(desertHydro)
 library(terra)
 library(ggplot2) # For plotting
 library(gganimate) # For animations
-library(whitebox)
+library(whitebox) # for dem modifications
 #require(whitebox)
 whitebox::wbt_init(
   exe_path = whitebox::wbt_exe_path(shell_quote = FALSE),
@@ -103,21 +103,19 @@ and the excel file.
 
 ### Rainfall event elements
 ```{r, event files, results='hide'}
-date <- "2018-07-13" # Optional - if dates present must be in YYYY-MM-DD format
+date <- "2022-07-15" # For particular dates must be in YYYY-MM-DD format
 rainFile <- "USGS_Rain_2001_2021.xlsx"
 dischargeFile <- "observable-discharge.csv"
 discharge <-  T # If TRUE, expects discharge present in file
 
 # If rainfall method is synthetic - uses 1/2 inch - 15 minute storm
-rainfall_method <- "synthetic" 
+#rainfall_method <- "synthetic"
+rainfall_method <- "spatial" 
 ```
 
 ### Model elements
 ```{r, model checklist, results='hide'}
 
-length <- 10 # grid cell length - assumes uniform grid
-store = T
-time_step <- .1 # time step in minutes
 simulation_length <-  10 # time length in minutes
 impervious <- T  # no infiltration
 overwrite <- T # overwrite watershed elements and model folder

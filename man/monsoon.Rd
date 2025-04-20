@@ -19,6 +19,8 @@ monsoon(
   courant = 0.8,
   time = NaN,
   overwrite = NA,
+  velocity_method = "darcys",
+  debug = F,
   ...
 )
 }

@@ -1559,3 +1559,29 @@ count_inflow <- function(flow_dir){
   terra::writeRaster(inflow_count, file.path(ModelFolder, "inflow_cells.tif"), overwrite = T)
   return(inflow_count)
 }
+
+horizontal_flow <- function(flow_dir){
+  flow_reclass <- c(0, 1,
+                    1, 1,
+                    2, sqrt(2),
+                    4, 1,
+                    8, sqrt(2),
+                    16, 1,
+                    32, sqrt(2),
+                    64, 1,
+                    128, sqrt(2))
+  # Create matrix for classification
+  flow_matrix <- matrix(flow_reclass, ncol = 2, byrow = TRUE)
+  horizontal_flow <- terra::classify(flow_dir, flow_matrix) * grid_size(flow_dir)
+  return(horizontal_flow)
+}
+
+elevation_shifted <- function(dem){
+  # Shift the lowest elevation to current location
+  shifted <- terra::focal(dem, w = 3, fun = "min", na.rm = T, na.policy = "omit")
+  return(shifted)
+}
+
+flow_slope <- function(vertical_distance, horizontal_distance){
+  return(atan(vertical/horizontal_distance))
+}

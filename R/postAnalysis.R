@@ -31,6 +31,9 @@ compareDischarge <- function(recorded_discharge_df, estimated_discharge_df){
 #                            KGE = Kling-Gupta
 # Returns Model efficiency values
 modelEfficiency <- function(dischargeDF, method = "NSE", timeCol = T){
+  if(is.character(dischargeDF)){
+    dischargeDF <- as.data.frame(data.table::fread(dischargeDF))
+  }
   if(timeCol){ # assumes column order time | obs | modeled
     observed <- dischargeDF[,2]
     modeled <- dischargeDF[,3]
@@ -504,52 +507,52 @@ volume_over_time_plot <- function(ModelFolder, date){
 }
 
 create_single_graphic <- function(ModelFolder, date = NULL){
-  #require(magick)
+  require(magick)
 
-  # if(is.null(date)){
-  #   date <- substr(basename(ModelFolder),1,10) # assumes first 10 are numbers
-  # }
-  # # Read the GIFs
-  # gif1 <- magick::image_read(file.path(ModelFolder, paste0(date,"-moisture-content.gif")))
-  # gif2 <- magick::image_read(file.path(ModelFolder, paste0(date,"-rain-Depth.gif")))
-  # gif3 <- magick::image_read(file.path(ModelFolder, paste0(date,"-surface-Depth.gif")))
-  # gif4 <- magick::image_read(file.path(ModelFolder, paste0(date,"-velocity.gif")))
+  if(is.null(date)){
+    date <- substr(basename(ModelFolder),1,10) # assumes first 10 are numbers
+  }
+  # Read the GIFs
+  gif1 <- magick::image_read(file.path(ModelFolder, paste0(date,"-moisture-content.gif")))
+  gif2 <- magick::image_read(file.path(ModelFolder, paste0(date,"-rain-Depth.gif")))
+  gif3 <- magick::image_read(file.path(ModelFolder, paste0(date,"-surface-Depth.gif")))
+  gif4 <- magick::image_read(file.path(ModelFolder, paste0(date,"-velocity.gif")))
   #
-  # # Number of frames (assuming all have equal length)
-  # n_frames <- length(gif1)
-  #
-  # combined_frames <- vector("list", n_frames)
-  #
-  # for(i in 1:n_frames) {
-  #
-  #   # Extract each frame and explicitly remove transparency matching the grey background
-  #   frame1 <- image_background(gif1[i], "grey50") %>% image_flatten()
-  #   frame2 <- image_background(gif2[i], "grey50") %>% image_flatten()
-  #   frame3 <- image_background(gif3[i], "grey50") %>% image_flatten()
-  #   frame4 <- image_background(gif4[i], "grey50") %>% image_flatten()
-  #
-  #   # Ensure exactly equal dimensions for all frames
-  #   target_size <- geometry_size_pixels(
-  #     width = image_info(frame1)$width,
-  #     height = image_info(frame1)$height
-  #   )
-  #   frame2 <- image_resize(frame2, target_size)
-  #   frame3 <- image_resize(frame3, target_size)
-  #   frame4 <- image_resize(frame4, target_size)
-  #
-  #   # Combine horizontally and vertically
-  #   top_row <- image_append(c(frame1, frame2))
-  #   bottom_row <- image_append(c(frame3, frame4))
-  #   combined_frame <- image_append(c(top_row, bottom_row), stack = TRUE)
-  #
-  #   combined_frames[[i]] <- combined_frame
-  # }
-  #
-  # # Join frames without optimization to avoid hazy artifacts
-  # final_gif <- image_animate(image_join(combined_frames), fps = 10, optimize = FALSE)
-  #
-  # # Save final GIF
-  # image_write(final_gif, file.path(ModelFolder,paste0(date,"combined_gifs.gif")))
+  # Number of frames (assuming all have equal length)
+  n_frames <- length(gif1)
+
+  combined_frames <- vector("list", n_frames)
+
+  for(i in 1:n_frames) {
+
+    # Extract each frame and explicitly remove transparency matching the grey background
+    frame1 <- image_background(gif1[i], "grey50") %>% image_flatten()
+    frame2 <- image_background(gif2[i], "grey50") %>% image_flatten()
+    frame3 <- image_background(gif3[i], "grey50") %>% image_flatten()
+    frame4 <- image_background(gif4[i], "grey50") %>% image_flatten()
+
+    # Ensure exactly equal dimensions for all frames
+    target_size <- geometry_size_pixels(
+      width = image_info(frame1)$width,
+      height = image_info(frame1)$height
+    )
+    frame2 <- image_resize(frame2, target_size)
+    frame3 <- image_resize(frame3, target_size)
+    frame4 <- image_resize(frame4, target_size)
+
+    # Combine horizontally and vertically
+    top_row <- image_append(c(frame1, frame2))
+    bottom_row <- image_append(c(frame3, frame4))
+    combined_frame <- image_append(c(top_row, bottom_row), stack = TRUE)
+
+    combined_frames[[i]] <- combined_frame
+  }
+
+  # Join frames without optimization to avoid hazy artifacts
+  final_gif <- image_animate(image_join(combined_frames), fps = 10, optimize = FALSE)
+
+  # Save final GIF
+  image_write(final_gif, file.path(ModelFolder,paste0(date,"combined_gifs.gif")))
 }
 
 # Create backup extraction for discharge

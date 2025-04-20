@@ -189,7 +189,7 @@ terra::writeRaster(maxVelocity, file.path(ModelFolder, "max-velocity-map.tif"))
 slope <- SoilStack$slope
 dem <- terra::rast(file.path(ModelFolder, "model_dem.tif"))
 # Plot values that are a little to high - maybe
-plot(maxDepth > 30)
+plot(maxDepth > 100)
 plot(maxVelocity > 4)
 terra::writeRaster(maxDepth > 30, file.path(ModelFolder, "greaterThan30cm.tif"))
 terra::writeRaster(maxVelocity > 4, file.path(ModelFolder, "greaterThan4ms.tif"))
@@ -199,7 +199,7 @@ stream <- terra::vect(file.path(WatershedElements, "stream_path.shp"))
 # Load in created mainstem in QGIS
 # ms <- terra::vect(file.path(WatershedElements, "main-stem.shp"))
 # crsAssign(file.path(WatershedElements, "main-stem.shp"))
-stream <- 
+
 # dem <- terra::rast(breach_test)
 model_dem_rast <- terra::rast(file.path(ModelFolder, "model_dem.tif"))
 ogdem <- terra::rast(file.path(WatershedElements, "dem.tif"))
@@ -258,6 +258,7 @@ dischargeDF <- dailyDischarge(discharge_file_path = file.path(WatershedElements,
 volume <- dischargeVolume(dischargeDF)
 
 ```
+
 ```{r}
 # Flow to string
 flow_accum <- terra::rast(file.path(WatershedElements, "flow_accumulation.tif"))

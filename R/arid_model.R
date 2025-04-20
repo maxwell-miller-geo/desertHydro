@@ -63,7 +63,7 @@ arid_model <- function(ModelFolder,
                        store = T,
                        gif = T,
                        discharge = F,
-                       time_step = 0.25,
+                       time_step = 1,
                        simulation_length = NA,
                        overwrite = T,
                        write = T,
@@ -204,6 +204,7 @@ arid_model <- function(ModelFolder,
   if(store & discharge){
     # Compare goes rainfall to gauge rainfall
     if(rainfall_method == "goes"){
+      browser()
       goes_gauge_rain <- compare_rainfall(gauge = rain_discharge, rain_file, gauge_coords = "")
       plot_rainfall_comparison(goes_gauge_rain, date = date, outpath = ModelFolder)
     }

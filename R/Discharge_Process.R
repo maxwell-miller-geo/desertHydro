@@ -13,12 +13,12 @@
 ##-------------------- Discharge Creation
 # Function that checks and/or creates discharge for given date
 
-dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file = NULL, discharge = F, store = T, discharge_file_path = "waterholes_discharge_2001_2024.tsv"){
+dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file = NULL, discharge = F, store = T, discharge_file_path = "waterholes_gauge_discharge_2001_2024.tsv"){
   time <- Total_in <- NULL
   # Load in the filtered rainfall file
   rainFiltered_file <- file.path(ModelFolder, paste0("rain-data-", date,".csv"))
   rain_discharge_file <- file.path(ModelFolder, "rain-discharge.csv")
-
+  #browser()
   print("Processing discharge data...")
   if(discharge){
     if(file.exists(rain_discharge_file) & file.exists(rainFiltered_file)){
@@ -53,6 +53,21 @@ dischargeCreate <- function(date, ModelFolder, WatershedElements, rain_file = NU
       return(rain_discharge)
     }
   }else{
+    # rain_discharge <- data.table::fread(rain_file)
+    # time <- grep("time", names(rain_discharge), value = T)
+    # if(grepl("Total_in", names(rain_discharge))){
+    #
+    # }
+    # If gauge data exists but not discharge recorded
+    if(file.exists(rainFiltered_file)){
+      rain <- data.table::fread(rainFiltered_file)
+      rain_discharge <- rain[,c("time","Total_in")]
+      new_row <- as.list(rep(0, ncol(rain_discharge)))
+      names(new_row) <- names(rain_discharge)
+      rain_discharge <- rbind(new_row, rain_discharge)
+      readr::write_csv(x = rain_discharge, file = rain_discharge_file)
+      return(rain_discharge)
+    }
     rain_discharge <- readr::read_csv(rain_file, show_col_types = F) |>
       dplyr::select(time, Total_in) |>
       dplyr::add_row(Total_in = 0,
@@ -509,7 +524,7 @@ dischargeVolume <- function(dischargeDF, time_col = "time"){
 #' discharge_events <- discharge_rainfall_events(discharge_file, ModelFolder,
 #'                                       WatershedElements, store = T)
 #' }
-discharge_rainfall_events <- function(discharge_file, ModelFolder, WatershedElements = model()@watershedPath, store = F){
+discharge_rainfall_events <- function(discharge_file, ModelFolder, WatershedElements = model()@watershedPath, store = F, select_dates = NULL){
   # Assumes observable discharge file is in location
   out_excel <- file.path(ModelFolder, "DischargeEvents.xlsx")
   if(file.exists(out_excel)){
@@ -523,6 +538,10 @@ discharge_rainfall_events <- function(discharge_file, ModelFolder, WatershedElem
   }else{
   # Discharge file needs to just be observable discharge dates...
   dates <- get_dates(discharge_file)
+  # Select particular dates, if needed
+  if(!is.null(select_dates)){
+    dates <- select_dates
+  }
   # Create discharge events from those dates
   discharge_events <- lapply(dates, dischargeCreate, ModelFolder, WatershedElements, discharge = T, store = store)
   # Assign names to list
@@ -650,7 +669,7 @@ rainfallVolume <- function(dataframe, method = "total", rain_area_file = file.pa
 
 # Correlation matrix
 correlate <- function(df){
-  corre <- cor(df[,2:ncol(df)])
+  corre <- cor(df[,3:ncol(df)])
   corrplot::corrplot(corre, "square")
   return(corre)
 }
@@ -661,7 +680,7 @@ plot_corre <- function(df, col1 = "rainfall_vol", col2 = "discharge_duration", f
   col1 <- stringMatch(df, col1)
   col2 <- stringMatch(df, col2)
   # drop na rows
-  df1 <- na.omit(df1)
+  df1 <- na.omit(df)
   # Correlate the two variables
   x <- df1[[col1]]
   y <- df1[[col2]]
@@ -726,3 +745,4 @@ plot_rainfall_line_dual_axis <- function(combined_dt, primary_col = "discharge",
 
   return(joint_plot)
 }
+

@@ -16,9 +16,9 @@ arid_model(
   impervious = F,
   rainfall_method = "gauges",
   store = T,
-  gif = F,
+  gif = T,
   discharge = F,
-  time_step = 0.25,
+  time_step = 1,
   simulation_length = NA,
   overwrite = T,
   write = T,
@@ -30,6 +30,8 @@ arid_model(
   rain_adj = 1,
   surface_adj = 1,
   infiltration_adj = 1,
+  velocity_method = "darcys",
+  debug = F,
   ...
 )
 }

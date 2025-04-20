@@ -150,7 +150,10 @@ flowModel <- function(ModelFolder,
   }
 # Loop through time
   #browser()
-
+# Calculate the horizontal flow distance for each cell
+horizontal_flow_distance <- horizontal_flow(SoilStack$flow_direction)
+shifted_dem <- elevation_shifted(SoilStack$model_dem)
+vertical_flow_distance <- SoilStack$model_dem -  shifted_dem
 # Initialize  size of things beforehand
 # Things to initialize
   staticStack <- c(SoilStack$model_dem,
@@ -188,6 +191,7 @@ flowModel <- function(ModelFolder,
   }
 
   # Individual layers that will be adjusted
+
   surfaceWater <- adjustStack$surfaceWater
   slope <- adjustStack$slope
   mannings_n <- adjustStack$mannings_n
@@ -204,6 +208,7 @@ flowModel <- function(ModelFolder,
   velocity_cell <- getCellCoords(drain, surfaceWater)[2]
   # Create maximum velocity
   max_velocity <- adjustStack$infiltrated_water_cm * 0 + 1000 # 10 m/s
+  dem <- SoilStack$model_dem
   # Write the Surface Stack
   terra::writeRaster(adjustStack+0, tempStorage, overwrite = T)
   #browser()
@@ -221,7 +226,7 @@ for(t in simulation_values){
   end_time <- simulation_duration[t+1]
   timeElapsed <- end_time - beginning_time # time elapsed in minutes
   simulationTimeSecs <- timeElapsed * 60 # time elapse in minutes * seconds
-  print(paste("End time:", end_time ))
+  #print(paste("End time:", end_time ))
   ## [1] Rainfall
   ## - Calculates the amount of rainfall in a given time step
   if(simulation_duration[t] < total_rain_duration){ # could cut off rainfall if not careful
@@ -348,12 +353,18 @@ for(t in simulation_values){
       # shifted_elevation <- shifted_dem
       # slope_v2 <- (new_elevation - shifted_elevation) / flow_units
       # slope_temp <- terra::terrain(new_elevation, v = "slope", neighbors = 8, unit = "radians")
-      new_dem <- surfaceWater/100 + staticStack$model_dem # assumes meters
-      slope_temp <- terra::terrain(new_dem, v = "slope", neighbors = 8, unit = "radians")
-      new_slope <- terra::merge(slope_temp, model_slope) # opened earlier
-      #new_slope <- slope_edge(new_dem, slope_temp, cellsize = cellsize)
+      surface_water_height <- surfaceWater/100 * 0.5 + dem
+      # Add new surface water height to slope calculation
+      new_slope <- flow_slope(surface_water_height + shifted_dem, horizontal_flow_distance)
       names(new_slope) <- "slope"
       slope <- terra::ifel(new_slope < 0.02, 0.02, new_slope)
+      # new_dem <- surfaceWater/100 + staticStack$model_dem # assumes meters
+      # slope_temp <- terra::terrain(new_dem, v = "slope", neighbors = 8, unit = "radians")
+      # #slope <- elevation_diff/ (cell_size * )
+      # new_slope <- terra::merge(slope_temp, model_slope) # opened earlier
+      # #new_slope <- slope_edge(new_dem, slope_temp, cellsize = cellsize)
+      # names(new_slope) <- "slope"
+      # slope <- terra::ifel(new_slope < 0.02, 0.02, new_slope)
     }else{
       slope <- slope
     }
