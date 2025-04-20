@@ -722,7 +722,7 @@ download_rain <- function(date, rainfall_method = "goes"){
 }
 # Get all of the rain
 #goes_rain_all <- lapply(goes_dates, download_rain)
-rainfall_plot_comparison <- function(folder,  date = "2022-07-29", method1 = "spatial", method2 = "goes"){
+rainfall_plot_comparison <- function(folder,  date = "2021-07-22", method1 = "spatial", method2 = "goes"){
 
   goes_file <- rainfallCreation(folder, model()@watershedPath, date = date, method = method2, overwrite = F)
   # Spatially distributed map
@@ -731,6 +731,9 @@ rainfall_plot_comparison <- function(folder,  date = "2022-07-29", method1 = "sp
   rain_df <- data.table::fread(spatial_file)[,c("time","WATER-1", "WATER-2", "WATER-G")]
   # Janky way to load in the voronoi shapefile
   rain_regions <- terra::vect(filePresent("voronoi.shp", model()@watershedPath))
+  if(get_crs(rain_regions) != get_crs(goes_file)){
+    rain_regions <- terra::project(rain_regions, get_crs(goes_file))
+  }
   gauges <- rain_df[,c("WATER-1", "WATER-2", "WATER-G")]*25.4
   rain_surface <- do.call(c, apply(gauges, MARGIN = 1, FUN = rasterizeRainfall, rain_regions, terra::rast(goes_file)[[1]]))
   # Add up all the rain surfaces
@@ -755,7 +758,7 @@ rainfall_plot_comparison <- function(folder,  date = "2022-07-29", method1 = "sp
   # Plot 1
   terra::plot(spatial_rain_total,
               main = "Gauges Rainfall (mm)",
-              cex = 0.5)
+              cex = 0.9)
 
   # Plot 2
   terra::plot(goes_rain_total,
