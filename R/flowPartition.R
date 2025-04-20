@@ -1583,5 +1583,5 @@ elevation_shifted <- function(dem){
 }
 
 flow_slope <- function(vertical_distance, horizontal_distance){
-  return(atan(vertical/horizontal_distance))
+  return(atan(vertical_distance/horizontal_distance))
 }
