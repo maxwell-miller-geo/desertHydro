@@ -207,7 +207,7 @@ vertical_flow_distance <- SoilStack$model_dem -  shifted_dem
   velocity_cell <- drainCells$cell[2]
   velocity_cell <- getCellCoords(drain, surfaceWater)[2]
   # Create maximum velocity
-  max_velocity <- adjustStack$infiltrated_water_cm * 0 + 1000 # 10 m/s
+  max_velocity <- adjustStack$infiltrated_water_cm * 0 + 800 # 10 m/s
   dem <- SoilStack$model_dem
   # Write the Surface Stack
   terra::writeRaster(adjustStack+0, tempStorage, overwrite = T)
@@ -386,6 +386,10 @@ for(t in simulation_values){
     # Calculate the time in minutes after each time-step
     end_time <- beginning_time + round((runoff_counter + time_delta_s) / 60, 5) # min
 
+    # Check end time values
+    if(abs(end_time - round(end_time)) < 0.001){
+      end_time <- round(end_time)
+    }
     # Write raster to file at every minute
     if(end_time %% 1 == 0){
       if(!impervious){
@@ -501,10 +505,11 @@ for(t in simulation_values){
        runoff_counter <- simulationTimeSecs
      }
     }
-
+  # print(paste("End time: ", end_time))
+  # print(paste("Simulation length", simulation_length))
   ##---------------- Save step-------------
 # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
-  if(counter %% 10 == 0 || t == length(simulation_duration) || t == tail(simulation_duration,1)){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
+  if(end_time %% 9 == 0 || end_time == simulation_length){ # when so save the outputs - saveRate = 3, saves outputs every 3rd timestep
     if(!impervious){
       rasterCompile(ModelFolder, "soil", remove = T, overwrite = F)
     }

@@ -351,7 +351,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
     surface_plot <- animateStack(meltedSurface,
                                  title = "Surface Depth",
                                  units = "Depth (cm)",
-                                caption = paste0(round(total_rain,2)," inches of rain over ",  round(total_rain_duration, 2)," hours"))
+                                caption = paste0(round(total_rain,2)," inches of rain over ",  round(total_rain_duration, 2)," minutes"))
     # Display the animation
     #gganimate::animate(surface_plot)
     # store the animated GIF
@@ -390,7 +390,7 @@ gifCreation <- function(ModelFolder, rainfall_method = "", date = NULL, discharg
     velocity_plot <- animateStack(velocityStack,
                                   title = "Surface Velocities",
                                   units = "cm/s",
-                                  caption = paste0(round(total_rain,2)," inches of rain over ", round(total_rain_duration, 2)," hours"))
+                                  caption = paste0(round(total_rain,2)," inches of rain over ", round(total_rain_duration, 2)," minutes"))
     # Display the animation
     #gganimate::animate(velocity_plot)
     # store the animated GIF
