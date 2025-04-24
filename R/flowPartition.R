@@ -1529,7 +1529,7 @@ manning_to_darcy_cm <- function(n, h_cm, g = 980) {
   return(f)
 }
 
-count_inflow <- function(flow_dir){
+count_inflow <- function(flow_dir, ModelFolder){
 
   # Lists
   reverse_d8 <- c(

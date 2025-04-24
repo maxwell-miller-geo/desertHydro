@@ -228,7 +228,7 @@ initial_soil_conditions <- function(LandCoverCharacteristics,
   if(grepl("inflow", surface_method)){
     # Determine the manning's adjustment factor
     print("Adjusting roughness of higher inflow cells")
-    inflow <- abs(count_inflow(SoilStack$flow_direction) -2)
+    inflow <- abs(count_inflow(SoilStack$flow_direction, ModelFolder) -2)
     SoilStack$mannings_n <- SoilStack$mannings_n - inflow * 0.003
   }
   # Geo map adjustment
