@@ -689,7 +689,7 @@ plot_rainfall_comparison <- function(rain_df, date, store = T, outpath = "", gau
   # store the graph for the date
   if(store){
     outputPlot <- paste0("rain_comparison_", date ,".png")
-    ggplot2::ggsave(file.path(outpath, outputPlot), plot = combined_plot, width = 6)
+    ggplot2::ggsave(file.path(outpath, outputPlot), plot = combined_plot, width = 6.5)
   }
 }
 # Dates

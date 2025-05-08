@@ -169,6 +169,7 @@ monsoon <- function(ModelFolder = NULL,
                                      discharge = model1@discharge, saveGraph = T)
   }
 
+  # Save outputs
   # Output directory
   outputs <- file.path(ModelFolder, paste0("Outputs-", basename(ModelFolder)))
 
@@ -185,7 +186,8 @@ monsoon <- function(ModelFolder = NULL,
                     "Starting_Soil_Characteristics.csv",
                     paste0("Discharge-Outlet",date,".png"),
                     paste0("water_budget_", date, ".png"),
-                    paste0("rainfall-comparison-",date,".png"))
+                    paste0("rainfall-comparison-",date,".png"),
+                    "discharge-raw.csv")
   # Copy files to Output folder, if they exists
   lapply(file.path(ModelFolder, output_files), FUN = copy_if_exists, outputs)
 

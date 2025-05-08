@@ -34,6 +34,9 @@ modelEfficiency <- function(dischargeDF, method = "NSE", timeCol = T){
   if(is.character(dischargeDF)){
     dischargeDF <- as.data.frame(data.table::fread(dischargeDF))
   }
+  if(inherits(discharge_data, "data.table")){
+    dischargeDF <- as.data.frame(dischargeDF)
+  }
   if(timeCol){ # assumes column order time | obs | modeled
     observed <- dischargeDF[,2]
     modeled <- dischargeDF[,3]
@@ -75,21 +78,16 @@ modelEfficiency <- function(dischargeDF, method = "NSE", timeCol = T){
 # KGE1 <- modelEfficiency(dischargeDF1, method = "KGE")
 
 ## --------------------- Total volume differences
-totalVolume <- function(time, discharge){
+totalVolume <- function(time, discharge, units = "mins"){
   if(length(time) == length(discharge)){
-    sumVolume <- 0
-    arrayLength <- length(time) - 1
-    for(x in 1:arrayLength){
-      dt <- time[x+1] - time[x]
-      mean <- mean(c(discharge[x+1], discharge[x]))
-      vol <- mean * dt
-      # dDischarge <- discharge[x+1] - discharge[x]
-      # triangle <- dt * dDischarge / 2
-      # rectangle <- dt * discharge[x]
-      # area <- triangle + rectangle
-      sumVolume <- sumVolume + vol
+    if(units == "mins"){
+      time <- diff(time)*60
     }
-    return(sumVolume)
+    mean_discharge <- (discharge[-length(discharge)] + discharge[-1])/2
+    volume <- mean_discharge*time
+    return(sum(volume))
+  }else{
+    return(NA)
   }
 }
 # time <- c(0,1,2,3)
@@ -555,6 +553,72 @@ create_single_graphic <- function(ModelFolder, date = NULL){
   image_write(final_gif, file.path(ModelFolder,paste0(date,"combined_gifs.gif")))
 }
 
-# Create backup extraction for discharge
+# Gets the NSE value, maximum discharge difference, and peak offset time for a single event
+compare_discharge <- function(folder = NULL, completed_file = "ModelComplete.txt"){
+  if(is.null(folder)){
+    folder <- getwd()
+  }
+  # Check if model is completed
+  completed_check <- file.path(folder, completed_file)
+  if(file.exists(completed_check)){
+    # Find the raw discharge data
+    discharge_data <- data.table::fread(file.path(folder, "discharge-raw.csv"))
+    NSE <- modelEfficiency(discharge_data)
+    predicted_max <- max(discharge_data[,3])
+    observed_max <- max(discharge_data[,2])
+    peak_discharge_difference <- predicted_max - observed_max
+    time_arrival_difference <- discharge_data[xsection_1 == predicted_max,time] -
+                               discharge_data[observed == observed_max, time]
+    volume_difference <- totalVolume(discharge_data$time, discharge_data$xsection_1) -
+                         totalVolume(discharge_data$time, discharge_data$observed)
+    out_data_table <- data.table::data.table(NSE = NSE,
+                                             peak_discharge_difference = peak_discharge_difference,
+                                             peak_discharge_time_offset_minutes = time_arrival_difference,
+                                             volume_discharge_difference = volume_difference)
+    data.table::fwrite(out_data_table, file.path(folder, "discharge-analysis.csv"))
+    return(out_data_table)
 
+  }else{
+    print(paste("The folder:", folder, "does not have a completed model."))
+    return(NULL)
+  }
+}
 
+# Helper functions for post analysis stuff
+get_discharge_volume <- function(time, disch){
+  if(inherits(discharge_df, "data.table")){
+    discharge_df <- as.data.frame(discharge_df)
+  }
+  # makes assumption modeled discharge is in the 3rd column
+}
+
+# Copy certain files over for post-analysis
+copy_output_files <- function(folder = NULL, date = NULL){
+  if(is.null(folder)){
+    folder <- getwd()
+  }
+  # Get date from folder header
+  if(is.null(date)){
+    date <- substr(basename(folder), 1, 10)
+  }
+  outputs <- file.path(folder, paste0("Outputs-", basename(folder)))
+
+  # Grab files needed
+  output_files <- c("simulation_time.txt",
+                    paste0(date, "-velocity.gif"),
+                    paste0(date, "-surface-Depth.gif"),
+                    paste0(date, "-moisture-content.gif"),
+                    paste0(date, "-rain-Depth.gif"),
+                    paste0("discharge_rain_", date, ".png"),
+                    paste0("Discharge-Outlet-",date, ".png"),
+                    "volumes.csv",
+                    "model-checks.csv",
+                    "Starting_Soil_Characteristics.csv",
+                    paste0("Discharge-Outlet",date,".png"),
+                    paste0("water_budget_", date, ".png"),
+                    paste0("rainfall-comparison-",date,".png"),
+                    "discharge-raw.csv")
+  # Copy files to Output folder, if they exists
+  lapply(file.path(folder, output_files), FUN = copy_if_exists, outputs)
+  print("Copied output files")
+}
