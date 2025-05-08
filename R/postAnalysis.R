@@ -563,18 +563,31 @@ compare_discharge <- function(folder = NULL, completed_file = "ModelComplete.txt
   if(file.exists(completed_check)){
     # Find the raw discharge data
     discharge_data <- data.table::fread(file.path(folder, "discharge-raw.csv"))
+    discharge_data <- interpolate_na_dt(discharge_data)
     NSE <- modelEfficiency(discharge_data)
     predicted_max <- max(discharge_data[,3])
     observed_max <- max(discharge_data[,2])
     peak_discharge_difference <- predicted_max - observed_max
-    time_arrival_difference <- discharge_data[xsection_1 == predicted_max,time] -
+    time_arrival_predicted <- discharge_data[xsection_1 == predicted_max, time]
+    if(length(time_arrival_predicted) > 1){
+      time_arrival_predicted <- time_arrival_predicted[[1]]
+    }
+    time_arrival_difference <- time_arrival_predicted -
                                discharge_data[observed == observed_max, time]
     volume_difference <- totalVolume(discharge_data$time, discharge_data$xsection_1) -
                          totalVolume(discharge_data$time, discharge_data$observed)
-    out_data_table <- data.table::data.table(NSE = NSE,
+    volume_observed <- totalVolume(discharge_data$time, discharge_data$observed)
+    peak_discharge_observed <- observed_max
+    # Get model variables to add to output
+    model_variables <- get_model_variables(folder)
+    analysis_table <- data.table::data.table(NSE = NSE,
                                              peak_discharge_difference = peak_discharge_difference,
+                                             peak_discharge_observed = peak_discharge_observed,
                                              peak_discharge_time_offset_minutes = time_arrival_difference,
-                                             volume_discharge_difference = volume_difference)
+                                             volume_discharge_difference = volume_difference,
+                                             volume_observed = volume_observed
+                                             )
+    out_data_table <- cbind(model_variables, analysis_table)
     data.table::fwrite(out_data_table, file.path(folder, "discharge-analysis.csv"))
     return(out_data_table)
 
@@ -582,6 +595,41 @@ compare_discharge <- function(folder = NULL, completed_file = "ModelComplete.txt
     print(paste("The folder:", folder, "does not have a completed model."))
     return(NULL)
   }
+}
+# Get dates and characteristics - works based on file path
+get_model_variables <- function(folder){
+  # Get basename of folder
+  folder_name <- basename(folder)
+  if(substr(folder_name, 1,1) != "2"){
+    # Assume its the output folder - remove 'outputs-'
+    folder_name <- substr(folder_name, 9, nchar(folder_name))
+  }
+  date <- substr(folder_name, 1, 10)
+  # Built only for specific cases
+  if(grepl("goes", folder_name)){
+    rainfall <- "goes"
+  }else if(grepl("spatial", folder_name)){
+    rainfall <- "spatial"
+  }
+  # Surface characteristics
+  pattern <- "adj\\-+(.*?)\\-+adj" # find stuff between adjusts
+  matches <- regmatches(folder_name, gregexpr(pattern, folder_name, perl = TRUE))[[1]]
+  surface_char <- gsub("(^adj-1-)|(-adj$)", "", matches)
+  #
+  pattern <- "adj-1\\-+(.*?)\\-+adj-1-c" # find stuff between adjusts
+  infilt_matches <- regmatches(folder_name, gregexpr(pattern, folder_name))[[1]]
+  subset_matches <- substr(infilt_matches, 2, nchar(infilt_matches))
+  infilt_matches <- regmatches(subset_matches, gregexpr(pattern, subset_matches))[[1]]
+  infilt_char <- gsub("(^adj-1-)|(-adj-1-c$)", "", infilt_matches)
+
+  # write out a file with model variables
+  model_variables <- data.table::data.table(date = date,
+                                            rainfall = rainfall,
+                                            surface_variables = surface_char,
+                                            infiltration_varibles = infilt_char)
+
+  data.table::fwrite(model_variables, file.path(folder, "model-variables.csv"))
+  return(model_variables)
 }
 
 # Helper functions for post analysis stuff
@@ -622,3 +670,200 @@ copy_output_files <- function(folder = NULL, date = NULL){
   lapply(file.path(folder, output_files), FUN = copy_if_exists, outputs)
   print("Copied output files")
 }
+
+interpolate_na <- function(x) {
+  if (all(is.na(x))) return(rep(NA, length(x)))
+  approx(x = which(!is.na(x)),
+         y = x[!is.na(x)],
+         xout = seq_along(x),
+         method = "linear",
+         rule = 2)$y  # rule = 2 means extrapolate ends if needed
+}
+
+interpolate_na_dt <- function(dt, exclude = NULL, inplace = TRUE) {
+  if (!inherits(dt, "data.table")) stop("Input must be a data.table.")
+
+  # Define interpolation function
+  interpolate_na <- function(x) {
+    if (all(is.na(x))) return(rep(NA, length(x)))
+    approx(x = which(!is.na(x)),
+           y = x[!is.na(x)],
+           xout = seq_along(x),
+           method = "linear",
+           rule = 2)$y
+  }
+
+  # Select numeric columns, excluding any user-specified ones
+  cols <- names(dt)[sapply(dt, is.numeric) & !(names(dt) %in% exclude)]
+
+  # Modify in place or on a copy
+  target_dt <- if (inplace) dt else copy(dt)
+
+  target_dt[, (cols) := lapply(.SD, interpolate_na), .SDcols = cols]
+
+  return(target_dt)
+}
+
+combine_discharge_analysis <- function(folder_list){
+  # find all the discharge-analysis files
+  discharge_analysis_files <- lapply(folder_list, function(x) data.table::fread(file.path(x, "discharge-analysis.csv")))
+  # Combined the tables
+  combined <- data.table::rbindlist(discharge_analysis_files)
+  # Write output one folder layer above folder_list
+  data.table::fwrite(combined, file.path(dirname(folder_list[[1]]), "combined-discharge-analysis.csv"))
+}
+
+# Let's combine discharge data from all events with the same rainfall input
+plot_group_discharge <- function(folder_list, date = NULL, rain_method = NULL, inflow = F){
+
+  # Remove duplicate paths
+  path_list <- keep_deepest_paths(folder_list)
+
+  # Remove paths with inflow for now
+  if(!inflow){
+    path_list <- grep("inflow", path_list, invert = T, value = T)
+  }
+  # Filter by date
+  if(!is.null(date)){
+    path_list <- grep(date, path_list, value = T)
+  }
+  if(!is.null(rain_method)){
+    path_list <- grep(rain_method, path_list, value = T)
+  }
+  # Read all the different raw discharge data
+  raw_discharge_data <- lapply(path_list, function(x) data.table::fread(file.path(x, "discharge-raw.csv")))
+  # Grab just the discharge data from all models
+  time <- raw_discharge_data[[1]]$time # should be the same for all of them
+  observed_discharge <- raw_discharge_data[[1]]$observed
+
+  # Need to assign proper names to list variables
+  model_variables <- lapply(path_list, get_model_variables)
+  # Extract combined variable names from model_variables
+  column_names <- sapply(model_variables, function(m) {
+    paste0("surface-", m$surface_variables, "_", "infilt-", m$infiltration_varibles)
+  })
+  # Combine all xsection_1 columns from the list
+  combined_xsections <- data.table::as.data.table(
+    setNames(
+      lapply(raw_discharge_data, function(dt) dt[["xsection_1"]]),
+      column_names
+    )
+  )
+  combined_table <- cbind(time, observed_discharge, combined_xsections)
+
+  # Melt the wide table into long format
+  long_dt <- data.table::melt(
+    combined_table,
+    id.vars = "time",
+    variable.name = "Scenario",
+    value.name = "Discharge"
+  )
+  # Apply pretty labels to your Scenario variable
+  long_dt$Scenario <- prettify_scenario_labels(long_dt$Scenario)
+  long_dt <- long_dt[!(duplicated(long_dt, by = c("Scenario", "time")))]
+  if(rain_method == "spatial"){
+    rain_method_label <- "Gauges"
+  }else if(rain_method == "goes"){
+    rain_method_label <- "Satellites"
+  }
+  # Build title using variables
+  plot_title <- paste0("Modeled vs Observed Discharge from ", date, ": " , rain_method_label)
+
+  out_plot <- (ggplot2::ggplot(long_dt, ggplot2::aes(x = time, y = Discharge, group = Scenario)) +
+    ggplot2::geom_line(
+      ggplot2::aes(color = Scenario, linetype = Scenario),
+      linewidth = 1
+    )  +
+    ggplot2::scale_color_viridis_d(option = "D") +
+    ggplot2::labs(
+      title = plot_title,
+      x = "Time (minutes)",
+      y = expression("Discharge (ft"^3*"/s)"),
+      color = "Scenario",
+      linetype = "Scenario"
+    ) +
+    ggplot2::theme_minimal() +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(hjust = 0.5, face = "bold", size = 11),
+        plot.background = ggplot2::element_rect(fill = "white", color = NA),
+        panel.background = ggplot2::element_rect(fill = "white", color = NA),
+        panel.border = ggplot2::element_rect(color = "black", fill = NA, linewidth = 1),
+
+        # Legend positioning and appearance
+        # legend.position = c(0.99, 0.99),
+        # legend.justification = c(1, 1),
+
+        legend.background = ggplot2::element_rect(color = "black", fill = "white"),
+        legend.position = "bottom",
+        legend.box = "vertical",
+        legend.direction = "vertical",
+        legend.justification = "center",
+        #legend.direction = "horizontal",
+        # Legend text and spacing
+        legend.title = ggplot2::element_text(size = 10, face = "bold"),
+        legend.text = ggplot2::element_text(size = 10),
+        legend.key.height = ggplot2::unit(0.4, "lines"),
+        legend.key.width = ggplot2::unit(0.8, "lines"),
+        #legend.margin = ggplot2::margin(t = 4, b = 2),  # ← this moves legend closer to plot
+        # ↓ This reduces extra space between plot and legend
+        plot.margin = ggplot2::margin(5, 5, 5, 5)  # top, right, bottom, left
+      ))
+    # Save the plot as
+    plot_name <- file.path(dirname(path_list[[1]]), paste0(date, "-", rain_method, ".png"))
+    ggplot2::ggsave(plot_name, out_plot, width = 5, height = 4, units = "in", bg = "white")  # ← this also helps ensure clean white background)
+    return(out_plot)
+}
+
+# Function to remove paths that are substrings of others
+remove_contained_paths <- function(paths) {
+  to_keep <- !sapply(seq_along(paths), function(i) {
+    any(sapply(paths[-i], function(p) grepl(p, paths[i], fixed = TRUE)))
+  })
+  paths[to_keep]
+}
+
+# Function to remove shorter paths that are contained within longer ones
+keep_deepest_paths <- function(paths) {
+  to_remove <- sapply(seq_along(paths), function(i) {
+    any(sapply(seq_along(paths), function(j) {
+      i != j && grepl(paths[i], paths[j], fixed = TRUE)
+    }))
+  })
+  paths[!to_remove]
+}
+
+prettify_scenario_labels <- function(scenarios) {
+  sapply(scenarios, function(s) {
+    if (tolower(s) == "observed_discharge") return("Observed Discharge")
+
+    # Clean up separators
+    s_clean <- gsub("_", " ", s)
+    s_clean <- gsub("-", " ", s_clean)
+
+    # Split into surface and infiltration parts
+    parts <- unlist(strsplit(s_clean, "infil", fixed = TRUE))
+    surface_part <- trimws(parts[1])
+    infilt_part <- if (length(parts) > 1) trimws(parts[2]) else ""
+
+    # Surface label logic
+    surface_label <- if (grepl("geo", surface_part, ignore.case = TRUE)) {
+      "Surface Roughness: Geology"
+    } else if (grepl("stream", surface_part, ignore.case = TRUE)) {
+      "Surface Roughness: Soils + Stream"
+    } else {
+      "Surface Roughness: Soils"
+    }
+
+    # Infiltration label logic
+    infilt_label <- if (grepl("green", infilt_part, ignore.case = TRUE)) {
+      "Infiltration: Dynamic"
+    } else if (grepl("flat", infilt_part, ignore.case = TRUE)) {
+      "Infiltration: Constant"
+    } else {
+      "Infiltration"
+    }
+
+    paste(surface_label, "|", infilt_label)
+  }, USE.NAMES = FALSE)
+}
+
