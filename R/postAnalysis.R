@@ -550,7 +550,7 @@ create_single_graphic <- function(ModelFolder, date = NULL){
   final_gif <- image_animate(image_join(combined_frames), fps = 10, optimize = FALSE)
 
   # Save final GIF
-  image_write(final_gif, file.path(ModelFolder,paste0(date,"combined_gifs.gif")))
+  image_write(final_gif, file.path(ModelFolder,paste0(date,"_combined_gifs.gif")))
 }
 
 # Gets the NSE value, maximum discharge difference, and peak offset time for a single event
